@@ -25,8 +25,56 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: ThermostatPage(title: 'Thermostat'),
+//      home: ThermostatPage(title: 'Thermostat'),
+      home: DefaultTabController(
+        length: 3,
+        child: Scaffold(
+          appBar: AppBar(
+          // Here we take the value from the MyHomePage object that was created by
+          // the App.build method, and use it to set our appbar title.
+          title: Text('Thermostat'),
+          bottom: TabBar(
+          tabs: [
+            Tab(
+                text: "Status",
+//                icon: Icon(Icons.stay_current_landscape)
+            ),
+            Tab(text: 'Holiday'),
+            Tab(text: 'Schedule'),
+          ],
+        ),
+     ),
+    body: TabBarView(
+    children: [
+      ThermostatPage(),
+      HoidayPage(),
+      Icon(Icons.directions_bike),
+    ],
+    ),
+//          floatingActionButton: FloatingActionButton(
+//            onPressed: getStatus,
+//            tooltip: 'Refresh',
+//            child: Icon(Icons.refresh),
+//          ), // This trailing comma makes auto-formatting nicer for build methods.
+    ),
+    ),
     );
+  }
+}
+
+class HolidayPage extends StatefulWidget {
+
+  @override
+  State createState() {
+    _HolidayPageState();
+  }
+}
+
+class _HolidayPageState extends State {
+
+  @override
+  Widget build(BuildContext context) {
+
   }
 }
 
@@ -76,6 +124,14 @@ class _ThermostatPageState extends State<ThermostatPage> {
     super.initState();
   }
 
+  @override
+  void dispose() {
+    print('Disposing Thermostat page;);
+    timer.cancel();
+    client.close();
+    super.dispose();
+  }
+
   void _decRequestedTemp() {
     if (iconButtonsEnabled) {
       print("Minus pressed");
@@ -107,9 +163,11 @@ class _ThermostatPageState extends State<ThermostatPage> {
         print ("Got HttpException sending setTemp: " + he.toString());
       }
     }
-    setState(() {
-      requestedTemp = temp;
-    });
+    if (this.mounted) {
+      setState(() {
+        requestedTemp = temp;
+      });
+    }
   }
 
   void refreshStatus(Timer timer) {
@@ -126,9 +184,11 @@ class _ThermostatPageState extends State<ThermostatPage> {
         response.transform(utf8.decoder).listen((contents) {
           print('Got response:');
           print(contents);
-          setState(() {
-            processStatus(contents);
-          });
+          if (mounted) {
+            setState(() {
+              processStatus(contents);
+            });
+          }
   //        client.close();
         });
       });
@@ -179,13 +239,8 @@ class _ThermostatPageState extends State<ThermostatPage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
-    Widget returnWidget = Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: ListView(children: [
+    Widget returnWidget =
+      ListView(children: [
         Column(
           // Column is also layout widget. It takes a list of children and
           // arranges them vertically. By default, it sizes itself to fit its
@@ -229,14 +284,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
             ShowDateTimeStamp(dateTimeStamp: new DateTime.now()),
           ],
         ),
-      ]),
-      floatingActionButton: FloatingActionButton(
-        onPressed: getStatus,
-        tooltip: 'Refresh',
-        child: Icon(Icons.refresh),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
-    iconButtonsEnabled = true;
+      ],);
+//    );
+//    iconButtonsEnabled = true;
     return returnWidget;
   }
 }
