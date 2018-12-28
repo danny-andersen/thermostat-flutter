@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'dart:convert';
 import 'dart:async';
 import 'package:intl/intl.dart';
-
+import 'dropbox-api.dart';
 
 class ThermostatPage extends StatefulWidget {
   ThermostatPage({@required this.oauthToken}) : super();
@@ -20,25 +19,23 @@ class ThermostatPage extends StatefulWidget {
   final String oauthToken;
 
   @override
-  _ThermostatPageState createState() => _ThermostatPageState(oauthToken: this.oauthToken);
+  _ThermostatPageState createState() =>
+      _ThermostatPageState(oauthToken: this.oauthToken);
 }
 
 class _ThermostatPageState extends State<ThermostatPage> {
   _ThermostatPageState({@required this.oauthToken});
   final String oauthToken;
+  final String statusFile = "/thermostat_status.txt";
+  final String setTempFile = "/setTemp.txt";
+  HttpClient client = new HttpClient();
   double currentTemp = 0.0;
-  double extTemp = 0.0;
+  double extTemp = 100.0;
   double setTemp = 0.0;
   double requestedTemp = 10.0;
   bool boilerOn = true;
   int minsToSetTemp = 0;
-  Uri statusUri = Uri.parse("https://content.dropboxapi.com/2/files/download");
-  Uri uploadUri = Uri.parse("https://content.dropboxapi.com/2/files/upload");
-  HttpClient client = new HttpClient();
-  String statusFile = "/thermostat_status.txt";
-  String setTempFile = "/setTemp.txt";
   Timer timer;
-  bool iconButtonsEnabled = false;
 
   @override
   void initState() {
@@ -57,35 +54,20 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void _decRequestedTemp() {
-    if (iconButtonsEnabled) {
 //      print("Minus pressed");
-      requestedTemp -= 0.10;
-      sendNewTemp(requestedTemp, true);
-    }
+    requestedTemp -= 0.10;
+    sendNewTemp(requestedTemp, true);
   }
 
   void _incrementRequestedTemp() {
-    if (iconButtonsEnabled) {
-      requestedTemp += 0.10;
-      sendNewTemp(requestedTemp, true);
-    }
+    requestedTemp += 0.10;
+    sendNewTemp(requestedTemp, true);
   }
 
   void sendNewTemp(double temp, bool send) {
     if (send) {
-      try {
-        client.postUrl(uploadUri).then((HttpClientRequest request) {
-          request.headers.add("Authorization", "Bearer " + this.oauthToken);
-          request.headers.add("Dropbox-API-Arg",
-              "{\"path\": \"$setTempFile\", \"mode\": \"overwrite\", \"mute\": true}");
-          request.headers
-              .add(HttpHeaders.contentTypeHeader, "application/octet-stream");
-          request.write(requestedTemp.toStringAsFixed(1) + "\n");
-          return request.close();
-        }).then((HttpClientResponse response) {});
-      } on HttpException catch (he) {
-        print ("Got HttpException sending setTemp: " + he.toString());
-      }
+      String contents = requestedTemp.toStringAsFixed(1) + "\n";
+      sendDropBoxFile(client: this.client, oauthToken: this.oauthToken, fileToUpload: setTempFile, contents: contents);
     }
     if (this.mounted) {
       setState(() {
@@ -99,61 +81,49 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void getStatus() {
-    try {
-//      print (this.oauthToken);
-      client.getUrl(statusUri).then((HttpClientRequest request) {
-        request.headers.add("Authorization", "Bearer " + this.oauthToken);
-        request.headers.add("Dropbox-API-Arg", "{\"path\": \"$statusFile\"}");
-        return request.close();
-      }).then((HttpClientResponse response) {
-        response.transform(utf8.decoder).listen((contents) {
-//          print('Got response:');
-//          print(contents);
-          if (mounted) {
-            setState(() {
-              processStatus(contents);
-            });
-          }
-          //        client.close();
-        });
-      });
-    } on HttpException catch (he) {
-      print ("Got HttpException getting status: " + he.toString());
-    }
-
+    getDropBoxFile(client: this.client, oauthToken: this.oauthToken, fileToDownload: this.statusFile, callback: processStatus );
   }
 
+
   void processStatus(String contents) {
-    contents.split('\n').forEach((line) {
-      if (line.startsWith('Current temp:')) {
-        try {
-          currentTemp = double.parse(line.split(':')[1].trim());
-        } on FormatException {
-          print("Received non-double Current temp format: $line");
+    if (mounted) {
+      setState(() {
+      contents.split('\n').forEach((line) {
+        if (line.startsWith('Current temp:')) {
+          try {
+            currentTemp = double.parse(line.split(':')[1].trim());
+          } on FormatException {
+            print("Received non-double Current temp format: $line");
+          }
+        } else if (line.startsWith('Current set temp:')) {
+          try {
+            setTemp = double.parse(line.split(':')[1].trim());
+            if (requestedTemp == 10.0) requestedTemp = setTemp;
+          } on FormatException {
+            print("Received non-double setTemp format: $line");
+          }
+        } else if (line.startsWith('External temp:')) {
+          if (line.split(':')[1].trim().startsWith('Not Set')) {
+              extTemp = 100.0;
+          } else {
+            try {
+              extTemp = double.parse(line.split(':')[1].trim());
+            } on FormatException {
+              print("Received non-double extTemp format: $line");
+            }
+          }
+        } else if (line.startsWith('Heat on?')) {
+          boilerOn = (line.split('?')[1].trim() == 'Yes');
+        } else if (line.startsWith('Mins to set temp')) {
+          try {
+            minsToSetTemp = int.parse(line.split(':')[1].trim());
+          } on FormatException {
+            print("Received non-int minsToSetTemp format: $line");
+          }
         }
-      } else if (line.startsWith('Current set temp:')) {
-        try {
-          setTemp = double.parse(line.split(':')[1].trim());
-          if (requestedTemp == 10.0) requestedTemp = setTemp;
-        } on FormatException {
-          print("Received non-double setTemp format: $line");
-        }
-      } else if (line.startsWith('External temp:')) {
-        try {
-          extTemp = double.parse(line.split(':')[1].trim());
-        } on FormatException {
-          print("Received non-double extTemp format: $line");
-        }
-      } else if (line.startsWith('Heat on?')) {
-        boilerOn = (line.split('?')[1].trim() == 'Yes');
-      } else if (line.startsWith('Mins to set temp')) {
-        try {
-          minsToSetTemp = int.parse(line.split(':')[1].trim());
-        } on FormatException {
-          print("Received non-int minsToSetTemp format: $line");
-        }
-      }
-    });
+      });
+      });
+    }
   }
 
   @override
@@ -164,38 +134,39 @@ class _ThermostatPageState extends State<ThermostatPage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
-    Widget returnWidget =
-    ListView(children: [
-          LabelWithDoubleState(
-              label: 'House Temp:', valueGetter: () => currentTemp),
-          LabelWithDoubleState(
-              label: 'External Temp:', valueGetter: () => extTemp),
-          LabelWithDoubleState(
-              label: 'Current Set Temp:', valueGetter: () => setTemp),
-          LabelWithDoubleStateOrBlank(
-              label: 'Requested Set Temp:',
-              valueGetter: () => requestedTemp,
-              blank: (requestedTemp.toStringAsFixed(1) == setTemp.toStringAsFixed(1))),
-          LabelWithDoubleStateOrBlank( //Hacky way to get a line spacing between rows
-            label: 'Blank Line',
+    Widget returnWidget = ListView(
+      children: [
+        LabelWithDoubleState(
+            label: 'House Temp:', valueGetter: () => currentTemp, fontSizeFactor: 0.5,),
+        LabelWithDoubleState(
+            label: 'External Temp:', valueGetter: () => extTemp, fontSizeFactor: 0.5,),
+        LabelWithDoubleState(
+            label: 'Current Set Temp:', valueGetter: () => setTemp,fontSizeFactor: 0.5),
+        LabelWithDoubleStateOrBlank(
+            label: 'Requested Set Temp:',
             valueGetter: () => requestedTemp,
-            blank: true,
-          ),
-          SliderWithRange(
-              requestedTempGetter: () => requestedTemp,
-              returnNewTemp: sendNewTemp),
-          SetTempButtonBar(
-              minusPressed: _decRequestedTemp,
-              plusPressed: _incrementRequestedTemp),
-          BoilerState(
-              boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
-          ShowDateTimeStamp(dateTimeStamp: new DateTime.now()),
-        ],
-      );
+            blank: (requestedTemp.toStringAsFixed(1) ==
+                setTemp.toStringAsFixed(1))),
+        const SizedBox(height: 10,),
+        LabelWithDoubleStateOrBlank(
+          //Hacky way to get a line spacing between rows
+          label: 'Blank Line',
+          valueGetter: () => requestedTemp,
+          blank: true,
+        ),
+        SliderWithRange(
+            requestedTempGetter: () => requestedTemp,
+            returnNewTemp: sendNewTemp),
+        SetTempButtonBar(
+            minusPressed: _decRequestedTemp,
+            plusPressed: _incrementRequestedTemp),
+        BoilerState(boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
+        ShowDateTimeStamp(dateTimeStamp: new DateTime.now()),
+      ],
+    );
     return returnWidget;
   }
 }
-
 
 class ShowDateTimeStamp extends StatelessWidget {
   ShowDateTimeStamp({@required this.dateTimeStamp});
@@ -205,7 +176,6 @@ class ShowDateTimeStamp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
 //      decoration: BoxDecoration(
 //        border: Border.all(
@@ -241,10 +211,8 @@ class ShowDateTimeStamp extends StatelessWidget {
           ),
           Text(
             dateFormat.format(dateTimeStamp),
-            style: Theme.of(context)
-                .textTheme
-                .display1
-                .apply(fontSizeFactor: 0.5),
+            style:
+                Theme.of(context).textTheme.display1.apply(fontSizeFactor: 0.5),
 //            style: TextStyle(
 //              //color: Colors.grey[500],
 //              fontSize: 18.0,
@@ -253,10 +221,8 @@ class ShowDateTimeStamp extends StatelessWidget {
         ],
       ),
     );
-
   }
 }
-
 
 class SetTempButtonBar extends StatelessWidget {
   SetTempButtonBar({@required this.minusPressed, @required this.plusPressed});
@@ -317,26 +283,25 @@ class ActionButtons extends StatelessWidget {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      IconButton(
-                        icon: Icon(Icons.remove),
-                        tooltip: "Decrease Set Temp by 0.1 degree",
-                        onPressed: minusPressed,
-                        color: Colors.blue,
-
-                      )
-                    ])),
+                  IconButton(
+                    icon: Icon(Icons.remove),
+                    tooltip: "Decrease Set Temp by 0.1 degree",
+                    onPressed: minusPressed,
+                    color: Colors.blue,
+                  )
+                ])),
             Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    IconButton(
-                      icon: Icon(Icons.add),
-                      color: Colors.red,
-                      tooltip: "Increase Set Temp by 0.1 degree",
-                      onPressed: plusPressed,
-                    )
-                  ],
-                ))
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                IconButton(
+                  icon: Icon(Icons.add),
+                  color: Colors.red,
+                  tooltip: "Increase Set Temp by 0.1 degree",
+                  onPressed: plusPressed,
+                )
+              ],
+            ))
           ]),
     );
   }
@@ -393,7 +358,7 @@ class SliderWithRange extends StatelessWidget {
         Flexible(
           flex: 1,
           child: Slider(
-            value: requestedTempGetter() >= 10.0? requestedTempGetter() : 10.0,
+            value: requestedTempGetter() >= 10.0 ? requestedTempGetter() : 10.0,
             min: 10.0,
             max: 25.0,
             divisions: 75,
@@ -433,7 +398,7 @@ class LabelWithDoubleStateOrBlank extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity (
+    return Opacity(
       opacity: blank ? 0.0 : 1.0,
       child: LabelWithDoubleState(
         label: label,
@@ -447,8 +412,8 @@ class LabelWithDoubleStateOrBlank extends StatelessWidget {
 class LabelWithDoubleState extends StatelessWidget {
   LabelWithDoubleState(
       {@required this.label,
-        @required this.valueGetter,
-        this.fontSizeFactor = 1.0});
+      @required this.valueGetter,
+      this.fontSizeFactor = 1.0});
 
   final String label;
   final ValueGetter<double> valueGetter;
@@ -490,7 +455,7 @@ class LabelWithDoubleState extends StatelessWidget {
             ),
           ),
           Text(
-            '${valueGetter().toStringAsFixed(1)}\u00B0C',
+            '${(valueGetter() == 100.0 ? '' : valueGetter().toStringAsFixed(1) + '\u00B0C')}',
             style: Theme.of(context)
                 .textTheme
                 .display1
@@ -570,7 +535,7 @@ class BoilerState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
               child: Text(
                 "Boiler is On",
-                style: dispStyle.apply(color: Colors.green),
+                style: dispStyle.apply(color: Colors.green, fontSizeFactor: 0.5),
 //                    style: TextStyle(
 //                      fontSize: 18.0,
 //                      fontWeight: FontWeight.bold,
@@ -591,7 +556,7 @@ class BoilerState extends StatelessWidget {
                           child: Text(
                             "Mins to Set Temp:",
                             style: dispStyle.apply(
-                                color: Colors.green, fontSizeFactor: 0.75),
+                                color: Colors.green, fontSizeFactor: 0.5),
                             //                    style: TextStyle(
                             //                      fontSize: 18.0,
                             //                      fontWeight: FontWeight.bold,
@@ -604,7 +569,7 @@ class BoilerState extends StatelessWidget {
                   Text(
                     '${minsToTemp()}',
                     style: dispStyle.apply(
-                        color: Colors.green, fontSizeFactor: 0.75),
+                        color: Colors.green, fontSizeFactor: 0.5),
                     //            style: TextStyle(
                     //              //color: Colors.grey[500],
                     //              fontSize: 18.0,
@@ -631,7 +596,7 @@ class BoilerState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                     child: Text(
                       "Boiler is Off",
-                      style: dispStyle.apply(color: Colors.red),
+                      style: dispStyle.apply(color: Colors.red, fontSizeFactor: 0.5),
 //                    style: TextStyle(
 //                      fontSize: 18.0,
 //                      fontWeight: FontWeight.bold,

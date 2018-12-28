@@ -7,9 +7,7 @@ import 'thermostat-tab.dart';
 
 void main() => runApp(MyApp());
 
-
 class MyApp extends StatefulWidget {
-
   @override
   State createState() => MyAppState();
 }
@@ -32,6 +30,7 @@ class MyAppState extends State<MyApp> {
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
         primarySwatch: Colors.blue,
+        fontFamily: 'Roboto',
       ),
 //      home: ThermostatPage(title: 'Thermostat'),
       home: DefaultTabController(
@@ -71,12 +70,16 @@ class MyAppState extends State<MyApp> {
 
   @override
   void initState() {
-    print ("Loading API KEY");
-    Future<Secret> secret = SecretLoader(secretPath: "assets/api-key.json").load();
-    secret.then((Secret secret) { setState(() {this.oauthToken = secret.apiKey; });});
+    print("Loading API KEY");
+    Future<Secret> secret =
+        SecretLoader(secretPath: "assets/api-key.json").load();
+    secret.then((Secret secret) {
+      setState(() {
+        this.oauthToken = secret.apiKey;
+      });
+    });
     super.initState();
   }
-
 }
 
 class SecretLoader {
@@ -85,10 +88,10 @@ class SecretLoader {
   SecretLoader({this.secretPath});
   Future<Secret> load() {
     return rootBundle.loadStructuredData<Secret>(this.secretPath,
-            (jsonStr) async {
-          final secret = Secret.fromJson(json.decode(jsonStr));
-          return secret;
-        });
+        (jsonStr) async {
+      final secret = Secret.fromJson(json.decode(jsonStr));
+      return secret;
+    });
   }
 }
 
@@ -99,4 +102,3 @@ class Secret {
     return new Secret(apiKey: jsonMap["api_key"]);
   }
 }
-
