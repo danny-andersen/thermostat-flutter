@@ -28,53 +28,62 @@ class _HolidayPageState extends State<HolidayPage> {
   TimeOfDay _toTime;
   double holidayTemp = 10.0;
   int nextHours = 1;
+  bool holidaySet = false;
+  bool onHoliday = false;
 
   @override
   void initState() {
+    //Retrieve any current holiday dates
+    refreshCurrent();
+    super.initState();
+  }
+
+  void refreshCurrent() {
     //Retrieve any current holiday dates
     getDropBoxFile(
         client: this.client,
         oauthToken: this.oauthToken,
         fileToDownload: this.currentHolidayFile,
         callback: processCurrentHoliday);
+    resetDates();
+  }
+
+  void resetDates() {
     DateTime now = DateTime.now();
     _fromDate = DateTime(now.year, now.month, now.day, now.hour);
     _fromTime = TimeOfDay(hour: _fromDate.hour, minute: 0);
     _toDate = _fromDate.add(Duration(hours: 1));
-    _toTime = TimeOfDay(hour: _toDate.hour, minute: _toDate.minute, );
-    super.initState();
+    _toTime = TimeOfDay(
+      hour: _toDate.hour,
+      minute: _toDate.minute,
+    );
   }
 
   void processCurrentHoliday(String contents) {
 //    print("Got current holiday: " + contents);
+    DateTime newFromDate;
+    DateTime newToDate;
     setState(() {
       contents.split('\n').forEach((line) {
         List<String> fields = line.split(',');
         if (line.startsWith('Start,')) {
+          holidaySet = true;
           try {
-            DateTime newfromDate = DateTime(
+            newFromDate = DateTime(
                 (2000 + int.parse(fields[1])),
                 int.parse(fields[2]),
                 int.parse(fields[3]),
                 int.parse(fields[4]));
-            if (newfromDate.isAfter(_fromDate)) {
-              _fromDate = newfromDate;
-              _fromTime = TimeOfDay(hour: int.parse(fields[4]), minute: 0);
-            }
           } on FormatException {
             print("Received incorrect holiday start line: $line");
           }
         } else if (line.startsWith('End,')) {
           try {
-            DateTime newToDate = DateTime(
+            newToDate = DateTime(
                 (2000 + int.parse(fields[1])),
                 int.parse(fields[2]),
                 int.parse(fields[3]),
                 int.parse(fields[4]));
-            if (newToDate.isAfter(_toDate)) {
-              _toDate = newToDate;
-              _toTime = TimeOfDay(hour: int.parse(fields[4]), minute: 0);
-            }
           } on FormatException {
             print("Received incorrect holiday end line: $line");
           }
@@ -86,16 +95,31 @@ class _HolidayPageState extends State<HolidayPage> {
           }
         }
       });
+      if (holidaySet) {
+        //Check if holiday period still active
+        if (newFromDate.isAfter(_fromDate)) {
+          //Holiday in future
+          _fromDate = newFromDate;
+          _fromTime = TimeOfDay(hour: _fromDate.hour, minute: 0);
+          _toDate = newToDate;
+          _toTime = TimeOfDay(hour: _toDate.hour, minute: 0);
+        } else if (newToDate.isAfter(_fromDate)) {
+          //On Holiday
+          onHoliday = true;
+        } else {
+          onHoliday = false;
+          holidaySet = false;
+        }
+      }
     });
   }
 
   void minusPressed() {
     setState(() {
-      if (nextHours >= 1) {
+      if (nextHours > 1) {
         nextHours -= 1;
-        _toDate =
-            DateTime.fromMillisecondsSinceEpoch(_toDate.millisecondsSinceEpoch)
-                .add(Duration(hours: -1));
+        resetDates();
+        _toDate = _fromDate.add(Duration(hours: nextHours));
         _toTime = TimeOfDay.fromDateTime(_toDate);
       }
     });
@@ -104,9 +128,8 @@ class _HolidayPageState extends State<HolidayPage> {
   void plusPressed() {
     setState(() {
       nextHours += 1;
-      _toDate =
-          DateTime.fromMillisecondsSinceEpoch(_toDate.millisecondsSinceEpoch)
-              .add(Duration(hours: 1));
+      resetDates();
+      _toDate = _fromDate.add(Duration(hours: nextHours));
       _toTime = TimeOfDay.fromDateTime(_toDate);
     });
   }
@@ -129,17 +152,27 @@ class _HolidayPageState extends State<HolidayPage> {
         oauthToken: this.oauthToken,
         fileToUpload: holidayFile,
         contents: contents);
+    setState(() {
+      refreshCurrent();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    String title = 'Set Holiday dates';
+    final textStyle =  Theme.of(context).textTheme.title;
+    if (onHoliday) {
+      title = 'On holiday! Change dates to reset';
+    } else if (holidaySet) {
+      title = 'Holiday already set. Change dates to reset';
+    }
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: <Widget>[
         Text(
-          'Set Holiday dates',
-          style:
-              Theme.of(context).textTheme.display1.apply(fontSizeFactor: 0.5),
+          title,
+          style: textStyle,
+//              Theme.of(context).textTheme.display1.apply(fontSizeFactor: 0.5),
         ),
         const SizedBox(height: 8.0),
         _DateTimePicker(
@@ -155,8 +188,10 @@ class _HolidayPageState extends State<HolidayPage> {
           selectTime: (TimeOfDay time) {
             setState(() {
               _fromTime = time;
-              _fromDate = DateTime(_fromDate.year, _fromDate.month, _fromDate.day, _fromTime.hour, _fromTime.minute);
-              _toTime = TimeOfDay.fromDateTime(_fromDate.add(Duration(hours: 1)));
+              _fromDate = DateTime(_fromDate.year, _fromDate.month,
+                  _fromDate.day, _fromTime.hour, _fromTime.minute);
+              _toTime =
+                  TimeOfDay.fromDateTime(_fromDate.add(Duration(hours: 1)));
             });
           },
         ),
@@ -172,44 +207,57 @@ class _HolidayPageState extends State<HolidayPage> {
           selectTime: (TimeOfDay time) {
             setState(() {
               _toTime = time;
-              _toDate = DateTime(_toDate.year, _toDate.month, _toDate.day, _toTime.hour, _toTime.minute);
+              _toDate = DateTime(_toDate.year, _toDate.month, _toDate.day,
+                  _toTime.hour, _toTime.minute);
             });
           },
         ),
         const SizedBox(height: 32.0),
         Text(
-          'Or set in holiday mode for next $nextHours hours ',
-          style:
-              Theme.of(context).textTheme.display1.apply(fontSizeFactor: 0.5),
+          'OR\n\nSet in holiday mode for next',
+          style: textStyle,
+//              Theme.of(context).textTheme.display1.apply(fontSizeFactor: 0.5),
         ),
         const SizedBox(height: 16.0),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             RaisedButton(
-              child: Icon(Icons.remove),
+              child: Icon(Icons.remove, color: Colors.white,),
 //                      tooltip: "Increase holiday time by 1 hour",
               onPressed: minusPressed,
+              color: Colors.blue,
+            ),
+            Text(
+              ' $nextHours hours  ',
+              style: textStyle,
+//              Theme.of(context)
+//                  .textTheme
+//                  .display1
+//                  .apply(fontSizeFactor: 0.5),
             ),
             RaisedButton(
-              child: Icon(Icons.add),
+              child: Icon(Icons.add, color: Colors.white,),
 //                        tooltip: "Decrease holiday time by 1 hour",
               onPressed: plusPressed,
+              color: Colors.blue,
             ),
           ],
         ),
         const SizedBox(height: 32.0),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
           RaisedButton(
-            child: Text("Send"),
+            child: Text("Send", style: textStyle.apply(color: Colors.white,), ),
             onPressed: sendNewHoliday,
-          )
+            color: Colors.blue,
+                  )
         ]),
       ],
     );
+  }
 //      ),
 //    );
-  }
+
 }
 
 class _DateTimePicker extends StatelessWidget {

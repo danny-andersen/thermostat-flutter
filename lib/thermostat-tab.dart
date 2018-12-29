@@ -32,7 +32,8 @@ class _ThermostatPageState extends State<ThermostatPage> {
   double currentTemp = 0.0;
   double extTemp = 100.0;
   double setTemp = 0.0;
-  double requestedTemp = 10.0;
+  double requestedTemp = 0.0;
+  bool requestOutstanding = false;
   bool boilerOn = true;
   int minsToSetTemp = 0;
   Timer timer;
@@ -40,6 +41,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   @override
   void initState() {
     client.idleTimeout = Duration(seconds: 90);
+    getSetTemp();
     getStatus();
     timer = new Timer.periodic(Duration(seconds: 45), refreshStatus);
     super.initState();
@@ -67,8 +69,13 @@ class _ThermostatPageState extends State<ThermostatPage> {
   void sendNewTemp(double temp, bool send) {
     if (send) {
       String contents = requestedTemp.toStringAsFixed(1) + "\n";
-      sendDropBoxFile(client: this.client, oauthToken: this.oauthToken, fileToUpload: setTempFile, contents: contents);
+      sendDropBoxFile(
+          client: this.client,
+          oauthToken: this.oauthToken,
+          fileToUpload: setTempFile,
+          contents: contents);
     }
+    requestOutstanding = true;
     if (this.mounted) {
       setState(() {
         requestedTemp = temp;
@@ -81,47 +88,79 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void getStatus() {
-    getDropBoxFile(client: this.client, oauthToken: this.oauthToken, fileToDownload: this.statusFile, callback: processStatus );
+    getDropBoxFile(
+        client: this.client,
+        oauthToken: this.oauthToken,
+        fileToDownload: this.statusFile,
+        callback: processStatus);
   }
 
+  void getSetTemp() {
+    getDropBoxFile(
+        client: this.client,
+        oauthToken: this.oauthToken,
+        fileToDownload: this.setTempFile,
+        callback: processSetTemp);
+  }
+
+  void processSetTemp(String contents) {
+    try {
+      setState(() {
+        requestedTemp = double.parse(contents.trim());
+        if (requestedTemp.toStringAsFixed(1) != setTemp.toStringAsFixed(1)) {
+          requestOutstanding = true;
+        }
+      });
+    } on FormatException {
+      //Do nothing - no setTemp file exists
+    }
+  }
 
   void processStatus(String contents) {
     if (mounted) {
       setState(() {
-      contents.split('\n').forEach((line) {
-        if (line.startsWith('Current temp:')) {
-          try {
-            currentTemp = double.parse(line.split(':')[1].trim());
-          } on FormatException {
-            print("Received non-double Current temp format: $line");
-          }
-        } else if (line.startsWith('Current set temp:')) {
-          try {
-            setTemp = double.parse(line.split(':')[1].trim());
-            if (requestedTemp == 10.0) requestedTemp = setTemp;
-          } on FormatException {
-            print("Received non-double setTemp format: $line");
-          }
-        } else if (line.startsWith('External temp:')) {
-          if (line.split(':')[1].trim().startsWith('Not Set')) {
-              extTemp = 100.0;
-          } else {
+        contents.split('\n').forEach((line) {
+          if (line.startsWith('Current temp:')) {
             try {
-              extTemp = double.parse(line.split(':')[1].trim());
+              currentTemp = double.parse(line.split(':')[1].trim());
             } on FormatException {
-              print("Received non-double extTemp format: $line");
+              print("Received non-double Current temp format: $line");
+            }
+          } else if (line.startsWith('Current set temp:')) {
+            try {
+              setTemp = double.parse(line.split(':')[1].trim());
+              print(
+                  "Req Temp: $requestedTemp, request out? $requestOutstanding");
+              if (requestedTemp.toStringAsFixed(1) ==
+                  setTemp.toStringAsFixed(1)) {
+                requestOutstanding = false;
+              }
+              if (!requestOutstanding) {
+                requestedTemp = setTemp;
+              }
+            } on FormatException {
+              print("Received non-double setTemp format: $line");
+            }
+          } else if (line.startsWith('External temp:')) {
+            if (line.split(':')[1].trim().startsWith('Not Set')) {
+              extTemp = 100.0;
+            } else {
+              try {
+                extTemp = double.parse(line.split(':')[1].trim());
+              } on FormatException {
+                print("Received non-double extTemp format: $line");
+              }
+            }
+          } else if (line.startsWith('Heat on?')) {
+            boilerOn = (line.split('?')[1].trim() == 'Yes');
+          } else if (line.startsWith('Mins to set temp')) {
+            try {
+              minsToSetTemp = int.parse(line.split(':')[1].trim());
+            } on FormatException {
+              print("Received non-int minsToSetTemp format: $line");
             }
           }
-        } else if (line.startsWith('Heat on?')) {
-          boilerOn = (line.split('?')[1].trim() == 'Yes');
-        } else if (line.startsWith('Mins to set temp')) {
-          try {
-            minsToSetTemp = int.parse(line.split(':')[1].trim());
-          } on FormatException {
-            print("Received non-int minsToSetTemp format: $line");
-          }
-        }
-      });
+        });
       });
     }
   }
@@ -134,26 +173,37 @@ class _ThermostatPageState extends State<ThermostatPage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
+    final TextStyle textStyle = Theme.of(context).textTheme.title;
     Widget returnWidget = ListView(
       children: [
         LabelWithDoubleState(
-            label: 'House Temp:', valueGetter: () => currentTemp, fontSizeFactor: 0.5,),
-        LabelWithDoubleState(
-            label: 'External Temp:', valueGetter: () => extTemp, fontSizeFactor: 0.5,),
-        LabelWithDoubleState(
-            label: 'Current Set Temp:', valueGetter: () => setTemp,fontSizeFactor: 0.5),
-        LabelWithDoubleStateOrBlank(
-            label: 'Requested Set Temp:',
-            valueGetter: () => requestedTemp,
-            blank: (requestedTemp.toStringAsFixed(1) ==
-                setTemp.toStringAsFixed(1))),
-        const SizedBox(height: 10,),
-        LabelWithDoubleStateOrBlank(
-          //Hacky way to get a line spacing between rows
-          label: 'Blank Line',
-          valueGetter: () => requestedTemp,
-          blank: true,
+          label: 'House Temp:',
+          valueGetter: () => currentTemp,
+          textStyle: textStyle,
         ),
+        LabelWithDoubleState(
+          label: 'External Temp:',
+          valueGetter: () => extTemp,
+          textStyle: textStyle,
+        ),
+        LabelWithDoubleState(
+            label: 'Current Set Temp:',
+            valueGetter: () => setTemp,
+    textStyle: textStyle,
+        ),
+        requestOutstanding
+            ? LabelWithDoubleState(
+                label: 'Requested Set Temp:',
+                valueGetter: () => requestedTemp,
+          textStyle: textStyle,
+              )
+            : const SizedBox(
+                height: 10,
+              ),
+        const SizedBox(
+          height: 10,
+        ),
+        const SizedBox(height: 16.0),
         SliderWithRange(
             requestedTempGetter: () => requestedTemp,
             returnNewTemp: sendNewTemp),
@@ -162,6 +212,18 @@ class _ThermostatPageState extends State<ThermostatPage> {
             plusPressed: _incrementRequestedTemp),
         BoilerState(boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
         ShowDateTimeStamp(dateTimeStamp: new DateTime.now()),
+        const SizedBox(height: 32.0),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            RaisedButton(
+              child: Icon(Icons.refresh),
+              color: Colors.blue,
+              textColor: Colors.white,
+              onPressed: getStatus,
+            ),
+          ],
+        )
       ],
     );
     return returnWidget;
@@ -245,6 +307,7 @@ class SetTempButtonBar extends StatelessWidget {
         RaisedButton(
           child: Icon(Icons.arrow_downward),
 //                        tooltip: "Decrease Set Temp by 0.1 degree",
+          textColor: Colors.white,
           onPressed: minusPressed,
           color: Colors.blue,
         ),
@@ -253,6 +316,7 @@ class SetTempButtonBar extends StatelessWidget {
 //                      tooltip: "Increase Set Temp by 0.1 degree",
           onPressed: plusPressed,
           color: Colors.red,
+          textColor: Colors.white,
         )
       ],
     );
@@ -349,7 +413,7 @@ class SliderWithRange extends StatelessWidget {
 //                  width: 50.0,
           alignment: Alignment.center,
           padding: const EdgeInsets.only(left: 8.0),
-          child: Text('10',
+          child: Text('10\u00B0C',
               style: Theme.of(context)
                   .textTheme
                   .display1
@@ -377,7 +441,7 @@ class SliderWithRange extends StatelessWidget {
 //                  width: 50.0,
           alignment: Alignment.center,
           padding: const EdgeInsets.only(right: 8.0),
-          child: Text('25',
+          child: Text('25\u00B0C',
               style: Theme.of(context)
                   .textTheme
                   .display1
@@ -388,36 +452,16 @@ class SliderWithRange extends StatelessWidget {
   }
 }
 
-class LabelWithDoubleStateOrBlank extends StatelessWidget {
-  LabelWithDoubleStateOrBlank(
-      {@required this.label, @required this.valueGetter, @required this.blank});
-
-  final String label;
-  final ValueGetter<double> valueGetter;
-  final bool blank;
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: blank ? 0.0 : 1.0,
-      child: LabelWithDoubleState(
-        label: label,
-        valueGetter: valueGetter,
-        fontSizeFactor: 0.5,
-      ),
-    );
-  }
-}
-
 class LabelWithDoubleState extends StatelessWidget {
   LabelWithDoubleState(
       {@required this.label,
       @required this.valueGetter,
-      this.fontSizeFactor = 1.0});
+      @required this.textStyle});
 
   final String label;
   final ValueGetter<double> valueGetter;
-  final double fontSizeFactor;
+//  final double fontSizeFactor;
+  final TextStyle textStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -441,10 +485,11 @@ class LabelWithDoubleState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                   child: Text(
                     label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .display1
-                        .apply(fontSizeFactor: fontSizeFactor),
+                      style: textStyle,
+//                    style: Theme.of(context)
+//                        .textTheme
+//                        .display1
+//                        .apply(fontSizeFactor: fontSizeFactor, ),
 //                    style: TextStyle(
 //                      fontSize: 18.0,
 //                      fontWeight: FontWeight.bold,
@@ -456,11 +501,12 @@ class LabelWithDoubleState extends StatelessWidget {
           ),
           Text(
             '${(valueGetter() == 100.0 ? '' : valueGetter().toStringAsFixed(1) + '\u00B0C')}',
-            style: Theme.of(context)
-                .textTheme
-                .display1
-                .apply(fontSizeFactor: fontSizeFactor),
-//            style: TextStyle(
+            style: textStyle,
+//            Theme.of(context)
+//                .textTheme
+//                .display1
+//                .apply(fontSizeFactor: fontSizeFactor),
+////            style: TextStyle(
 //              //color: Colors.grey[500],
 //              fontSize: 18.0,
 //            ),
@@ -524,7 +570,7 @@ class BoilerState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget _returnWidget;
-    TextStyle dispStyle = Theme.of(context).textTheme.display1;
+    TextStyle dispStyle = Theme.of(context).textTheme.title;
     if (boilerOn()) {
       _returnWidget = Container(
         padding: const EdgeInsets.all(10.0),
@@ -535,10 +581,8 @@ class BoilerState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
               child: Text(
                 "Boiler is On",
-                style: dispStyle.apply(color: Colors.green, fontSizeFactor: 0.5),
-//                    style: TextStyle(
-//                      fontSize: 18.0,
-//                      fontWeight: FontWeight.bold,
+                style:
+                    dispStyle.apply(color: Colors.green),
 //                    ),
               ),
             ),
@@ -556,11 +600,7 @@ class BoilerState extends StatelessWidget {
                           child: Text(
                             "Mins to Set Temp:",
                             style: dispStyle.apply(
-                                color: Colors.green, fontSizeFactor: 0.5),
-                            //                    style: TextStyle(
-                            //                      fontSize: 18.0,
-                            //                      fontWeight: FontWeight.bold,
-                            //                    ),
+                                color: Colors.green),
                           ),
                         )
                       ],
@@ -569,11 +609,7 @@ class BoilerState extends StatelessWidget {
                   Text(
                     '${minsToTemp()}',
                     style: dispStyle.apply(
-                        color: Colors.green, fontSizeFactor: 0.5),
-                    //            style: TextStyle(
-                    //              //color: Colors.grey[500],
-                    //              fontSize: 18.0,
-                    //            ),
+                        color: Colors.green),
                   ),
                 ],
               ),
@@ -596,7 +632,8 @@ class BoilerState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                     child: Text(
                       "Boiler is Off",
-                      style: dispStyle.apply(color: Colors.red, fontSizeFactor: 0.5),
+                      style: dispStyle.apply(
+                          color: Colors.red),
 //                    style: TextStyle(
 //                      fontSize: 18.0,
 //                      fontWeight: FontWeight.bold,
