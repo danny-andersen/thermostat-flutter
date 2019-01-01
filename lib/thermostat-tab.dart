@@ -29,15 +29,18 @@ class ColorByTemp {
       returnColor = Colors.blue;
     else if (temp <= maxYellow)
       returnColor = Colors.yellow;
-    else if (temp <= maxOrange) returnColor = Colors.orange;
-    else if (temp <= maxRed) returnColor = Colors.red;
+    else if (temp <= maxOrange)
+      returnColor = Colors.orange;
+    else if (temp <= maxRed)
+      returnColor = Colors.red;
     else if (temp <= maxRed2) returnColor = Colors.red[600];
     return returnColor;
   }
 
   static charts.Color findActiveChartColor(double temp) {
     Color color = findActiveColor(temp);
-    return charts.Color(r: color.red, g: color.green, b: color.blue, a: color.alpha);
+    return charts.Color(
+        r: color.red, g: color.green, b: color.blue, a: color.alpha);
   }
 
   static Color findInActiveColor(double temp) {
@@ -233,7 +236,8 @@ class _ThermostatPageState extends State<ThermostatPage> {
         // Set a label accessor to control the text of the bar label.
         labelAccessorFn: (TypeTemp tempByType, _) =>
             '${tempByType.type}: ${tempByType.temp.toStringAsFixed(1)}\u00B0C',
-        fillColorFn: (TypeTemp tempByType, _) => ColorByTemp.findActiveChartColor(tempByType.temp),
+        fillColorFn: (TypeTemp tempByType, _) =>
+            ColorByTemp.findActiveChartColor(tempByType.temp),
         insideLabelStyleAccessorFn: (TypeTemp tempByTemp, _) {
           return new charts.TextStyleSpec(
               fontSize: 18, color: charts.MaterialPalette.white);
@@ -254,9 +258,8 @@ class _ThermostatPageState extends State<ThermostatPage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
-    final TextStyle textStyle = Theme.of(context).textTheme.title;
-    Widget returnWidget = ListView(
-      children: [
+//    final TextStyle textStyle = Theme.of(context).textTheme.title;
+    Widget returnWidget = ListView(children: [
 //        LabelWithDoubleState(
 //          label: 'House Temp:',
 //          valueGetter: () => currentTemp,
@@ -281,33 +284,46 @@ class _ThermostatPageState extends State<ThermostatPage> {
 //            : const SizedBox(
 //                height: 10,
 //              ),
-        Container(
-          height: 250,
-          child: HorizontalBarLabelCustomChart(createChartSeries()),
-        ),
-        const SizedBox(height: 16.0),
-        SliderWithRange(
-            requestedTempGetter: () => requestedTemp,
-            returnNewTemp: sendNewTemp),
-        SetTempButtonBar(
-            minusPressed: _decRequestedTemp,
-            plusPressed: _incrementRequestedTemp),
-        BoilerState(boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
-        ShowDateTimeStamp(dateTimeStamp: new DateTime.now()),
-        const SizedBox(height: 32.0),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            RaisedButton(
-              child: Icon(Icons.refresh),
-              color: Colors.blue,
-              textColor: Colors.white,
-              onPressed: getStatus,
-            ),
-          ],
-        ),
-      ],
-    );
+      Container(
+        height: 250,
+        child:
+            HorizontalBarLabelCustomChart(createChartSeries(), animate: false),
+      ),
+      const SizedBox(height: 16.0),
+      SliderWithRange(
+          requestedTempGetter: () => requestedTemp, returnNewTemp: sendNewTemp),
+      SetTempButtonBar(
+          minusPressed: _decRequestedTemp,
+          plusPressed: _incrementRequestedTemp),
+      BoilerState(boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
+      const SizedBox(height: 16.0),
+      ShowDateTimeStamp(dateTimeStamp: new DateTime.now()),
+//        const SizedBox(height: 32.0),
+//        Row(
+//          mainAxisAlignment: MainAxisAlignment.center,
+//          children: <Widget>[
+//            RaisedButton(
+//              child: Icon(Icons.refresh),
+//              color: Colors.blue,
+//              textColor: Colors.white,
+//              onPressed: getStatus,
+//            ),
+//          ],
+//        ),
+      FloatingActionButton(
+        onPressed: getStatus,
+        tooltip: 'Refresh',
+//          shape: StadiumBorder(),
+        child: Icon(Icons.refresh),
+      ),
+
+//        FloatingActionButton.extended(
+//            onPressed: getStatus,
+//            tooltip: 'Refresh',
+//            label: Text('Refresh'),
+//            icon: Icon(Icons.refresh),
+//          ),
+    ]);
     return returnWidget;
   }
 }
