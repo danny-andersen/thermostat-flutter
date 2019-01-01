@@ -1,8 +1,55 @@
-import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:charts_flutter/flutter.dart' as charts;
+
 import 'dropbox-api.dart';
+
+class TypeTemp {
+  final String type;
+  final double temp;
+
+  TypeTemp(this.type, this.temp);
+}
+
+class ColorByTemp {
+  static final double maxDarkBlue = 5.0;
+  static final double maxBlue = 15.0;
+  static final double maxYellow = 17.0;
+  static final double maxOrange = 19.0;
+  static final double maxRed = 20.0;
+  static final double maxRed2 = 21.0;
+
+  static Color findActiveColor(double temp) {
+    Color returnColor = Colors.red[700];
+    if (temp <= maxDarkBlue)
+      returnColor = Colors.indigo;
+    else if (temp <= maxBlue)
+      returnColor = Colors.blue;
+    else if (temp <= maxYellow)
+      returnColor = Colors.yellow;
+    else if (temp <= maxOrange) returnColor = Colors.orange;
+    else if (temp <= maxRed) returnColor = Colors.red;
+    else if (temp <= maxRed2) returnColor = Colors.red[600];
+    return returnColor;
+  }
+
+  static charts.Color findActiveChartColor(double temp) {
+    Color color = findActiveColor(temp);
+    return charts.Color(r: color.red, g: color.green, b: color.blue, a: color.alpha);
+  }
+
+  static Color findInActiveColor(double temp) {
+    Color returnColor = Colors.red;
+    if (temp <= maxBlue)
+      returnColor = Colors.amber;
+    else if (temp <= maxYellow)
+      returnColor = Colors.orange;
+    else if (temp <= maxOrange) returnColor = Colors.red;
+    return returnColor;
+  }
+}
 
 class ThermostatPage extends StatefulWidget {
   ThermostatPage({@required this.oauthToken}) : super();
@@ -33,6 +80,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   double extTemp = 100.0;
   double setTemp = 0.0;
   double requestedTemp = 0.0;
+
   bool requestOutstanding = false;
   bool boilerOn = true;
   int minsToSetTemp = 0;
@@ -129,8 +177,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           } else if (line.startsWith('Current set temp:')) {
             try {
               setTemp = double.parse(line.split(':')[1].trim());
-              print(
-                  "Req Temp: $requestedTemp, request out? $requestOutstanding");
+//              print("Req Temp: $requestedTemp, request out? $requestOutstanding");
               if (requestedTemp.toStringAsFixed(1) ==
                   setTemp.toStringAsFixed(1)) {
                 requestOutstanding = false;
@@ -165,6 +212,40 @@ class _ThermostatPageState extends State<ThermostatPage> {
     }
   }
 
+  List<charts.Series<TypeTemp, String>> createChartSeries() {
+    List<TypeTemp> data = [
+      new TypeTemp('House Temperature', currentTemp),
+      new TypeTemp('Set Temperature', setTemp),
+    ];
+
+    if (requestedTemp != setTemp) {
+      data.add(
+        new TypeTemp('Requested Temperature', requestedTemp),
+      );
+    }
+    data.add(new TypeTemp('Outside Temperature', extTemp));
+    return [
+      new charts.Series<TypeTemp, String>(
+        id: 'Temperature',
+        domainFn: (TypeTemp tempByType, _) => tempByType.type,
+        measureFn: (TypeTemp tempByType, _) => tempByType.temp,
+        data: data,
+        // Set a label accessor to control the text of the bar label.
+        labelAccessorFn: (TypeTemp tempByType, _) =>
+            '${tempByType.type}: ${tempByType.temp.toStringAsFixed(1)}\u00B0C',
+        fillColorFn: (TypeTemp tempByType, _) => ColorByTemp.findActiveChartColor(tempByType.temp),
+        insideLabelStyleAccessorFn: (TypeTemp tempByTemp, _) {
+          return new charts.TextStyleSpec(
+              fontSize: 18, color: charts.MaterialPalette.white);
+        },
+        outsideLabelStyleAccessorFn: (TypeTemp tempByTemp, _) {
+          return new charts.TextStyleSpec(
+              fontSize: 18, color: charts.MaterialPalette.black);
+        },
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -176,32 +257,33 @@ class _ThermostatPageState extends State<ThermostatPage> {
     final TextStyle textStyle = Theme.of(context).textTheme.title;
     Widget returnWidget = ListView(
       children: [
-        LabelWithDoubleState(
-          label: 'House Temp:',
-          valueGetter: () => currentTemp,
-          textStyle: textStyle,
-        ),
-        LabelWithDoubleState(
-          label: 'External Temp:',
-          valueGetter: () => extTemp,
-          textStyle: textStyle,
-        ),
-        LabelWithDoubleState(
-            label: 'Current Set Temp:',
-            valueGetter: () => setTemp,
-    textStyle: textStyle,
-        ),
-        requestOutstanding
-            ? LabelWithDoubleState(
-                label: 'Requested Set Temp:',
-                valueGetter: () => requestedTemp,
-          textStyle: textStyle,
-              )
-            : const SizedBox(
-                height: 10,
-              ),
-        const SizedBox(
-          height: 10,
+//        LabelWithDoubleState(
+//          label: 'House Temp:',
+//          valueGetter: () => currentTemp,
+//          textStyle: textStyle,
+//        ),
+//        LabelWithDoubleState(
+//          label: 'Outside Temp:',
+//          valueGetter: () => extTemp,
+//          textStyle: textStyle,
+//        ),
+//        LabelWithDoubleState(
+//            label: 'Current Set Temp:',
+//            valueGetter: () => setTemp,
+//    textStyle: textStyle,
+//        ),
+//        requestOutstanding
+//            ? LabelWithDoubleState(
+//                label: 'Requested Set Temp:',
+//                valueGetter: () => requestedTemp,
+//          textStyle: textStyle,
+//              )
+//            : const SizedBox(
+//                height: 10,
+//              ),
+        Container(
+          height: 250,
+          child: HorizontalBarLabelCustomChart(createChartSeries()),
         ),
         const SizedBox(height: 16.0),
         SliderWithRange(
@@ -223,7 +305,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
               onPressed: getStatus,
             ),
           ],
-        )
+        ),
       ],
     );
     return returnWidget;
@@ -381,26 +463,6 @@ class SliderWithRange extends StatelessWidget {
   final double maxYellow = 17.0;
   final double maxOrange = 18.5;
 
-  Color findActiveColor() {
-    Color returnColor = Colors.red;
-    if (requestedTempGetter() <= maxBlue)
-      returnColor = Colors.blue;
-    else if (requestedTempGetter() <= maxYellow)
-      returnColor = Colors.yellow;
-    else if (requestedTempGetter() <= maxOrange) returnColor = Colors.orange;
-    return returnColor;
-  }
-
-  Color findInActiveColor() {
-    Color returnColor = Colors.red;
-    if (requestedTempGetter() <= maxBlue)
-      returnColor = Colors.amber;
-    else if (requestedTempGetter() <= maxYellow)
-      returnColor = Colors.orange;
-    else if (requestedTempGetter() <= maxOrange) returnColor = Colors.red;
-    return returnColor;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -426,8 +488,8 @@ class SliderWithRange extends StatelessWidget {
             min: 10.0,
             max: 25.0,
             divisions: 75,
-            activeColor: findActiveColor(),
-            inactiveColor: findInActiveColor(),
+            activeColor: ColorByTemp.findActiveColor(requestedTempGetter()),
+            inactiveColor: ColorByTemp.findInActiveColor(requestedTempGetter()),
             label: requestedTempGetter().toStringAsFixed(1),
             onChanged: (double newValue) {
               returnNewTemp(newValue, false);
@@ -485,7 +547,7 @@ class LabelWithDoubleState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                   child: Text(
                     label,
-                      style: textStyle,
+                    style: textStyle,
 //                    style: Theme.of(context)
 //                        .textTheme
 //                        .display1
@@ -581,8 +643,7 @@ class BoilerState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
               child: Text(
                 "Boiler is On",
-                style:
-                    dispStyle.apply(color: Colors.green),
+                style: dispStyle.apply(color: Colors.green),
 //                    ),
               ),
             ),
@@ -599,8 +660,7 @@ class BoilerState extends StatelessWidget {
                           //                  padding: const EdgeInsets.only(bottom: 8.0),
                           child: Text(
                             "Mins to Set Temp:",
-                            style: dispStyle.apply(
-                                color: Colors.green),
+                            style: dispStyle.apply(color: Colors.green),
                           ),
                         )
                       ],
@@ -608,8 +668,7 @@ class BoilerState extends StatelessWidget {
                   ),
                   Text(
                     '${minsToTemp()}',
-                    style: dispStyle.apply(
-                        color: Colors.green),
+                    style: dispStyle.apply(color: Colors.green),
                   ),
                 ],
               ),
@@ -632,8 +691,7 @@ class BoilerState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                     child: Text(
                       "Boiler is Off",
-                      style: dispStyle.apply(
-                          color: Colors.red),
+                      style: dispStyle.apply(color: Colors.red),
 //                    style: TextStyle(
 //                      fontSize: 18.0,
 //                      fontWeight: FontWeight.bold,
@@ -648,5 +706,28 @@ class BoilerState extends StatelessWidget {
       );
     }
     return _returnWidget;
+  }
+}
+
+class HorizontalBarLabelCustomChart extends StatelessWidget {
+  final List<charts.Series> seriesList;
+  final bool animate;
+
+  HorizontalBarLabelCustomChart(this.seriesList, {this.animate});
+
+  // The [BarLabelDecorator] has settings to set the text style for all labels
+  // for inside the bar and outside the bar. To be able to control each datum's
+  // style, set the style accessor functions on the series.
+  @override
+  Widget build(BuildContext context) {
+    return new charts.BarChart(
+      seriesList,
+      animate: animate,
+      vertical: false,
+      barRendererDecorator: new charts.BarLabelDecorator<String>(),
+      // Hide domain axis.
+      domainAxis:
+          new charts.OrdinalAxisSpec(renderSpec: new charts.NoneRenderSpec()),
+    );
   }
 }
