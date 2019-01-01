@@ -148,19 +148,68 @@ class _HolidayPageState extends State<HolidayPage> {
         fileToUpload: currentHolidayFile,
         contents: contents);
     sendDropBoxFile(
-        client: this.client,
-        oauthToken: this.oauthToken,
-        fileToUpload: holidayFile,
-        contents: contents);
+      client: this.client,
+      oauthToken: this.oauthToken,
+      fileToUpload: holidayFile,
+      contents: contents,
+      callback: notifyFileSent,
+      callbackMsg: 'New Holiday Schedule sent!',
+    );
     setState(() {
       refreshCurrent();
     });
   }
 
+  void cancelHoliday() {
+    StringBuffer buff = StringBuffer();
+    buff.writeln("Start,19,01,01,01");
+    buff.writeln("End,19,01,01,02");
+    buff.writeln("Temp,$holidayTemp");
+    String contents = buff.toString();
+    sendDropBoxFile(
+        client: this.client,
+        oauthToken: this.oauthToken,
+        fileToUpload: currentHolidayFile,
+        contents: contents);
+    sendDropBoxFile(
+        client: this.client,
+        oauthToken: this.oauthToken,
+        fileToUpload: holidayFile,
+        contents: contents,
+        callback: notifyFileSent,
+        callbackMsg: 'Holiday cancelled!');
+    setState(() {
+      refreshCurrent();
+    });
+  }
+
+  void notifyFileSent(String contents, String message) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return SimpleDialog(
+          title: Text(message),
+          children: <Widget>[
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [const Text('OK')],
+              ),
+            )
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     String title = 'Set Holiday dates';
-    final textStyle =  Theme.of(context).textTheme.title;
+    final textStyle = Theme.of(context).textTheme.title;
     if (onHoliday) {
       title = 'On holiday! Change dates to reset';
     } else if (holidaySet) {
@@ -223,8 +272,11 @@ class _HolidayPageState extends State<HolidayPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             RaisedButton(
-              child: Icon(Icons.remove, color: Colors.white,),
-//                      tooltip: "Increase holiday time by 1 hour",
+              child: Icon(
+                Icons.remove,
+                color: Colors.white,
+              ),
+              elevation: 15,
               onPressed: minusPressed,
               color: Colors.blue,
             ),
@@ -237,8 +289,11 @@ class _HolidayPageState extends State<HolidayPage> {
 //                  .apply(fontSizeFactor: 0.5),
             ),
             RaisedButton(
-              child: Icon(Icons.add, color: Colors.white,),
-//                        tooltip: "Decrease holiday time by 1 hour",
+              child: Icon(
+                Icons.add,
+                color: Colors.white,
+              ),
+            elevation: 15,
               onPressed: plusPressed,
               color: Colors.blue,
             ),
@@ -247,10 +302,35 @@ class _HolidayPageState extends State<HolidayPage> {
         const SizedBox(height: 32.0),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
           RaisedButton(
-            child: Text("Send", style: textStyle.apply(color: Colors.white,), ),
+            child: Text(
+              "Send New Holiday Schedule",
+              style: textStyle.apply(
+                color: Colors.white,
+              ),
+            ),
             onPressed: sendNewHoliday,
+            elevation: 15,
             color: Colors.blue,
-                  )
+          )
+        ]),
+        const SizedBox(height: 32.0),
+        Text(
+          'OR:',
+          style: textStyle,
+        ),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+          RaisedButton(
+            child: Text(
+              "Cancel",
+              style: textStyle.apply(
+                color: Colors.white,
+              ),
+            ),
+            onPressed: holidaySet ? cancelHoliday : null,
+            color: Colors.blue,
+            disabledElevation: 10,
+            elevation: 15,
+          )
         ]),
       ],
     );

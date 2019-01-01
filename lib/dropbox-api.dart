@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:meta/meta.dart';
 
-getDropBoxFile(
-{HttpClient client,
-  String oauthToken,
-  String fileToDownload,
-  Function callback,
+getDropBoxFile({
+  @required HttpClient client,
+  @required String oauthToken,
+  @required String fileToDownload,
+  @required Function callback,
 }) {
   final Uri downloadUri =
       Uri.parse("https://content.dropboxapi.com/2/files/download");
@@ -27,12 +28,16 @@ getDropBoxFile(
   }
 }
 
-sendDropBoxFile({HttpClient client,
-String oauthToken,
-String fileToUpload,
-String contents,
+sendDropBoxFile({
+  @required HttpClient client,
+  @required String oauthToken,
+  @required String fileToUpload,
+  @required String contents,
+  Function callback,
+  String callbackMsg,
 }) {
-  final Uri uploadUri =  Uri.parse("https://content.dropboxapi.com/2/files/upload");
+  final Uri uploadUri =
+      Uri.parse("https://content.dropboxapi.com/2/files/upload");
 
   try {
     client.postUrl(uploadUri).then((HttpClientRequest request) {
@@ -43,9 +48,12 @@ String contents,
           .add(HttpHeaders.contentTypeHeader, "application/octet-stream");
       request.write(contents);
       return request.close();
-    }).then((HttpClientResponse response) {});
+    }).then((HttpClientResponse response) {
+      if (callback != null) {
+        callback(contents, callbackMsg);
+      }
+    });
   } on HttpException catch (he) {
     print("Got HttpException sending setTemp: " + he.toString());
   }
-
 }

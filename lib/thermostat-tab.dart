@@ -312,6 +312,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
 //        ),
       FloatingActionButton(
         onPressed: getStatus,
+        elevation: 15,
         tooltip: 'Refresh',
 //          shape: StadiumBorder(),
         child: Icon(Icons.refresh),
@@ -407,12 +408,14 @@ class SetTempButtonBar extends StatelessWidget {
 //                        tooltip: "Decrease Set Temp by 0.1 degree",
           textColor: Colors.white,
           onPressed: minusPressed,
+          elevation: 15,
           color: Colors.blue,
         ),
         RaisedButton(
           child: Icon(Icons.arrow_upward),
 //                      tooltip: "Increase Set Temp by 0.1 degree",
           onPressed: plusPressed,
+          elevation: 15,
           color: Colors.red,
           textColor: Colors.white,
         )
