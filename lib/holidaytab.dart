@@ -63,75 +63,81 @@ class _HolidayPageState extends State<HolidayPage> {
 //    print("Got current holiday: " + contents);
     DateTime newFromDate;
     DateTime newToDate;
-    setState(() {
-      contents.split('\n').forEach((line) {
-        List<String> fields = line.split(',');
-        if (line.startsWith('Start,')) {
-          holidaySet = true;
-          try {
-            newFromDate = DateTime(
-                (2000 + int.parse(fields[1])),
-                int.parse(fields[2]),
-                int.parse(fields[3]),
-                int.parse(fields[4]));
-          } on FormatException {
-            print("Received incorrect holiday start line: $line");
+    if (this.mounted) {
+      setState(() {
+        contents.split('\n').forEach((line) {
+          List<String> fields = line.split(',');
+          if (line.startsWith('Start,')) {
+            holidaySet = true;
+            try {
+              newFromDate = DateTime(
+                  (2000 + int.parse(fields[1])),
+                  int.parse(fields[2]),
+                  int.parse(fields[3]),
+                  int.parse(fields[4]));
+            } on FormatException {
+              print("Received incorrect holiday start line: $line");
+            }
+          } else if (line.startsWith('End,')) {
+            try {
+              newToDate = DateTime(
+                  (2000 + int.parse(fields[1])),
+                  int.parse(fields[2]),
+                  int.parse(fields[3]),
+                  int.parse(fields[4]));
+            } on FormatException {
+              print("Received incorrect holiday end line: $line");
+            }
+          } else if (line.startsWith('Temp,')) {
+            try {
+              holidayTemp = double.parse(fields[1]);
+            } on FormatException {
+              print("Couldn't parse temp double: $line");
+            }
           }
-        } else if (line.startsWith('End,')) {
-          try {
-            newToDate = DateTime(
-                (2000 + int.parse(fields[1])),
-                int.parse(fields[2]),
-                int.parse(fields[3]),
-                int.parse(fields[4]));
-          } on FormatException {
-            print("Received incorrect holiday end line: $line");
-          }
-        } else if (line.startsWith('Temp,')) {
-          try {
-            holidayTemp = double.parse(fields[1]);
-          } on FormatException {
-            print("Couldn't parse temp double: $line");
+        });
+        if (holidaySet) {
+          //Check if holiday period still active
+          if (newFromDate.isAfter(_fromDate)) {
+            //Holiday in future
+            _fromDate = newFromDate;
+            _fromTime = TimeOfDay(hour: _fromDate.hour, minute: 0);
+            _toDate = newToDate;
+            _toTime = TimeOfDay(hour: _toDate.hour, minute: 0);
+          } else if (newToDate.isAfter(_fromDate)) {
+            //On Holiday
+            onHoliday = true;
+          } else {
+            onHoliday = false;
+            holidaySet = false;
           }
         }
       });
-      if (holidaySet) {
-        //Check if holiday period still active
-        if (newFromDate.isAfter(_fromDate)) {
-          //Holiday in future
-          _fromDate = newFromDate;
-          _fromTime = TimeOfDay(hour: _fromDate.hour, minute: 0);
-          _toDate = newToDate;
-          _toTime = TimeOfDay(hour: _toDate.hour, minute: 0);
-        } else if (newToDate.isAfter(_fromDate)) {
-          //On Holiday
-          onHoliday = true;
-        } else {
-          onHoliday = false;
-          holidaySet = false;
-        }
-      }
-    });
+    }
   }
 
   void minusPressed() {
-    setState(() {
-      if (nextHours > 1) {
-        nextHours -= 1;
-        resetDates();
-        _toDate = _fromDate.add(Duration(hours: nextHours));
-        _toTime = TimeOfDay.fromDateTime(_toDate);
-      }
-    });
+    if (this.mounted) {
+      setState(() {
+        if (nextHours > 1) {
+          nextHours -= 1;
+          resetDates();
+          _toDate = _fromDate.add(Duration(hours: nextHours));
+          _toTime = TimeOfDay.fromDateTime(_toDate);
+        }
+      });
+    }
   }
 
   void plusPressed() {
-    setState(() {
-      nextHours += 1;
-      resetDates();
-      _toDate = _fromDate.add(Duration(hours: nextHours));
-      _toTime = TimeOfDay.fromDateTime(_toDate);
-    });
+    if (this.mounted) {
+      setState(() {
+        nextHours += 1;
+        resetDates();
+        _toDate = _fromDate.add(Duration(hours: nextHours));
+        _toTime = TimeOfDay.fromDateTime(_toDate);
+      });
+    }
   }
 
   void sendNewHoliday() {
@@ -155,9 +161,11 @@ class _HolidayPageState extends State<HolidayPage> {
       callback: notifyFileSent,
       callbackMsg: 'New Holiday Schedule sent!',
     );
-    setState(() {
-      refreshCurrent();
-    });
+    if (this.mounted) {
+      setState(() {
+        refreshCurrent();
+      });
+    }
   }
 
   void cancelHoliday() {
@@ -178,9 +186,11 @@ class _HolidayPageState extends State<HolidayPage> {
         contents: contents,
         callback: notifyFileSent,
         callbackMsg: 'Holiday cancelled!');
-    setState(() {
-      refreshCurrent();
-    });
+    if (this.mounted) {
+      setState(() {
+        refreshCurrent();
+      });
+    }
   }
 
   void notifyFileSent(String contents, String message) {

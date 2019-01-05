@@ -155,20 +155,22 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void processSetTemp(String contents) {
-    try {
-      setState(() {
-        requestedTemp = double.parse(contents.trim());
-        if (requestedTemp.toStringAsFixed(1) != setTemp.toStringAsFixed(1)) {
-          requestOutstanding = true;
-        }
-      });
-    } on FormatException {
-      //Do nothing - no setTemp file exists
+    if (this.mounted) {
+      try {
+        setState(() {
+          requestedTemp = double.parse(contents.trim());
+          if (requestedTemp.toStringAsFixed(1) != setTemp.toStringAsFixed(1)) {
+            requestOutstanding = true;
+          }
+        });
+      } on FormatException {
+        //Do nothing - no setTemp file exists
+      }
     }
   }
 
   void processStatus(String contents) {
-    if (mounted) {
+    if (this.mounted) {
       setState(() {
         contents.split('\n').forEach((line) {
           if (line.startsWith('Current temp:')) {
@@ -217,16 +219,16 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   List<charts.Series<TypeTemp, String>> createChartSeries() {
     List<TypeTemp> data = [
-      new TypeTemp('House Temperature', currentTemp),
-      new TypeTemp('Set Temperature', setTemp),
+      new TypeTemp('House', currentTemp),
+      new TypeTemp('Thermostat', setTemp),
     ];
 
     if (requestedTemp != setTemp) {
       data.add(
-        new TypeTemp('Requested Temperature', requestedTemp),
+        new TypeTemp('Requested', requestedTemp),
       );
     }
-    data.add(new TypeTemp('Outside Temperature', extTemp));
+    data.add(new TypeTemp('Outside', extTemp));
     return [
       new charts.Series<TypeTemp, String>(
         id: 'Temperature',
@@ -285,9 +287,19 @@ class _ThermostatPageState extends State<ThermostatPage> {
 //                height: 10,
 //              ),
       Container(
+                  padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+      child: Text(
+      'Temperature Chart',
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+    ),
+      ),
+        Container(
         height: 250,
         child:
-            HorizontalBarLabelCustomChart(createChartSeries(), animate: false),
+            TemperatureChart(createChartSeries(), animate: false),
       ),
       const SizedBox(height: 16.0),
       SliderWithRange(
@@ -728,11 +740,11 @@ class BoilerState extends StatelessWidget {
   }
 }
 
-class HorizontalBarLabelCustomChart extends StatelessWidget {
+class TemperatureChart extends StatelessWidget {
   final List<charts.Series> seriesList;
   final bool animate;
 
-  HorizontalBarLabelCustomChart(this.seriesList, {this.animate});
+  TemperatureChart(this.seriesList, {this.animate});
 
   // The [BarLabelDecorator] has settings to set the text style for all labels
   // for inside the bar and outside the bar. To be able to control each datum's
