@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/services.dart' show rootBundle;
 import 'holidaytab.dart';
 import 'thermostat-tab.dart';
+import 'schedule-tab.dart';
 
 void main() => runApp(MyApp());
 
@@ -55,7 +56,7 @@ class MyAppState extends State<MyApp> {
             children: [
               ThermostatPage(oauthToken: this.oauthToken),
               HolidayPage(oauthToken: this.oauthToken),
-              Icon(Icons.directions_bike),
+              SchedulePage(oauthToken: this.oauthToken),
             ],
           ),
 //          floatingActionButton: FloatingActionButton(
@@ -70,7 +71,7 @@ class MyAppState extends State<MyApp> {
 
   @override
   void initState() {
-    print("Loading API KEY");
+//    print("Loading API KEY");
     Future<Secret> secret =
         SecretLoader(secretPath: "assets/api-key.json").load();
     secret.then((Secret secret) {

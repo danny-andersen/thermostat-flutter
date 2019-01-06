@@ -120,7 +120,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   void sendNewTemp(double temp, bool send) {
     if (send) {
       String contents = requestedTemp.toStringAsFixed(1) + "\n";
-      sendDropBoxFile(
+      DropBoxAPIFn.sendDropBoxFile(
           client: this.client,
           oauthToken: this.oauthToken,
           fileToUpload: setTempFile,
@@ -139,7 +139,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void getStatus() {
-    getDropBoxFile(
+    DropBoxAPIFn.getDropBoxFile(
         client: this.client,
         oauthToken: this.oauthToken,
         fileToDownload: this.statusFile,
@@ -147,7 +147,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void getSetTemp() {
-    getDropBoxFile(
+    DropBoxAPIFn.getDropBoxFile(
         client: this.client,
         oauthToken: this.oauthToken,
         fileToDownload: this.setTempFile,

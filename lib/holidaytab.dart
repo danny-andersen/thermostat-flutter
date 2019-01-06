@@ -40,7 +40,7 @@ class _HolidayPageState extends State<HolidayPage> {
 
   void refreshCurrent() {
     //Retrieve any current holiday dates
-    getDropBoxFile(
+    DropBoxAPIFn.getDropBoxFile(
         client: this.client,
         oauthToken: this.oauthToken,
         fileToDownload: this.currentHolidayFile,
@@ -148,12 +148,12 @@ class _HolidayPageState extends State<HolidayPage> {
         "End,${_toDate.year - 2000},${_toDate.month},${_toDate.day},${_toTime.hour}");
     buff.writeln("Temp,$holidayTemp");
     String contents = buff.toString();
-    sendDropBoxFile(
+    DropBoxAPIFn.sendDropBoxFile(
         client: this.client,
         oauthToken: this.oauthToken,
         fileToUpload: currentHolidayFile,
         contents: contents);
-    sendDropBoxFile(
+    DropBoxAPIFn.sendDropBoxFile(
       client: this.client,
       oauthToken: this.oauthToken,
       fileToUpload: holidayFile,
@@ -174,12 +174,12 @@ class _HolidayPageState extends State<HolidayPage> {
     buff.writeln("End,19,01,01,02");
     buff.writeln("Temp,$holidayTemp");
     String contents = buff.toString();
-    sendDropBoxFile(
+    DropBoxAPIFn.sendDropBoxFile(
         client: this.client,
         oauthToken: this.oauthToken,
         fileToUpload: currentHolidayFile,
         contents: contents);
-    sendDropBoxFile(
+    DropBoxAPIFn.sendDropBoxFile(
         client: this.client,
         oauthToken: this.oauthToken,
         fileToUpload: holidayFile,
