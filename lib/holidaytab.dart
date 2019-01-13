@@ -4,23 +4,24 @@ import 'dart:io';
 import 'dropbox-api.dart';
 
 class HolidayPage extends StatefulWidget {
-  HolidayPage({@required this.oauthToken});
+  HolidayPage({@required this.client, @required this.oauthToken});
 
   final String oauthToken;
+  final HttpClient client;
 
   @override
-  State createState() => _HolidayPageState(oauthToken: oauthToken);
+  State createState() => _HolidayPageState(client: this.client, oauthToken: oauthToken);
 }
 
 class _HolidayPageState extends State<HolidayPage> {
-  _HolidayPageState({@required this.oauthToken});
+  _HolidayPageState({@required this.client, @required this.oauthToken});
 
   final String oauthToken;
+  final HttpClient client;
   final Uri downloadUri =
       Uri.parse("https://content.dropboxapi.com/2/files/download");
   final String currentHolidayFile = "/holiday.txt.current";
   final String holidayFile = "/holiday.txt";
-  HttpClient client = new HttpClient();
 
   DateTime _fromDate;
   TimeOfDay _fromTime;
@@ -37,6 +38,8 @@ class _HolidayPageState extends State<HolidayPage> {
     refreshCurrent();
     super.initState();
   }
+
+
 
   void refreshCurrent() {
     //Retrieve any current holiday dates

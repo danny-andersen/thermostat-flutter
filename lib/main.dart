@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'holidaytab.dart';
 import 'thermostat-tab.dart';
@@ -15,6 +16,7 @@ class MyApp extends StatefulWidget {
 
 class MyAppState extends State<MyApp> {
   String oauthToken = "API KEY IS BLANK";
+  final HttpClient client = new HttpClient();
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -54,9 +56,9 @@ class MyAppState extends State<MyApp> {
           ),
           body: TabBarView(
             children: [
-              ThermostatPage(oauthToken: this.oauthToken),
-              HolidayPage(oauthToken: this.oauthToken),
-              SchedulePage(oauthToken: this.oauthToken),
+              ThermostatPage(client: this.client, oauthToken: this.oauthToken),
+              HolidayPage(client: this.client, oauthToken: this.oauthToken),
+              SchedulePage(client: this.client, oauthToken: this.oauthToken),
             ],
           ),
 //          floatingActionButton: FloatingActionButton(
@@ -81,6 +83,13 @@ class MyAppState extends State<MyApp> {
     });
     super.initState();
   }
+
+  @override
+  void dispose() {
+    client.close();
+    super.dispose();
+  }
+
 }
 
 class SecretLoader {

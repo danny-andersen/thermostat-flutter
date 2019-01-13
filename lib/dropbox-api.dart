@@ -64,7 +64,7 @@ class DropBoxAPIFn {
         });
       });
     } on HttpException catch (he) {
-      print("Got HttpException getting status: " + he.toString());
+      print("Got HttpException downloading file: " + he.toString());
     }
   }
 
@@ -94,7 +94,7 @@ class DropBoxAPIFn {
         }
       });
     } on HttpException catch (he) {
-      print("Got HttpException sending setTemp: " + he.toString());
+      print("Got HttpException sending file: " + he.toString());
     }
   }
 
@@ -116,12 +116,12 @@ class DropBoxAPIFn {
       }).then((HttpClientResponse response) {
         response.transform(utf8.decoder).listen((contents) {
 //          print('Got response:');
-          print(contents);
+//          print(contents);
           callback(new FileListing.fromJson(jsonDecode(contents)));
         });
       });
     } on HttpException catch (he) {
-      print("Got HttpException sending setTemp: " + he.toString());
+      print("Got HttpException during search: " + he.toString());
     }
   }
 }

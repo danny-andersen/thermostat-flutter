@@ -55,30 +55,22 @@ class ColorByTemp {
 }
 
 class ThermostatPage extends StatefulWidget {
-  ThermostatPage({@required this.oauthToken}) : super();
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  ThermostatPage({@required this.client, @required this.oauthToken}) : super();
 
   final String oauthToken;
+  final HttpClient client;
 
   @override
   _ThermostatPageState createState() =>
-      _ThermostatPageState(oauthToken: this.oauthToken);
+      _ThermostatPageState(client: this.client, oauthToken: this.oauthToken);
 }
 
 class _ThermostatPageState extends State<ThermostatPage> {
-  _ThermostatPageState({@required this.oauthToken});
+  _ThermostatPageState({@required this.client, @required this.oauthToken});
   final String oauthToken;
+  final HttpClient client;
   final String statusFile = "/thermostat_status.txt";
   final String setTempFile = "/setTemp.txt";
-  HttpClient client = new HttpClient();
   double currentTemp = 0.0;
   double extTemp = 100.0;
   double setTemp = 0.0;
@@ -228,7 +220,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
         new TypeTemp('Requested', requestedTemp),
       );
     }
-    data.add(new TypeTemp('Outside', extTemp));
+    if (extTemp != 100.0) {
+      data.add(new TypeTemp('Outside', extTemp));
+    }
     return [
       new charts.Series<TypeTemp, String>(
         id: 'Temperature',
