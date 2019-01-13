@@ -105,7 +105,7 @@ class SchedulePageState extends State<SchedulePage> {
   void generateHourTempSeries(String day) {
     List<ScheduleDay> dayEntries = this.selectedSchedule.filterEntriesByDayRange(day);
     List<TempByHour> tempPoints = Schedule.generateTempByHourForEntries(dayEntries);
-    tempPoints.forEach((th) => print("Time: ${th.hour} Temp: ${th.temperature}"));
+//    tempPoints.forEach((th) => print("Time: ${th.hour} Temp: ${th.temperature}"));
     hourTempSeries = PointsLineChart.createSeries(tempPoints);
   }
 

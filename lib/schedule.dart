@@ -10,7 +10,7 @@ class TempByHour {
   factory TempByHour.from(DateTime time, temp) {
     String tStr = sprintf("%2i%02i", [time.hour, time.minute]);
     int hour = int.parse(tStr);
-    print ('${time.toString()} : $tStr : $hour');
+//    print ('${time.toString()} : $tStr : $hour');
     return TempByHour(hour, temp);
   }
 }
@@ -118,7 +118,7 @@ class Schedule {
   //For each 15 mins, work out what the temperature is for the filtered list given
   static List<TempByHour> generateTempByHourForEntries(List<ScheduleDay> entries) {
     DateTime currentTime = DateTime(2000, 1,1,0,0);
-    DateTime end = DateTime(2000, 1,1, 24, 1);
+    DateTime end = DateTime(2000, 1,1, 23, 59);
     //Sort entries by precedence so that most precedence (lower number) is last
     entries.sort((a, b) => b.getPrecedence().compareTo(a.getPrecedence()));
     List<TempByHour> retEntries = List();
@@ -135,6 +135,7 @@ class Schedule {
       currentTime = newTime;
       currentTemp = newTemp;
     } while (currentTime.isBefore(end));
+    retEntries.add(TempByHour.from(end, currentTemp));
     return retEntries;
   }
 
