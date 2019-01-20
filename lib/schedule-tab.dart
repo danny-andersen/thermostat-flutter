@@ -1,7 +1,5 @@
-/// Line chart example
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'dart:io';
 import 'dropbox-api.dart';
 import 'schedule.dart';
@@ -32,6 +30,8 @@ class SchedulePageState extends State<SchedulePage> {
   List<DropdownMenuItem<ScheduleEntry>> scheduleEntries;
   Schedule selectedSchedule;
   List<DropdownMenuItem<String>> scheduleDays;
+  ScheduleDay selectedScheduleTimeRange;
+  List<DropdownMenuItem<ScheduleDay>> timeRanges;
   String selectedDayRange;
   List<charts.Series> hourTempSeries;
   bool showNowEnabled = false;
@@ -43,6 +43,12 @@ class SchedulePageState extends State<SchedulePage> {
     showNowEnabled = false;
     hourTempSeries = PointsLineChart.createSeries(
         [TempByHour(0, 10.0), TempByHour(2400, 10.0)]);
+//    this.scheduleEntries = List();
+//    this.scheduleEntries.add(DropdownMenuItem<ScheduleEntry>(value: null, child: Text('     ')));
+//    this.scheduleDays = List();
+//    this.scheduleDays.add(DropdownMenuItem<String>(value: null, child: Text('     ')));
+//    this.timeRanges = List();
+//    this.timeRanges.add(DropdownMenuItem<ScheduleDay>(value: null, child: Text('     ')));
     super.initState();
   }
 
@@ -113,6 +119,16 @@ class SchedulePageState extends State<SchedulePage> {
     setState(() {
       this.selectedDayRange = day;
       generateHourTempSeries(day);
+      this.timeRanges = getScheduleTimes();
+      this.selectedScheduleTimeRange = this.selectedSchedule.filterEntriesByDayRange(day)[0];
+//      print (this.selectedScheduleTimeRange .getStartToEndStr());
+    });
+  }
+
+  void timeRangeSelected(ScheduleDay day) {
+    setState(() {
+      this.selectedScheduleTimeRange = day;
+      print (this.selectedScheduleTimeRange .getStartToEndStr());
     });
   }
 
@@ -136,85 +152,141 @@ class SchedulePageState extends State<SchedulePage> {
     );
   }
 
+  void onChartSelectionChanged(charts.SelectionModel model) {
+    final selectedDatum = model.selectedDatum;
+    ScheduleDay selectedDay;
+    if (selectedDatum.isNotEmpty) {
+      String timeStr =
+          TempByHour.hourFormat.format(selectedDatum.first.datum.hour);
+      DateTime dtime = DateTime(2000, 1, 1, int.parse(timeStr.substring(0, 2)),
+          int.parse(timeStr.substring(2, 4)));
+      double temp = selectedDatum.first.datum.temperature;
+      print('$timeStr : $temp');
+      selectedSchedule.days.forEach((day) {
+        if (day.isInTimeRange(dtime, temp)) {
+          selectedDay = day;
+        }
+      });
+    }
+    setState(() {
+      this.selectedScheduleTimeRange = selectedDay;
+      this.timeRanges = getScheduleTimes();
+//      print (selectedDay.getStartToEndStr());
+    });
+  }
+
+  List<DropdownMenuItem<ScheduleDay>> getScheduleTimes() {
+    List<DropdownMenuItem<ScheduleDay>> retList = List();
+    selectedSchedule.days.forEach((day) => retList.add(DropdownMenuItem<ScheduleDay>(value: day,
+      child: new Text(day.getStartToEndStr()),
+    )));
+    return retList;
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget returnWidget = ListView(children: [
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.only(top: 10.0),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+            padding: const EdgeInsets.only(top: 8.0),
             child: RaisedButton(
               child: Text('Show current schedule'),
               elevation: 5,
               onPressed: showNowEnabled ? showNowSchedule : null,
 //              color: Colors.blue,
-            ),
-          )
-        ],
-      ),
-      Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.only(top: 10.0, bottom: 16.0),
-              child: Text(
-                'Or select a schedule to view/modify:',
-                style: Theme.of(context).textTheme.body1,
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.only(left: 20.0, right: 20.0),
-              child: DropdownButton<ScheduleEntry>(
-                items: scheduleEntries,
-                onChanged: scheduleSelected,
-                elevation: 25,
-                isExpanded: true,
-                value: this.selectedScheduleEntry,
-                isDense: true,
-                style: Theme.of(context).textTheme.subtitle,
-              ),
-            ),
-          ]),
-      Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.only(top: 10.0, bottom: 16.0),
-              child: Text(
-                'Select Day Range to show:',
-                style: Theme.of(context).textTheme.body1,
-              ),
-            ),
-            Container(
-              padding:
-                  const EdgeInsets.only(left: 20.0, right: 20.0, bottom: 30.0),
-              child: DropdownButton<String>(
-                items: scheduleDays,
-                onChanged: daySelected,
-                elevation: 25,
-                isExpanded: true,
-                value: this.selectedDayRange,
-                isDense: true,
-                style: Theme.of(context).textTheme.subtitle,
-              ),
-            ),
-          ]),
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
+            )),
+      ]),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Container(
+          padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 10.0),
+          child: Text(
+            'Or select a schedule to view/modify:',
+            style: Theme.of(context).textTheme.body1,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.only(right: 8.0),
+          width: 100.0,
+          height: 24.0,
+          child: DropdownButton<ScheduleEntry>(
+            items: scheduleEntries,
+            onChanged: scheduleSelected,
+            elevation: 25,
+            isExpanded: true,
+            value: this.selectedScheduleEntry,
+            isDense: true,
+            style: Theme.of(context).textTheme.subtitle,
+          ),
+        ),
+      ]),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Container(
+          padding: const EdgeInsets.only(left: 8.0, top: 15.0),
+          child: Text(
+            'Select Day Range to show: ',
+            style: Theme.of(context).textTheme.body1,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.only(right: 8.0),
+          width: 100.0,
+          height: 24.0,
+//          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width, maxHeight: 30),
+          child: DropdownButton<String>(
+            items: this.scheduleDays,
+            onChanged: daySelected,
+            elevation: 25,
+            isExpanded: true,
+            value: this.selectedDayRange,
+            isDense: false,
+            style: Theme.of(context).textTheme.subtitle,
+          ),
+        ),
+      ]),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
+            padding: const EdgeInsets.only(left: 3.0, top: 20.0, right: 0.0),
             height: 300.0,
-//            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
-            child: PointsLineChart(this.hourTempSeries),
+            width: MediaQuery.of(context).size.width,
+            //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
+            child:
+                PointsLineChart(this.hourTempSeries, onChartSelectionChanged),
+          ),
+        ],
+      ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Container(
+            padding: const EdgeInsets.only(left: 8.0, top: 15.0),
+            child: Text(
+              'Selected Time Range: ',
+              style: Theme.of(context).textTheme.body1,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.only(left: 8.0, top: 15.0),
+            width: 120.0,
+//            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width, minWidth: 50.0),
+            child: DropdownButton<ScheduleDay>(
+              items: this.timeRanges,
+              onChanged: timeRangeSelected,
+              elevation: 25,
+              isExpanded: true,
+              value: this.selectedScheduleTimeRange,
+              isDense: true,
+              style: Theme.of(context).textTheme.subtitle,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 8.0),
+            child: Text(
+              this.selectedScheduleTimeRange == null ?  '   ': 'Temp: ${this.selectedScheduleTimeRange.temperature}\u00B0C',
+              style: Theme.of(context).textTheme.body1,
+            ),
           ),
         ],
       ),
@@ -227,19 +299,15 @@ class SchedulePageState extends State<SchedulePage> {
 
 class PointsLineChart extends StatelessWidget {
   final List<charts.Series> seriesList;
-  final bool animate;
+  final Function onSelectionChanged;
 
-  static final NumberFormat domainFormat = new NumberFormat('0000', 'en_US');
-
-  PointsLineChart(this.seriesList, {this.animate});
+  PointsLineChart(this.seriesList, this.onSelectionChanged);
 
   /// Creates a [LineChart] with sample data and no transition.
   factory PointsLineChart.withSampleData() {
-    return new PointsLineChart(
-      _createSampleData(),
-      // Disable animations for image tests.
-      animate: true,
-    );
+    return new PointsLineChart(_createSampleData(), null
+        // Disable animations for image tests.
+        );
   }
 
   double getMaxValue() {
@@ -261,18 +329,20 @@ class PointsLineChart extends StatelessWidget {
   charts.RangeAnnotation getRangeAnnotation() {
     double minValue = getMinValue();
     List<charts.LineAnnotationSegment> lines = List();
-    int nowTime = TempByHour.from(DateTime.now(),0.0).hour;
+    int nowTime = TempByHour.from(DateTime.now(), 0.0).hour;
     lines.add(new charts.LineAnnotationSegment(
-        nowTime, charts.RangeAnnotationAxisType.domain,
-        strokeWidthPx: 30,
-//        color: charts.Color.fromHex('#ff0000');,
-        startLabel: domainFormat.format(nowTime)));
+      nowTime,
+      charts.RangeAnnotationAxisType.domain,
+      color: charts.MaterialPalette.red.shadeDefault,
+      startLabel: TempByHour.hourFormat.format(nowTime),
+      labelAnchor: charts.AnnotationLabelAnchor.middle,
+    ));
     for (charts.Series s in this.seriesList)
       for (TempByHour point in s.data)
         if (point.temperature != minValue)
           lines.add(new charts.LineAnnotationSegment(
               point.hour, charts.RangeAnnotationAxisType.domain,
-              startLabel: domainFormat.format(point.hour)));
+              startLabel: TempByHour.hourFormat.format(point.hour)));
     return new charts.RangeAnnotation(lines);
   }
 
@@ -281,7 +351,7 @@ class PointsLineChart extends StatelessWidget {
     double maxValue = getMaxValue();
     return new charts.LineChart(
       seriesList,
-      animate: animate,
+      animate: true,
       primaryMeasureAxis: new charts.NumericAxisSpec(
         viewport:
             new charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
@@ -294,9 +364,15 @@ class PointsLineChart extends StatelessWidget {
             new charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
         tickFormatterSpec:
             new charts.BasicNumericTickFormatterSpec.fromNumberFormat(
-                domainFormat),
+                TempByHour.hourFormat),
       ),
       defaultRenderer: new charts.LineRendererConfig(includePoints: true),
+      selectionModels: [
+        new charts.SelectionModelConfig(
+          type: charts.SelectionModelType.info,
+          changedListener: this.onSelectionChanged,
+        )
+      ],
       behaviors: [
         getRangeAnnotation(),
       ],

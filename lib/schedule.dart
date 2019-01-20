@@ -1,5 +1,6 @@
 import 'dropbox-api.dart';
 import 'package:sprintf/sprintf.dart';
+import 'package:intl/intl.dart';
 
 
 //Used to represent the schedule as a series of Time + Temp points in a graph
@@ -13,6 +14,8 @@ class TempByHour {
 //    print ('${time.toString()} : $tStr : $hour');
     return TempByHour(hour, temp);
   }
+  static final NumberFormat hourFormat = new NumberFormat('0000', 'en_US');
+
 }
 
 //A schedule entry. This represents the temperature to set the thermostat
@@ -24,6 +27,32 @@ class ScheduleDay {
   final DateTime end; //End time
   final double temperature; //Temperature to set during the schedule
   ScheduleDay(this.dayRange, this.start, this.end, this.temperature);
+
+  static int dateTimeToHour(DateTime time) {
+    String tStr = sprintf("%2i%02i", [time.hour, time.minute]);
+    return int.parse(tStr);
+  }
+
+  String getStartAsStr() {
+    return TempByHour.hourFormat.format(dateTimeToHour(this.start));
+  }
+
+  String getEndAsStr() {
+    return TempByHour.hourFormat.format(dateTimeToHour(this.end));
+  }
+
+  String getStartToEndStr() {
+    return '${this.getStartAsStr()}-${this.getEndAsStr()}';
+  }
+
+
+  bool isInTimeRange(DateTime time, double temp) {
+//    print ("IN: $time start: $start ${this.start.isAtSameMomentAs(time)} end: $end temp in: ${this.temperature.toStringAsFixed(1).compareTo(temp.toStringAsFixed(1))}");
+    return ((
+        (this.start.isAtSameMomentAs(time) || this.end.isAtSameMomentAs(time))
+            || (time.isAfter(this.start) && time.isBefore(this.end)))
+        && this.temperature.toStringAsFixed(1).compareTo(temp.toStringAsFixed(1)) == 0);
+  }
 
   //Determine if the given day (or dayRange) is in the range of this entry
   bool isDayInRange(String day) {
