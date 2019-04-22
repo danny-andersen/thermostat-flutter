@@ -28,9 +28,18 @@ class ScheduleDay {
   final double temperature; //Temperature to set during the schedule
   ScheduleDay(this.dayRange, this.start, this.end, this.temperature);
 
+  static final zeroTime = DateTime(2000, 1, 1, 0, 0);
+
   static int dateTimeToHour(DateTime time) {
     String tStr = sprintf("%2i%02i", [time.hour, time.minute]);
     return int.parse(tStr);
+  }
+
+  static DateTime hourToDateTime(int hour) {
+    String hourStr = sprintf("%04i", [hour]);
+    return DateTime(2000, 1, 1,
+        int.parse(hourStr.substring(0, 2)),
+        int.parse(hourStr.substring(2, 4)));
   }
 
   String getStartAsStr() {
@@ -45,6 +54,9 @@ class ScheduleDay {
     return '${this.getStartAsStr()}-${this.getEndAsStr()}';
   }
 
+  bool isDefaultTimeRange() {
+    return this.start.isAtSameMomentAs(zeroTime) && this.end.isAtSameMomentAs(zeroTime);
+  }
 
   bool isInTimeRange(DateTime time, double temp) {
 //    print ("IN: $time start: $start ${this.start.isAtSameMomentAs(time)} end: $end temp in: ${this.temperature.toStringAsFixed(1).compareTo(temp.toStringAsFixed(1))}");
@@ -117,10 +129,16 @@ class ScheduleDay {
 class Schedule {
   //The dropbox file holding this schedule
   final ScheduleEntry file;
+  final String fileContents;
   //Each schedule consists of a list of <dayrange>,<start>,<stop>,<temp> tuples
   final List<ScheduleDay> days;
 
-  Schedule(this.file, this.days);
+  Schedule(this.file, this.days, this.fileContents);
+
+  Schedule copy() {
+    //Create a copy based on the original file
+    return Schedule.fromFile(this.file, this.fileContents);
+  }
 
   factory Schedule.fromFile(ScheduleEntry file, String contents) {
     List<ScheduleDay> entries = List();
@@ -142,7 +160,7 @@ class Schedule {
         entries.add(ScheduleDay(day, start, end, temp));
       }
     });
-    return Schedule(file, entries);
+    return Schedule(file, entries, contents);
   }
 
   //Returns the list of schedule entries that match this dayrange (or day)
