@@ -103,16 +103,20 @@ class _HolidayPageState extends State<HolidayPage> {
           //Check if holiday period still active
           if (newFromDate.isAfter(_fromDate)) {
             //Holiday in future
-            _fromDate = newFromDate;
-            _fromTime = TimeOfDay(hour: _fromDate.hour, minute: 0);
-            _toDate = newToDate;
-            _toTime = TimeOfDay(hour: _toDate.hour, minute: 0);
+            onHoliday = false;
           } else if (newToDate.isAfter(_fromDate)) {
             //On Holiday
             onHoliday = true;
           } else {
+            //Holiday in past - ignore
             onHoliday = false;
             holidaySet = false;
+          }
+          if (holidaySet) {
+            _fromDate = newFromDate;
+            _fromTime = TimeOfDay(hour: _fromDate.hour, minute: 0);
+            _toDate = newToDate;
+            _toTime = TimeOfDay(hour: _toDate.hour, minute: 0);
           }
         }
       });
