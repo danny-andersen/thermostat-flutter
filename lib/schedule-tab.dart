@@ -221,9 +221,9 @@ class SchedulePageState extends State<SchedulePage> {
       DateTime dtime = DateTime(2000, 1, 1, int.parse(timeStr.substring(0, 2)),
           int.parse(timeStr.substring(2, 4)));
       double temp = selectedDatum.first.datum.temperature;
-      print('$timeStr : $temp');
+//      print('$timeStr : $temp');
       selectedSchedule.filterEntriesByDayRange(this.selectedDayRange).forEach((day) {
-      if (day.isInTimeRange(dtime, temp)) {
+      if (day.isInTimeRange(dtime)) {
           selectedDay = day;
         } else if (day.isDefaultTimeRange())
           defaultDay = day;
@@ -235,6 +235,7 @@ class SchedulePageState extends State<SchedulePage> {
     setState(() {
       this.selectedScheduleTimeRange = selectedDay;
       this.timeRanges = getScheduleTimes();
+      generateHourTempSeries(this.selectedDayRange);
 //      print (selectedDay.getStartToEndStr());
     });
   }
@@ -486,13 +487,13 @@ class PointsLineChart extends StatelessWidget {
     return new charts.Series<TempByHour, int>(
         id: 'Scheduled',
         colorFn: ((TempByHour tempByHour, __) {
-      var color;
-      DateTime hourTime = ScheduleDay.hourToDateTime(tempByHour.hour);
-      if (selectedDay != null && selectedDay.isInTimeRange(hourTime, tempByHour.temperature)) {
-        color = charts.MaterialPalette.red.shadeDefault;
-      } else {
-        color = charts.MaterialPalette.blue.shadeDefault;
-      }
+          var color;
+          DateTime hourTime = ScheduleDay.hourToDateTime(tempByHour.hour);
+          if (selectedDay != null && selectedDay.isInTimeRange(hourTime)) {
+            color = charts.MaterialPalette.red.shadeDefault;
+          } else {
+            color = charts.MaterialPalette.blue.shadeDefault;
+          }
         return color;}),
         domainFn: (TempByHour tt, _) => tt.hour,
         measureFn: (TempByHour tt, _) => tt.temperature,

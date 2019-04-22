@@ -58,12 +58,11 @@ class ScheduleDay {
     return this.start.isAtSameMomentAs(zeroTime) && this.end.isAtSameMomentAs(zeroTime);
   }
 
-  bool isInTimeRange(DateTime time, double temp) {
+  bool isInTimeRange(DateTime time) {
 //    print ("IN: $time start: $start ${this.start.isAtSameMomentAs(time)} end: $end temp in: ${this.temperature.toStringAsFixed(1).compareTo(temp.toStringAsFixed(1))}");
-    return ((
+    return (
         (this.start.isAtSameMomentAs(time) || this.end.isAtSameMomentAs(time))
-            || (time.isAfter(this.start) && time.isBefore(this.end)))
-        && this.temperature.toStringAsFixed(1).compareTo(temp.toStringAsFixed(1)) == 0);
+            || (time.isAfter(this.start) && time.isBefore(this.end)));
   }
 
   //Determine if the given day (or dayRange) is in the range of this entry
