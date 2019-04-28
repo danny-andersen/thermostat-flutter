@@ -6,6 +6,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'holidaytab.dart';
 import 'thermostat-tab.dart';
 import 'schedule-tab.dart';
+import 'history-tab.dart';
 
 void main() => runApp(MyApp());
 
@@ -37,7 +38,7 @@ class MyAppState extends State<MyApp> {
       ),
 //      home: ThermostatPage(title: 'Thermostat'),
       home: DefaultTabController(
-        length: 3,
+        length: 4,
         child: Scaffold(
           appBar: AppBar(
             // Here we take the value from the MyHomePage object that was created by
@@ -49,6 +50,7 @@ class MyAppState extends State<MyApp> {
                   text: "Status",
 //                icon: Icon(Icons.stay_current_landscape)
                 ),
+                Tab(text: 'History'),
                 Tab(text: 'Holiday'),
                 Tab(text: 'Schedule'),
               ],
@@ -57,6 +59,7 @@ class MyAppState extends State<MyApp> {
           body: TabBarView(
             children: [
               ThermostatPage(client: this.client, oauthToken: this.oauthToken),
+              HistoryPage(client: this.client, oauthToken: this.oauthToken),
               HolidayPage(client: this.client, oauthToken: this.oauthToken),
               SchedulePage(client: this.client, oauthToken: this.oauthToken),
             ],

@@ -102,16 +102,16 @@ class DropBoxAPIFn {
     @required HttpClient client,
     @required String oauthToken,
     @required String filePattern,
-    Function callback,
+    @required Function callback,
+    int maxResults = 100,
   }) {
     final Uri uploadUri =
         Uri.parse("https://api.dropboxapi.com/2/files/search");
-
     try {
       client.postUrl(uploadUri).then((HttpClientRequest request) {
         request.headers.add("Authorization", "Bearer " + oauthToken);
         request.headers.add(HttpHeaders.contentTypeHeader, "application/json");
-        request.write("{\"path\": \"\", \"query\": \"$filePattern\",  \"mode\": \"filename\" }");
+        request.write("{\"path\": \"\", \"max_results\": $maxResults, \"query\": \"$filePattern\",  \"mode\": \"filename\" }");
         return request.close();
       }).then((HttpClientResponse response) {
         response.transform(utf8.decoder).listen((contents) {

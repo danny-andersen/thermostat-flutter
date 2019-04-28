@@ -220,7 +220,7 @@ class SchedulePageState extends State<SchedulePage> {
           TempByHour.hourFormat.format(selectedDatum.first.datum.hour);
       DateTime dtime = DateTime(2000, 1, 1, int.parse(timeStr.substring(0, 2)),
           int.parse(timeStr.substring(2, 4)));
-      double temp = selectedDatum.first.datum.temperature;
+//      double temp = selectedDatum.first.datum.temperature;
 //      print('$timeStr : $temp');
       selectedSchedule.filterEntriesByDayRange(this.selectedDayRange).forEach((day) {
       if (day.isInTimeRange(dtime)) {
@@ -272,15 +272,15 @@ class SchedulePageState extends State<SchedulePage> {
         Container(
           padding: const EdgeInsets.only(top:15.0, right: 8.0),
           width: 100.0,
-          height: 24.0,
+          height: 50.0,
           child: DropdownButton<ScheduleEntry>(
             items: scheduleEntries,
             onChanged: scheduleSelected,
-            elevation: 25,
+            elevation: 20,
             isExpanded: true,
             value: this.selectedScheduleEntry,
-            isDense: true,
-            style: Theme.of(context).textTheme.subtitle,
+            isDense: false,
+            style: Theme.of(context).textTheme.body1,
           ),
         ),
       ]),
@@ -295,16 +295,16 @@ class SchedulePageState extends State<SchedulePage> {
         Container(
           padding: const EdgeInsets.only(right: 8.0,  top: 15.0),
           width: 100.0,
-          height: 24.0,
+          height: 50.0,
 //          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width, maxHeight: 30),
           child: DropdownButton<String>(
             items: this.scheduleDays,
             onChanged: daySelected,
-            elevation: 25,
+            elevation: 20,
             isExpanded: true,
             value: this.selectedDayRange,
             isDense: false,
-            style: Theme.of(context).textTheme.subtitle,
+            style: Theme.of(context).textTheme.body1,
           ),
         ),
       ]),
