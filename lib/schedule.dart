@@ -2,7 +2,6 @@ import 'dropbox-api.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:intl/intl.dart';
 
-
 //Used to represent the schedule as a series of Time + Temp points in a graph
 class TempByHour {
   final int hour; //Hours and mins time of day
@@ -15,7 +14,6 @@ class TempByHour {
     return TempByHour(hour, temp);
   }
   static final NumberFormat hourFormat = new NumberFormat('0000', 'en_US');
-
 }
 
 //A schedule entry. This represents the temperature to set the thermostat
@@ -37,8 +35,7 @@ class ScheduleDay {
 
   static DateTime hourToDateTime(int hour) {
     String hourStr = sprintf("%04i", [hour]);
-    return DateTime(2000, 1, 1,
-        int.parse(hourStr.substring(0, 2)),
+    return DateTime(2000, 1, 1, int.parse(hourStr.substring(0, 2)),
         int.parse(hourStr.substring(2, 4)));
   }
 
@@ -55,23 +52,26 @@ class ScheduleDay {
   }
 
   bool isDefaultTimeRange() {
-    return this.start.isAtSameMomentAs(zeroTime) && this.end.isAtSameMomentAs(zeroTime);
+    return this.start.isAtSameMomentAs(zeroTime) &&
+        this.end.isAtSameMomentAs(zeroTime);
   }
 
   bool isInTimeRange(DateTime time) {
 //    print ("IN: $time start: $start ${this.start.isAtSameMomentAs(time)} end: $end temp in: ${this.temperature.toStringAsFixed(1).compareTo(temp.toStringAsFixed(1))}");
-    return (
-        (this.start.isAtSameMomentAs(time) || this.end.isAtSameMomentAs(time))
-            || (time.isAfter(this.start) && time.isBefore(this.end)));
+    return ((this.start.isAtSameMomentAs(time) ||
+            this.end.isAtSameMomentAs(time)) ||
+        (time.isAfter(this.start) && time.isBefore(this.end)));
   }
 
   //Determine if the given day (or dayRange) is in the range of this entry
   bool isDayInRange(String day) {
     bool isInRange = false;
-    if (day == this.dayRange) isInRange = true;
-    else if (dayRangeDays.keys.contains(this.dayRange) && daysofWeek.contains(day)) {
+    if (day == this.dayRange)
+      isInRange = true;
+    else if (dayRangeDays.keys.contains(this.dayRange) &&
+        daysofWeek.contains(day)) {
       //Its a single day and we are a dayrange
-      isInRange = dayRangeDays[this.dayRange].contains(day);
+      isInRange = dayRangeDays[this.dayRange]!.contains(day);
     }
     return isInRange;
   }
@@ -82,11 +82,12 @@ class ScheduleDay {
   int getPrecedence() {
     int precedence = 99;
     if (dayRangeDays.containsKey(this.dayRange)) {
-      precedence = dayRangeDays[this.dayRange].length;
+      precedence = dayRangeDays[this.dayRange]!.length;
     } else if (daysofWeek.contains(this.dayRange)) {
       precedence = 1;
     } else {
-      throw new FormatException("Day range in schedule not recognised: $this.dayRange");
+      throw new FormatException(
+          "Day range in schedule not recognised: $this.dayRange");
     }
     return precedence;
   }
@@ -114,13 +115,13 @@ class ScheduleDay {
   ];
 
   static final Map<int, String> weekDaysByInt = {
-  7: 'Sun',
-  1: 'Mon',
-  2:'Tues',
-  3: 'Wed',
-  4: 'Thurs',
-  5: 'Fri',
-  6: 'Sat',
+    7: 'Sun',
+    1: 'Mon',
+    2: 'Tues',
+    3: 'Wed',
+    4: 'Thurs',
+    5: 'Fri',
+    6: 'Sat',
   };
 }
 
@@ -140,7 +141,9 @@ class Schedule {
   }
 
   factory Schedule.fromFile(ScheduleEntry file, String contents) {
-    List<ScheduleDay> entries = List();
+    List<ScheduleDay> entries = List.filled(
+        0, ScheduleDay("", DateTime(2022), DateTime(2022), 0),
+        growable: true);
 //    print (contents);
     contents.split('\n').forEach((line) {
       var fields = line.split(',');
@@ -149,10 +152,16 @@ class Schedule {
 //        print("start: ${fields[1]} hour ${fields[1].substring(
 //            0, 2)} min ${fields[1].substring(2, 4)}");        retEntries
 
-        DateTime start = DateTime(2000, 1, 1,
+        DateTime start = DateTime(
+            2000,
+            1,
+            1,
             int.parse(fields[1].substring(0, 2)),
             int.parse(fields[1].substring(2, 4)));
-        DateTime end = DateTime(2000, 1, 1,
+        DateTime end = DateTime(
+            2000,
+            1,
+            1,
             int.parse(fields[2].substring(0, 2)),
             int.parse(fields[2].substring(2, 4)));
         double temp = double.parse(fields[3]);
@@ -164,7 +173,10 @@ class Schedule {
 
   //Returns the list of schedule entries that match this dayrange (or day)
   List<ScheduleDay> filterEntriesByDayRange(String dayRange) {
-    List<ScheduleDay> dayEntries = List();
+    List<ScheduleDay> dayEntries = List.filled(
+        0, ScheduleDay("", DateTime(2022), DateTime(2022), 0),
+        growable: true);
+
     for (ScheduleDay day in this.days) {
       if (day.isDayInRange(dayRange)) dayEntries.add(day);
     }
@@ -172,12 +184,14 @@ class Schedule {
   }
 
   //For each 15 mins, work out what the temperature is for the filtered list given
-  static List<TempByHour> generateTempByHourForEntries(List<ScheduleDay> entries) {
-    DateTime currentTime = DateTime(2000, 1,1,0,0);
-    DateTime end = DateTime(2000, 1,1, 23, 59);
+  static List<TempByHour> generateTempByHourForEntries(
+      List<ScheduleDay> entries) {
+    DateTime currentTime = DateTime(2000, 1, 1, 0, 0);
+    DateTime end = DateTime(2000, 1, 1, 23, 59);
     //Sort entries by precedence so that most precedence (lower number) is last
     entries.sort((a, b) => b.getPrecedence().compareTo(a.getPrecedence()));
-    List<TempByHour> retEntries = List();
+    List<TempByHour> retEntries =
+        List.filled(0, TempByHour(0, 0), growable: true);
     double currentTemp = getCurrentTemp(currentTime, entries);
     retEntries.add(TempByHour.from(currentTime, currentTemp));
     do {

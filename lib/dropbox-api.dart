@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
-import 'package:meta/meta.dart';
+// import 'package:meta/meta.dart';
 
 class FileEntry {
   final String fileName;
@@ -13,7 +13,7 @@ class FileEntry {
     String fn = json['name'];
     String path = json['path_display'];
     DateTime modified = DateTime.parse(json['server_modified']);
-    return FileEntry (fn, path, modified);
+    return FileEntry(fn, path, modified);
   }
 }
 
@@ -23,8 +23,7 @@ class FileMatch {
   FileMatch(this.fileEntry);
 
   factory FileMatch.fromJson(Map<String, dynamic> json) =>
-    FileMatch(FileEntry.fromJson(json));
-
+      FileMatch(FileEntry.fromJson(json));
 }
 
 class FileListing {
@@ -33,26 +32,26 @@ class FileListing {
 
   factory FileListing.fromJson(Map<String, dynamic> json) {
     var list = json['matches'] as List;
-    List<FileMatch> matches = list.map((js) => FileMatch.fromJson(js['metadata'])).toList();
+    List<FileMatch> matches =
+        list.map((js) => FileMatch.fromJson(js['metadata'])).toList();
     List<FileEntry> entries = matches.map((match) => match.fileEntry).toList();
     return FileListing(entries);
   }
-
 }
 
 class DropBoxAPIFn {
   static void getDropBoxFile({
-    @required HttpClient client,
-    @required String oauthToken,
-    @required String fileToDownload,
-    @required Function callback,
+    required String oauthToken,
+    required String fileToDownload,
+    required Function callback,
   }) {
+    HttpClient client = HttpClient();
     final Uri downloadUri =
         Uri.parse("https://content.dropboxapi.com/2/files/download");
 
     try {
       client.getUrl(downloadUri).then((HttpClientRequest request) {
-        request.headers.add("Authorization", "Bearer " + oauthToken);
+        request.headers.add("Authorization", "Bearer $oauthToken");
         request.headers
             .add("Dropbox-API-Arg", "{\"path\": \"$fileToDownload\"}");
         return request.close();
@@ -64,24 +63,24 @@ class DropBoxAPIFn {
         });
       });
     } on HttpException catch (he) {
-      print("Got HttpException downloading file: " + he.toString());
+      print("Got HttpException downloading file: ${he.toString()}");
     }
   }
 
   static void sendDropBoxFile({
-    @required HttpClient client,
-    @required String oauthToken,
-    @required String fileToUpload,
-    @required String contents,
-    Function callback,
-    String callbackMsg,
+    required String oauthToken,
+    required String fileToUpload,
+    required String contents,
+    Function? callback,
+    String? callbackMsg,
   }) {
+    HttpClient client = HttpClient();
     final Uri uploadUri =
         Uri.parse("https://content.dropboxapi.com/2/files/upload");
 
     try {
       client.postUrl(uploadUri).then((HttpClientRequest request) {
-        request.headers.add("Authorization", "Bearer " + oauthToken);
+        request.headers.add("Authorization", "Bearer $oauthToken");
         request.headers.add("Dropbox-API-Arg",
             "{\"path\": \"$fileToUpload\", \"mode\": \"overwrite\", \"mute\": true}");
         request.headers
@@ -94,34 +93,35 @@ class DropBoxAPIFn {
         }
       });
     } on HttpException catch (he) {
-      print("Got HttpException sending file: " + he.toString());
+      print("Got HttpException sending file: ${he.toString()}");
     }
   }
 
   static void searchDropBoxFileNames({
-    @required HttpClient client,
-    @required String oauthToken,
-    @required String filePattern,
-    @required Function callback,
+    required String oauthToken,
+    required String filePattern,
+    required Function callback,
     int maxResults = 100,
   }) {
+    HttpClient client = HttpClient();
     final Uri uploadUri =
         Uri.parse("https://api.dropboxapi.com/2/files/search");
     try {
       client.postUrl(uploadUri).then((HttpClientRequest request) {
-        request.headers.add("Authorization", "Bearer " + oauthToken);
+        request.headers.add("Authorization", "Bearer $oauthToken");
         request.headers.add(HttpHeaders.contentTypeHeader, "application/json");
-        request.write("{\"path\": \"\", \"max_results\": $maxResults, \"query\": \"$filePattern\",  \"mode\": \"filename\" }");
+        request.write(
+            "{\"path\": \"\", \"max_results\": $maxResults, \"query\": \"$filePattern\",  \"mode\": \"filename\" }");
         return request.close();
       }).then((HttpClientResponse response) {
         response.transform(utf8.decoder).listen((contents) {
 //          print('Got response:');
 //          print(contents);
-          callback(new FileListing.fromJson(jsonDecode(contents)));
+          callback(FileListing.fromJson(jsonDecode(contents)));
         });
       });
     } on HttpException catch (he) {
-      print("Got HttpException during search: " + he.toString());
+      print("Got HttpException during search: ${he.toString()}");
     }
   }
 }

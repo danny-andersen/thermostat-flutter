@@ -1,32 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
 import 'dropbox-api.dart';
 
 class HolidayPage extends StatefulWidget {
-  HolidayPage({@required this.client, @required this.oauthToken});
+  HolidayPage({required this.oauthToken});
 
   final String oauthToken;
-  final HttpClient client;
-
   @override
-  State createState() => _HolidayPageState(client: this.client, oauthToken: oauthToken);
+  State createState() => _HolidayPageState(oauthToken: oauthToken);
 }
 
 class _HolidayPageState extends State<HolidayPage> {
-  _HolidayPageState({@required this.client, @required this.oauthToken});
+  _HolidayPageState({required this.oauthToken});
 
   final String oauthToken;
-  final HttpClient client;
   final Uri downloadUri =
       Uri.parse("https://content.dropboxapi.com/2/files/download");
   final String currentHolidayFile = "/holiday.txt.current";
   final String holidayFile = "/holiday.txt";
 
-  DateTime _fromDate;
-  TimeOfDay _fromTime;
-  DateTime _toDate;
-  TimeOfDay _toTime;
+  DateTime _fromDate = DateTime(2022);
+  TimeOfDay _fromTime = TimeOfDay(hour: 0, minute: 0);
+  DateTime _toDate = DateTime(2022);
+  TimeOfDay _toTime = TimeOfDay(hour: 0, minute: 0);
   double holidayTemp = 10.0;
   int nextHours = 1;
   bool holidaySet = false;
@@ -39,12 +35,9 @@ class _HolidayPageState extends State<HolidayPage> {
     super.initState();
   }
 
-
-
   void refreshCurrent() {
     //Retrieve any current holiday dates
     DropBoxAPIFn.getDropBoxFile(
-        client: this.client,
         oauthToken: this.oauthToken,
         fileToDownload: this.currentHolidayFile,
         callback: processCurrentHoliday);
@@ -64,8 +57,8 @@ class _HolidayPageState extends State<HolidayPage> {
 
   void processCurrentHoliday(String contents) {
 //    print("Got current holiday: " + contents);
-    DateTime newFromDate;
-    DateTime newToDate;
+    DateTime newFromDate = DateTime(2022);
+    DateTime newToDate = DateTime(2022);
     if (this.mounted) {
       setState(() {
         contents.split('\n').forEach((line) {
@@ -156,12 +149,10 @@ class _HolidayPageState extends State<HolidayPage> {
     buff.writeln("Temp,$holidayTemp");
     String contents = buff.toString();
     DropBoxAPIFn.sendDropBoxFile(
-        client: this.client,
         oauthToken: this.oauthToken,
         fileToUpload: currentHolidayFile,
         contents: contents);
     DropBoxAPIFn.sendDropBoxFile(
-      client: this.client,
       oauthToken: this.oauthToken,
       fileToUpload: holidayFile,
       contents: contents,
@@ -182,12 +173,10 @@ class _HolidayPageState extends State<HolidayPage> {
     buff.writeln("Temp,$holidayTemp");
     String contents = buff.toString();
     DropBoxAPIFn.sendDropBoxFile(
-        client: this.client,
         oauthToken: this.oauthToken,
         fileToUpload: currentHolidayFile,
         contents: contents);
     DropBoxAPIFn.sendDropBoxFile(
-        client: this.client,
         oauthToken: this.oauthToken,
         fileToUpload: holidayFile,
         contents: contents,
@@ -226,7 +215,7 @@ class _HolidayPageState extends State<HolidayPage> {
   @override
   Widget build(BuildContext context) {
     String title = 'Set Holiday dates';
-    final textStyle = Theme.of(context).textTheme.title;
+    final textStyle = Theme.of(context).textTheme.titleMedium;
     if (onHoliday) {
       title = 'On holiday! Change dates to reset';
     } else if (holidaySet) {
@@ -242,6 +231,7 @@ class _HolidayPageState extends State<HolidayPage> {
         ),
         const SizedBox(height: 8.0),
         _DateTimePicker(
+          key: Key("From"),
           labelText: 'From',
           selectedDate: _fromDate,
           selectedTime: _fromTime,
@@ -262,6 +252,7 @@ class _HolidayPageState extends State<HolidayPage> {
           },
         ),
         _DateTimePicker(
+          key: Key("To"),
           labelText: 'To',
           selectedDate: _toDate,
           selectedTime: _toTime,
@@ -288,15 +279,14 @@ class _HolidayPageState extends State<HolidayPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            RaisedButton(
-              child: Icon(
-                Icons.remove,
-                color: Colors.white,
-              ),
-              elevation: 15,
-              onPressed: minusPressed,
-              color: Colors.blue,
-            ),
+            ElevatedButton(
+                child: Icon(
+                  Icons.remove,
+                  color: Colors.white,
+                ),
+                onPressed: minusPressed,
+                style: ButtonStyle(
+                    backgroundColor: MaterialStatePropertyAll(Colors.blue))),
             Text(
               ' $nextHours hours  ',
               style: textStyle,
@@ -305,30 +295,28 @@ class _HolidayPageState extends State<HolidayPage> {
 //                  .display1
 //                  .apply(fontSizeFactor: 0.5),
             ),
-            RaisedButton(
-              child: Icon(
-                Icons.add,
-                color: Colors.white,
-              ),
-            elevation: 15,
-              onPressed: plusPressed,
-              color: Colors.blue,
-            ),
+            ElevatedButton(
+                child: Icon(
+                  Icons.add,
+                  color: Colors.white,
+                ),
+                onPressed: plusPressed,
+                style: ButtonStyle(
+                    backgroundColor: MaterialStatePropertyAll(Colors.blue)))
           ],
         ),
         const SizedBox(height: 32.0),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          RaisedButton(
-            child: Text(
-              "Send New Holiday Schedule",
-              style: textStyle.apply(
-                color: Colors.white,
+          ElevatedButton(
+              child: Text(
+                "Send New Holiday Schedule",
+                style: textStyle!.apply(
+                  color: Colors.white,
+                ),
               ),
-            ),
-            onPressed: sendNewHoliday,
-            elevation: 15,
-            color: Colors.blue,
-          )
+              onPressed: sendNewHoliday,
+              style: ButtonStyle(
+                  backgroundColor: MaterialStatePropertyAll(Colors.blue)))
         ]),
         const SizedBox(height: 32.0),
         Text(
@@ -336,18 +324,16 @@ class _HolidayPageState extends State<HolidayPage> {
           style: textStyle,
         ),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          RaisedButton(
-            child: Text(
-              "Cancel",
-              style: textStyle.apply(
-                color: Colors.white,
+          ElevatedButton(
+              child: Text(
+                "Cancel",
+                style: textStyle.apply(
+                  color: Colors.white,
+                ),
               ),
-            ),
-            onPressed: holidaySet ? cancelHoliday : null,
-            color: Colors.blue,
-            disabledElevation: 10,
-            elevation: 15,
-          )
+              onPressed: holidaySet ? cancelHoliday : null,
+              style: ButtonStyle(
+                  backgroundColor: MaterialStatePropertyAll(Colors.blue)))
         ]),
       ],
     );
@@ -359,12 +345,12 @@ class _HolidayPageState extends State<HolidayPage> {
 
 class _DateTimePicker extends StatelessWidget {
   const _DateTimePicker(
-      {Key key,
-      this.labelText,
-      this.selectedDate,
-      this.selectedTime,
-      this.selectDate,
-      this.selectTime})
+      {required Key key,
+      required this.labelText,
+      required this.selectedDate,
+      required this.selectedTime,
+      required this.selectDate,
+      required this.selectTime})
       : super(key: key);
 
   final String labelText;
@@ -374,29 +360,30 @@ class _DateTimePicker extends StatelessWidget {
   final ValueChanged<TimeOfDay> selectTime;
 
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime picked = await showDatePicker(
+    final DateTime picked = (await showDatePicker(
         context: context,
         initialDate: selectedDate,
         firstDate: DateTime(2015, 8),
-        lastDate: DateTime(2101));
+        lastDate: DateTime(2101)))!;
     if (picked != null && picked != selectedDate) selectDate(picked);
   }
 
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay picked =
-        await showTimePicker(context: context, initialTime: selectedTime);
+        (await showTimePicker(context: context, initialTime: selectedTime))!;
     if (picked != null && picked != selectedTime) selectTime(picked);
   }
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle valueStyle = Theme.of(context).textTheme.title;
+    final TextStyle valueStyle = Theme.of(context).textTheme.titleMedium!;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
         Expanded(
           flex: 4,
           child: _InputDropdown(
+            key: Key(labelText),
             labelText: labelText,
             valueText: DateFormat.yMMMd().format(selectedDate),
             valueStyle: valueStyle,
@@ -409,6 +396,7 @@ class _DateTimePicker extends StatelessWidget {
         Expanded(
           flex: 3,
           child: _InputDropdown(
+            key: Key(selectedTime.format(context)),
             valueText: selectedTime.format(context),
             valueStyle: valueStyle,
             onPressed: () {
@@ -423,19 +411,19 @@ class _DateTimePicker extends StatelessWidget {
 
 class _InputDropdown extends StatelessWidget {
   const _InputDropdown(
-      {Key key,
+      {required Key key,
       this.child,
       this.labelText,
-      this.valueText,
-      this.valueStyle,
-      this.onPressed})
+      required this.valueText,
+      required this.valueStyle,
+      required this.onPressed})
       : super(key: key);
 
-  final String labelText;
+  final String? labelText;
   final String valueText;
   final TextStyle valueStyle;
   final VoidCallback onPressed;
-  final Widget child;
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) {

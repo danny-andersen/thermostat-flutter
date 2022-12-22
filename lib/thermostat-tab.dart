@@ -1,8 +1,7 @@
-import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:charts_flutter_new/flutter.dart' as charts;
 
 import 'dropbox-api.dart';
 
@@ -22,7 +21,7 @@ class ColorByTemp {
   static final double maxRed2 = 21.0;
 
   static Color findActiveColor(double temp) {
-    Color returnColor = Colors.red[700];
+    Color returnColor = Colors.red[700]!;
     if (temp <= maxDarkBlue)
       returnColor = Colors.indigo;
     else if (temp <= maxBlue)
@@ -33,7 +32,7 @@ class ColorByTemp {
       returnColor = Colors.orange;
     else if (temp <= maxRed)
       returnColor = Colors.red;
-    else if (temp <= maxRed2) returnColor = Colors.red[600];
+    else if (temp <= maxRed2) returnColor = Colors.red[600]!;
     return returnColor;
   }
 
@@ -55,20 +54,18 @@ class ColorByTemp {
 }
 
 class ThermostatPage extends StatefulWidget {
-  ThermostatPage({@required this.client, @required this.oauthToken}) : super();
+  ThermostatPage({required this.oauthToken}) : super();
 
   final String oauthToken;
-  final HttpClient client;
 
   @override
   _ThermostatPageState createState() =>
-      _ThermostatPageState(client: this.client, oauthToken: this.oauthToken);
+      _ThermostatPageState(oauthToken: this.oauthToken);
 }
 
 class _ThermostatPageState extends State<ThermostatPage> {
-  _ThermostatPageState({@required this.client, @required this.oauthToken});
+  _ThermostatPageState({required this.oauthToken});
   final String oauthToken;
-  final HttpClient client;
   final String statusFile = "/thermostat_status.txt";
   final String setTempFile = "/setTemp.txt";
   double currentTemp = 0.0;
@@ -79,11 +76,10 @@ class _ThermostatPageState extends State<ThermostatPage> {
   bool requestOutstanding = false;
   bool boilerOn = true;
   int minsToSetTemp = 0;
-  Timer timer;
+  Timer timer = Timer(Duration(), () {});
 
   @override
   void initState() {
-    client.idleTimeout = Duration(seconds: 90);
     getSetTemp();
     getStatus();
     timer = new Timer.periodic(Duration(seconds: 45), refreshStatus);
@@ -94,18 +90,17 @@ class _ThermostatPageState extends State<ThermostatPage> {
   void dispose() {
 //    print('Disposing Thermostat page');
     timer.cancel();
-    client.close();
     super.dispose();
   }
 
   void _decRequestedTemp() {
 //      print("Minus pressed");
-    requestedTemp -= 0.10;
+    requestedTemp -= 0.50;
     sendNewTemp(requestedTemp, true);
   }
 
   void _incrementRequestedTemp() {
-    requestedTemp += 0.10;
+    requestedTemp += 0.50;
     sendNewTemp(requestedTemp, true);
   }
 
@@ -113,7 +108,6 @@ class _ThermostatPageState extends State<ThermostatPage> {
     if (send) {
       String contents = requestedTemp.toStringAsFixed(1) + "\n";
       DropBoxAPIFn.sendDropBoxFile(
-          client: this.client,
           oauthToken: this.oauthToken,
           fileToUpload: setTempFile,
           contents: contents);
@@ -132,7 +126,6 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   void getStatus() {
     DropBoxAPIFn.getDropBoxFile(
-        client: this.client,
         oauthToken: this.oauthToken,
         fileToDownload: this.statusFile,
         callback: processStatus);
@@ -140,7 +133,6 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   void getSetTemp() {
     DropBoxAPIFn.getDropBoxFile(
-        client: this.client,
         oauthToken: this.oauthToken,
         fileToDownload: this.setTempFile,
         callback: processSetTemp);
@@ -256,44 +248,19 @@ class _ThermostatPageState extends State<ThermostatPage> {
     // than having to individually change instances of widgets.
 //    final TextStyle textStyle = Theme.of(context).textTheme.title;
     Widget returnWidget = ListView(children: [
-//        LabelWithDoubleState(
-//          label: 'House Temp:',
-//          valueGetter: () => currentTemp,
-//          textStyle: textStyle,
-//        ),
-//        LabelWithDoubleState(
-//          label: 'Outside Temp:',
-//          valueGetter: () => extTemp,
-//          textStyle: textStyle,
-//        ),
-//        LabelWithDoubleState(
-//            label: 'Current Set Temp:',
-//            valueGetter: () => setTemp,
-//    textStyle: textStyle,
-//        ),
-//        requestOutstanding
-//            ? LabelWithDoubleState(
-//                label: 'Requested Set Temp:',
-//                valueGetter: () => requestedTemp,
-//          textStyle: textStyle,
-//              )
-//            : const SizedBox(
-//                height: 10,
-//              ),
       Container(
-                  padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-      child: Text(
-      'Temperature Chart',
-                    style: TextStyle(
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-    ),
+        padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+        child: Text(
+          'Temperature Chart',
+          style: TextStyle(
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
-        Container(
+      Container(
         height: 250,
-        child:
-            TemperatureChart(createChartSeries(), animate: false),
+        child: TemperatureChart(createChartSeries(), animate: false),
       ),
       const SizedBox(height: 16.0),
       SliderWithRange(
@@ -336,7 +303,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
 }
 
 class ShowDateTimeStamp extends StatelessWidget {
-  ShowDateTimeStamp({@required this.dateTimeStamp});
+  ShowDateTimeStamp({required this.dateTimeStamp});
 
   final DateTime dateTimeStamp;
   final DateFormat dateFormat = new DateFormat("yyyy-MM-dd HH:mm:ss");
@@ -365,8 +332,8 @@ class ShowDateTimeStamp extends StatelessWidget {
                     "Last Updated: ",
                     style: Theme.of(context)
                         .textTheme
-                        .display1
-                        .apply(fontSizeFactor: 0.5),
+                        .displaySmall!
+                        .apply(fontSizeFactor: 0.3),
 //                    style: TextStyle(
 //                      fontSize: 18.0,
 //                      fontWeight: FontWeight.bold,
@@ -378,8 +345,10 @@ class ShowDateTimeStamp extends StatelessWidget {
           ),
           Text(
             dateFormat.format(dateTimeStamp),
-            style:
-                Theme.of(context).textTheme.display1.apply(fontSizeFactor: 0.5),
+            style: Theme.of(context)
+                .textTheme
+                .displaySmall!
+                .apply(fontSizeFactor: 0.3),
 //            style: TextStyle(
 //              //color: Colors.grey[500],
 //              fontSize: 18.0,
@@ -392,7 +361,7 @@ class ShowDateTimeStamp extends StatelessWidget {
 }
 
 class SetTempButtonBar extends StatelessWidget {
-  SetTempButtonBar({@required this.minusPressed, @required this.plusPressed});
+  SetTempButtonBar({required this.minusPressed, required this.plusPressed});
 
   final Function() minusPressed;
   final Function() plusPressed;
@@ -409,29 +378,29 @@ class SetTempButtonBar extends StatelessWidget {
       alignment: MainAxisAlignment.spaceEvenly,
 
       children: [
-        RaisedButton(
-          child: Icon(Icons.arrow_downward),
+        ElevatedButton(
+            child: Icon(Icons.arrow_downward),
 //                        tooltip: "Decrease Set Temp by 0.1 degree",
-          textColor: Colors.white,
-          onPressed: minusPressed,
-          elevation: 15,
-          color: Colors.blue,
-        ),
-        RaisedButton(
-          child: Icon(Icons.arrow_upward),
+            onPressed: minusPressed,
+            style: ButtonStyle(
+                textStyle:
+                    MaterialStatePropertyAll(TextStyle(color: Colors.white)),
+                backgroundColor: MaterialStatePropertyAll(Colors.blue))),
+        ElevatedButton(
+            child: Icon(Icons.arrow_upward),
 //                      tooltip: "Increase Set Temp by 0.1 degree",
-          onPressed: plusPressed,
-          elevation: 15,
-          color: Colors.red,
-          textColor: Colors.white,
-        )
+            onPressed: plusPressed,
+            style: ButtonStyle(
+                textStyle:
+                    MaterialStatePropertyAll(TextStyle(color: Colors.white)),
+                backgroundColor: MaterialStatePropertyAll(Colors.red))),
       ],
     );
   }
 }
 
 class ActionButtons extends StatelessWidget {
-  ActionButtons({@required this.minusPressed, @required this.plusPressed});
+  ActionButtons({required this.minusPressed, required this.plusPressed});
 
   final Function() minusPressed;
   final Function() plusPressed;
@@ -456,7 +425,7 @@ class ActionButtons extends StatelessWidget {
                     children: <Widget>[
                   IconButton(
                     icon: Icon(Icons.remove),
-                    tooltip: "Decrease Set Temp by 0.1 degree",
+                    tooltip: "Decrease Set Temp by 0.5 degree",
                     onPressed: minusPressed,
                     color: Colors.blue,
                   )
@@ -468,7 +437,7 @@ class ActionButtons extends StatelessWidget {
                 IconButton(
                   icon: Icon(Icons.add),
                   color: Colors.red,
-                  tooltip: "Increase Set Temp by 0.1 degree",
+                  tooltip: "Increase Set Temp by 0.5 degree",
                   onPressed: plusPressed,
                 )
               ],
@@ -480,7 +449,7 @@ class ActionButtons extends StatelessWidget {
 
 class SliderWithRange extends StatelessWidget {
   SliderWithRange(
-      {@required this.requestedTempGetter, @required this.returnNewTemp});
+      {required this.requestedTempGetter, required this.returnNewTemp});
 
   final ValueGetter<double> requestedTempGetter;
   final Function(double newTemp, bool endChange) returnNewTemp;
@@ -503,7 +472,7 @@ class SliderWithRange extends StatelessWidget {
           child: Text('10\u00B0C',
               style: Theme.of(context)
                   .textTheme
-                  .display1
+                  .displaySmall!
                   .apply(fontSizeFactor: 0.5)),
         ),
         Flexible(
@@ -531,7 +500,7 @@ class SliderWithRange extends StatelessWidget {
           child: Text('25\u00B0C',
               style: Theme.of(context)
                   .textTheme
-                  .display1
+                  .displaySmall!
                   .apply(fontSizeFactor: 0.5)),
         ),
       ],
@@ -541,9 +510,9 @@ class SliderWithRange extends StatelessWidget {
 
 class LabelWithDoubleState extends StatelessWidget {
   LabelWithDoubleState(
-      {@required this.label,
-      @required this.valueGetter,
-      @required this.textStyle});
+      {required this.label,
+      required this.valueGetter,
+      required this.textStyle});
 
   final String label;
   final ValueGetter<double> valueGetter;
@@ -605,7 +574,7 @@ class LabelWithDoubleState extends StatelessWidget {
 }
 
 class LabelWithIntState extends StatelessWidget {
-  LabelWithIntState({@required this.label, @required this.valueGetter});
+  LabelWithIntState({required this.label, required this.valueGetter});
 
   final String label;
   final ValueGetter<int> valueGetter;
@@ -632,7 +601,7 @@ class LabelWithIntState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                   child: Text(
                     label,
-                    style: Theme.of(context).textTheme.display1,
+                    style: Theme.of(context).textTheme.displayMedium,
                   ),
                 )
               ],
@@ -640,7 +609,7 @@ class LabelWithIntState extends StatelessWidget {
           ),
           Text(
             '${valueGetter()}',
-            style: Theme.of(context).textTheme.display1,
+            style: Theme.of(context).textTheme.displayMedium,
           ),
         ],
       ),
@@ -649,7 +618,7 @@ class LabelWithIntState extends StatelessWidget {
 }
 
 class BoilerState extends StatelessWidget {
-  BoilerState({@required this.boilerOn, @required this.minsToTemp});
+  BoilerState({required this.boilerOn, required this.minsToTemp});
 
   final ValueGetter<bool> boilerOn;
   final ValueGetter<int> minsToTemp;
@@ -657,7 +626,7 @@ class BoilerState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget _returnWidget;
-    TextStyle dispStyle = Theme.of(context).textTheme.title;
+    TextStyle dispStyle = Theme.of(context).textTheme.titleMedium!;
     if (boilerOn()) {
       _returnWidget = Container(
         padding: const EdgeInsets.all(10.0),
@@ -735,8 +704,8 @@ class BoilerState extends StatelessWidget {
 }
 
 class TemperatureChart extends StatelessWidget {
-  final List<charts.Series> seriesList;
-  final bool animate;
+  List<charts.Series<dynamic, String>> seriesList;
+  bool? animate = true;
 
   TemperatureChart(this.seriesList, {this.animate});
 

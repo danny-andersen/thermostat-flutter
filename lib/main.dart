@@ -1,26 +1,53 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'holidaytab.dart';
 import 'thermostat-tab.dart';
-import 'schedule-tab.dart';
 import 'history-tab.dart';
+import 'holidaytab.dart';
+import 'schedule-tab.dart';
 
-void main() => runApp(MyApp());
+void main() {
+  runApp(MyApp());
+}
 
 class MyApp extends StatefulWidget {
+  MyApp({super.key});
   @override
   State createState() => MyAppState();
 }
 
 class MyAppState extends State<MyApp> {
   String oauthToken = "API KEY IS BLANK";
-  final HttpClient client = new HttpClient();
+  final HttpClient client = HttpClient();
+  // Future<String> loadAsset() async {
+  //   return await rootBundle.loadString('assets/api-key.json');
+  // }
+
+  @override
+  void initState() {
+//    print("Loading API KEY");
+    Future<Secret> secret =
+        SecretLoader(secretPath: "assets/api-key.json").load();
+    secret.then((Secret secret) {
+      setState(() {
+        oauthToken = secret.apiKey;
+      });
+    });
+    super.initState();
+  }
+
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    // loadAsset().then((value) {
+    //   Map jsonMap = json.decode(value);
+    //   oauthToken = jsonMap["api_key"];
+    // });
+    // Future.wait([loadAsset()]).then((List<String> values) {
+    //   Map jsonMap = json.decode(values[0]);
+    //   oauthToken = jsonMap["api_key"];
+    // });
     return MaterialApp(
       title: 'Home Controller',
       theme: ThemeData(
@@ -58,10 +85,10 @@ class MyAppState extends State<MyApp> {
           ),
           body: TabBarView(
             children: [
-              ThermostatPage(client: this.client, oauthToken: this.oauthToken),
-              HistoryPage(client: this.client, oauthToken: this.oauthToken),
-              HolidayPage(client: this.client, oauthToken: this.oauthToken),
-              SchedulePage(client: this.client, oauthToken: this.oauthToken),
+              ThermostatPage(oauthToken: this.oauthToken),
+              HistoryPage(oauthToken: this.oauthToken),
+              HolidayPage(oauthToken: this.oauthToken),
+              SchedulePage(oauthToken: this.oauthToken),
             ],
           ),
 //          floatingActionButton: FloatingActionButton(
@@ -74,35 +101,33 @@ class MyAppState extends State<MyApp> {
     );
   }
 
-  @override
-  void initState() {
-//    print("Loading API KEY");
-    Future<Secret> secret =
-        SecretLoader(secretPath: "assets/api-key.json").load();
-    secret.then((Secret secret) {
-      setState(() {
-        this.oauthToken = secret.apiKey;
-      });
-    });
-    super.initState();
-  }
+//   @override
+//   void initState() {
+// //    print("Loading API KEY");
+//     Future<Secret> secret =
+//         SecretLoader(secretPath: "assets/api-key.json").load();
+//     secret.then((Secret secret) {
+//       setState(() {
+//         this.oauthToken = secret.apiKey;
+//       });
+//     });
+//     super.initState();
+//   }
 
   @override
   void dispose() {
     client.close();
     super.dispose();
   }
-
 }
 
 class SecretLoader {
-  final String secretPath;
+  final String? secretPath;
 
   SecretLoader({this.secretPath});
   Future<Secret> load() {
-    return rootBundle.loadStructuredData<Secret>(this.secretPath,
-        (jsonStr) async {
-      final secret = Secret.fromJson(json.decode(jsonStr));
+    return rootBundle.loadStructuredData<Secret>(secretPath!, (jsonStr) async {
+      final secret = Secret.fromJson(jsonDecode(jsonStr));
       return secret;
     });
   }
@@ -112,6 +137,6 @@ class Secret {
   final String apiKey;
   Secret({this.apiKey = ""});
   factory Secret.fromJson(Map<String, dynamic> jsonMap) {
-    return new Secret(apiKey: jsonMap["api_key"]);
+    return Secret(apiKey: jsonMap["api_key"]);
   }
 }

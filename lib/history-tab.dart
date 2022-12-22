@@ -1,98 +1,89 @@
-import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'package:charts_flutter_new/flutter.dart' as charts;
 import 'dropbox-api.dart';
 import 'schedule.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:intl/intl.dart';
 
 class HistoryPage extends StatefulWidget {
-  HistoryPage({@required this.client, @required this.oauthToken});
+  HistoryPage({required this.oauthToken});
 
   final String oauthToken;
-  final HttpClient client;
 
   @override
-  State createState() =>
-      HistoryPageState(client: this.client, oauthToken: this.oauthToken);
+  State createState() => HistoryPageState(oauthToken: oauthToken);
 }
 
 class HistoryPageState extends State<HistoryPage> {
-  HistoryPageState({@required this.client, @required this.oauthToken});
+  HistoryPageState({required this.oauthToken});
 
   final String oauthToken;
-  final HttpClient client;
   final String deviceChangePattern = "_device_change.txt";
 
-  HttpClient httpClient = new HttpClient();
-  List<DropdownMenuItem<String>> changeEntries;
-  String todayFile;
+  // HttpClient httpClient = HttpClient();
+  List<DropdownMenuItem<String>>? changeEntries;
+  String todayFile = "";
   bool enabled = false;
-  charts.Series<TempByHour, int> measuredTempSeries;
-  List<charts.Series<TempByHour, int>> chartsToPlot;
-  List<TempByHour> temperatureList;
-  String selectedDate;
+  charts.Series<TempByHour, int> measuredTempSeries =
+      HistoryLineChart.createMeasuredSeries(List.filled(0, TempByHour(0, 0.0)));
+  List<charts.Series<TempByHour, int>> chartsToPlot = List.filled(
+      0,
+      HistoryLineChart.createMeasuredSeries(
+          List.filled(0, TempByHour(0, 0.0))));
+  List<TempByHour> temperatureList =
+      List.filled(0, TempByHour(0, 0.0), growable: true);
+  String? selectedDate;
 
   @override
   void initState() {
-    measuredTempSeries = HistoryLineChart.createMeasuredSeries([TempByHour(0, 10.0), TempByHour(2400, 10.0)]);
-    chartsToPlot = [measuredTempSeries];
+    measuredTempSeries = HistoryLineChart.createMeasuredSeries(
+        [TempByHour(0, 10.0), TempByHour(2400, 10.0)]);
+    chartsToPlot = List.filled(1, measuredTempSeries, growable: true);
     DateTime now = DateTime.now();
-    this.todayFile = sprintf("%s%02i%02i%s", [now.year, now.month, now.day, deviceChangePattern]);
+    todayFile = sprintf(
+        "%s%02i%02i%s", [now.year, now.month, now.day, deviceChangePattern]);
+    // selectedDate = sprintf("%s%02i%02i", [now.year, now.month, now.day]);
     getChangeFileList();
-//    this.scheduleEntries = List();
-//    this.scheduleEntries.add(DropdownMenuItem<ScheduleEntry>(value: null, child: Text('     ')));
-//    this.scheduleDays = List();
-//    this.scheduleDays.add(DropdownMenuItem<String>(value: null, child: Text('     ')));
-//    this.timeRanges = List();
-//    this.timeRanges.add(DropdownMenuItem<ScheduleDay>(value: null, child: Text('     ')));
     super.initState();
   }
 
   void getTodaysFile() {
-    temperatureList = List();
-    this.selectedDate = todayFile;
+    selectedDate = todayFile;
     getChangeFile(todayFile);
   }
 
   void getChangeFile(String changeFile) {
     print("Downloading file: $changeFile");
     DropBoxAPIFn.getDropBoxFile(
-        client: this.client,
-        oauthToken: this.oauthToken,
-        fileToDownload: "/" + changeFile,
+        oauthToken: oauthToken,
+        fileToDownload: "/$changeFile",
         callback: processChangeFile);
   }
 
-  void newChangeFileSelected(String changeFile) {
-    this.temperatureList = List();
-    this.selectedDate = changeFile;
+  void newChangeFileSelected(String? changeFile) {
+    changeFile ??= "Select a file"; //Set to blank if null
+    selectedDate = changeFile;
     getChangeFile(changeFile);
   }
 
   void processChangeFile(String contents) {
 //    double lastTemp = 10.0;
+    temperatureList = List.filled(0, TempByHour(0, 0.0), growable: true);
     contents.split('\n').forEach((line) {
       if (line.contains(':Temp:')) {
         try {
           List<String> parts = line.split(':');
           int hour = int.parse(parts[0].trim());
           double temp = double.parse(parts[2].trim());
-          this.temperatureList.add(TempByHour(hour, temp));
+          temperatureList.add(TempByHour(hour, temp));
 //          lastTemp = temp;
         } on FormatException {
           print("Received incorrect temp format: $line");
         }
       }
     });
-//    //Extend measured graph to current time
-//    if (lastTemp != 10.0) {
-//      DateTime now = DateTime.now();
-//      int nowHour =  (now.hour * 100) + now.minute;
-//      tempList.add(TempByHour(nowHour, lastTemp));
-//    }
-    measuredTempSeries = HistoryLineChart.createMeasuredSeries(this.temperatureList);
-    print ("Plotting chart");
+    measuredTempSeries = HistoryLineChart.createMeasuredSeries(temperatureList);
+    // print("Plotting chart");
     setState(() {
       //Convert temperatures to the series
       chartsToPlot = [measuredTempSeries];
@@ -101,39 +92,29 @@ class HistoryPageState extends State<HistoryPage> {
 
   void getChangeFileList() {
     DropBoxAPIFn.searchDropBoxFileNames(
-        client: httpClient,
         oauthToken: oauthToken,
         filePattern: deviceChangePattern,
         callback: processChangeFileList,
-        maxResults: 14
-    );
+        maxResults: 31);
   }
 
   String formattedDateStr(String fileName) {
     //Convert yyyymmdd to dd Month Year
-    String retStr;
-    if (fileName != null) {
-      DateTime dateTime = DateTime.parse(fileName.split('_')[0]);
-      retStr = new DateFormat.yMMMMd("en_US").format(dateTime);
-    }
-    return retStr;
+    DateTime dateTime = DateTime.parse(fileName.split('_')[0]);
+    return DateFormat.yMMMMd("en_US").format(dateTime);
   }
-  
+
   void processChangeFileList(FileListing files) {
     //Process each file and add to dropdown
-    List<DropdownMenuItem<String>> entries = List();
-    for (FileEntry file in files.fileEntries) {
-      //Get date of file and add to drop down
-      String dateStr = formattedDateStr(file.fileName);
-//      String dateStr = file.fileName.split('_')[0];
-      print("Adding ${file.fileName}");
-      entries.add(DropdownMenuItem<String>(
-        value: file.fileName,
-        child: new Text(dateStr),
-      ));
-    }
+    List<FileEntry> fileEntries = files.fileEntries;
+    List<DropdownMenuItem<String>> entries =
+        List.generate(fileEntries.length, (index) {
+      String fileName = fileEntries[index].fileName;
+      String dateStr = fileName.split('_')[0];
+      return DropdownMenuItem<String>(value: fileName, child: Text(dateStr));
+    });
     setState(() {
-      this.changeEntries = entries;
+      changeEntries = entries;
       enabled = true;
     });
   }
@@ -144,10 +125,9 @@ class HistoryPageState extends State<HistoryPage> {
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(
             padding: const EdgeInsets.only(top: 8.0),
-            child: RaisedButton(
+            child: ElevatedButton(
               child: Text('Show today'),
-              elevation: 5,
-              onPressed: this.enabled ? getTodaysFile : null,
+              onPressed: enabled ? getTodaysFile : null,
 //              color: Colors.blue,
             )),
       ]),
@@ -156,11 +136,11 @@ class HistoryPageState extends State<HistoryPage> {
           padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 10.0),
           child: Text(
             'Or select a previous day::',
-            style: Theme.of(context).textTheme.body1,
+            // style: Theme.of(context).textTheme.body1,
           ),
         ),
         Container(
-          padding: const EdgeInsets.only(top:15.0, right: 8.0),
+          padding: const EdgeInsets.only(top: 15.0, right: 8.0),
           width: 100.0,
           height: 50.0,
           child: DropdownButton<String>(
@@ -168,20 +148,22 @@ class HistoryPageState extends State<HistoryPage> {
             onChanged: enabled ? newChangeFileSelected : null,
             elevation: 20,
             isExpanded: true,
-            value: this.selectedDate,
+            value: selectedDate,
             isDense: false,
-            style: Theme.of(context).textTheme.body1,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
       ]),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Container(
-      padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 10.0),
-      child: Text(
-        "Temperature Chart of " + formattedDateStr(this.selectedDate) ,
-        style: Theme.of(context).textTheme.title,
-        ),
-      )]),
+        Container(
+          padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 10.0),
+          child: Text(
+            "Temperature Chart of " +
+                (selectedDate != null ? formattedDateStr(selectedDate!) : ''),
+            // style: Theme.of(context).textTheme.title,
+          ),
+        )
+      ]),
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -190,8 +172,7 @@ class HistoryPageState extends State<HistoryPage> {
             height: 300.0,
             width: MediaQuery.of(context).size.width,
             //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
-            child:
-                HistoryLineChart(this.chartsToPlot, null),
+            child: HistoryLineChart(chartsToPlot, null),
           ),
         ],
       ),
@@ -203,14 +184,14 @@ class HistoryPageState extends State<HistoryPage> {
 }
 
 class HistoryLineChart extends StatelessWidget {
-  final List<charts.Series> seriesList;
-  final Function onSelectionChanged;
+  final List<charts.Series<TempByHour, int>> seriesList;
+  final void Function(charts.SelectionModel<num>)? onSelectionChanged;
 
   HistoryLineChart(this.seriesList, this.onSelectionChanged);
 
   double getMaxValue() {
     double maxValue = -999999999.0;
-    for (charts.Series s in this.seriesList)
+    for (charts.Series s in seriesList)
       for (TempByHour point in s.data)
         if (point.temperature > maxValue) maxValue = point.temperature;
     return maxValue;
@@ -218,7 +199,7 @@ class HistoryLineChart extends StatelessWidget {
 
   double getMinValue() {
     double minValue = 999999999.0;
-    for (charts.Series s in this.seriesList)
+    for (charts.Series s in seriesList)
       for (TempByHour point in s.data)
         if (point.temperature < minValue) minValue = point.temperature;
     return minValue;
@@ -235,7 +216,7 @@ class HistoryLineChart extends StatelessWidget {
 //      startLabel: TempByHour.hourFormat.format(nowTime),
 //      labelAnchor: charts.AnnotationLabelAnchor.middle,
 //    ));
-//    for (charts.Series s in this.seriesList)
+//    for (charts.Series s in seriesList)
 //      if (s.id.contains("Scheduled")) {
 //        for (TempByHour point in s.data)
 //          if (point.temperature != minValue)
@@ -270,7 +251,7 @@ class HistoryLineChart extends StatelessWidget {
       selectionModels: [
         new charts.SelectionModelConfig(
           type: charts.SelectionModelType.info,
-          changedListener: this.onSelectionChanged,
+          changedListener: onSelectionChanged,
         )
       ],
 //      behaviors: [
@@ -282,17 +263,17 @@ class HistoryLineChart extends StatelessWidget {
   static charts.Series<TempByHour, int> createMeasuredSeries(
       List<TempByHour> timeTempPoints) {
     int len = timeTempPoints.length;
-    print ("Creating new chart with $len");
+    print("Creating new chart with $len");
     return new charts.Series<TempByHour, int>(
-        id: 'Measured',
-        colorFn: ((TempByHour tempByHour, __) {
-          var color;
-          color = charts.MaterialPalette.green.shadeDefault;
-          return color;}),
-        domainFn: (TempByHour tt, _) => tt.hour,
-        measureFn: (TempByHour tt, _) => tt.temperature,
-        data: timeTempPoints,
+      id: 'Measured',
+      colorFn: ((TempByHour tempByHour, __) {
+        var color;
+        color = charts.MaterialPalette.green.shadeDefault;
+        return color;
+      }),
+      domainFn: (TempByHour tt, _) => tt.hour,
+      measureFn: (TempByHour tt, _) => tt.temperature,
+      data: timeTempPoints,
     );
   }
-
 }
