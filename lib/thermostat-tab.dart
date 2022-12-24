@@ -13,12 +13,12 @@ class TypeTemp {
 }
 
 class ColorByTemp {
-  static final double maxDarkBlue = 5.0;
-  static final double maxBlue = 15.0;
-  static final double maxYellow = 17.0;
-  static final double maxOrange = 19.0;
-  static final double maxRed = 20.0;
-  static final double maxRed2 = 21.0;
+  static const double maxDarkBlue = 5.0;
+  static const double maxBlue = 15.0;
+  static const double maxYellow = 17.0;
+  static const double maxOrange = 19.0;
+  static const double maxRed = 20.0;
+  static const double maxRed2 = 21.0;
 
   static Color findActiveColor(double temp) {
     Color returnColor = Colors.red[700]!;
@@ -72,6 +72,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   double extTemp = 100.0;
   double setTemp = 0.0;
   double requestedTemp = 0.0;
+  DateTime? lastHeardFrom;
 
   bool requestOutstanding = false;
   bool boilerOn = true;
@@ -82,7 +83,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   void initState() {
     getSetTemp();
     getStatus();
-    timer = new Timer.periodic(Duration(seconds: 45), refreshStatus);
+    timer = Timer.periodic(Duration(seconds: 45), refreshStatus);
     super.initState();
   }
 
@@ -106,7 +107,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   void sendNewTemp(double temp, bool send) {
     if (send) {
-      String contents = requestedTemp.toStringAsFixed(1) + "\n";
+      String contents = "${requestedTemp.toStringAsFixed(1)} \n";
       DropBoxAPIFn.sendDropBoxFile(
           oauthToken: this.oauthToken,
           fileToUpload: setTempFile,
@@ -127,14 +128,14 @@ class _ThermostatPageState extends State<ThermostatPage> {
   void getStatus() {
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: this.oauthToken,
-        fileToDownload: this.statusFile,
+        fileToDownload: statusFile,
         callback: processStatus);
   }
 
   void getSetTemp() {
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: this.oauthToken,
-        fileToDownload: this.setTempFile,
+        fileToDownload: setTempFile,
         callback: processSetTemp);
   }
 
@@ -195,6 +196,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
             } on FormatException {
               print("Received non-int minsToSetTemp format: $line");
             }
+          } else if (line.startsWith('Last heard time')) {
+            String dateStr = line.substring(line.indexOf(':') + 2, line.length);
+            lastHeardFrom = DateTime.parse(dateStr);
           }
         });
       });
@@ -270,7 +274,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           plusPressed: _incrementRequestedTemp),
       BoilerState(boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
       const SizedBox(height: 16.0),
-      ShowDateTimeStamp(dateTimeStamp: new DateTime.now()),
+      ShowDateTimeStamp(dateTimeStamp: lastHeardFrom),
 //        const SizedBox(height: 32.0),
 //        Row(
 //          mainAxisAlignment: MainAxisAlignment.center,
@@ -305,7 +309,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
 class ShowDateTimeStamp extends StatelessWidget {
   ShowDateTimeStamp({required this.dateTimeStamp});
 
-  final DateTime dateTimeStamp;
+  final DateTime? dateTimeStamp;
   final DateFormat dateFormat = new DateFormat("yyyy-MM-dd HH:mm:ss");
 
   @override
@@ -344,7 +348,9 @@ class ShowDateTimeStamp extends StatelessWidget {
             ),
           ),
           Text(
-            dateFormat.format(dateTimeStamp),
+            dateTimeStamp != null
+                ? dateFormat.format(dateTimeStamp!)
+                : 'Not heard from',
             style: Theme.of(context)
                 .textTheme
                 .displaySmall!
