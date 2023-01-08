@@ -333,7 +333,7 @@ class ShowDateTimeStamp extends StatelessWidget {
                 Container(
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                   child: Text(
-                    "Last Updated: ",
+                    "Last Heard from: ",
                     style: Theme.of(context)
                         .textTheme
                         .displaySmall!
