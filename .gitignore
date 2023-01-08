@@ -35,6 +35,11 @@ assets/api-key.json
 .pub/
 /build/
 
+local.properties
+
+*.lock
+*.bin
+
 # Symbolication related
 app.*.symbols
 
