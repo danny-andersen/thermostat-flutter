@@ -4,6 +4,7 @@ import 'dropbox-api.dart';
 import 'schedule.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:intl/intl.dart';
+import 'package:collection/collection.dart';
 
 class HistoryPage extends StatefulWidget {
   HistoryPage({required this.oauthToken});
@@ -24,25 +25,39 @@ class HistoryPageState extends State<HistoryPage> {
   List<DropdownMenuItem<String>>? changeEntries;
   String todayFile = "";
   bool enabled = false;
-  charts.Series<TempByHour, int> measuredTempSeries =
-      HistoryLineChart.createMeasuredSeries(List.filled(0, TempByHour(0, 0.0)));
-  List<charts.Series<TempByHour, int>> chartsToPlot = List.filled(
+  charts.Series<ValueByHour, int> measuredTempSeries =
+      HistoryLineChart.createMeasuredSeries(
+          List.filled(0, ValueByHour(0, 0.0)));
+  charts.Series<ValueByHour, int> measuredHumiditySeries =
+      HistoryLineChart.createMeasuredSeries(
+          List.filled(0, ValueByHour(0, 0.0)));
+  List<charts.Series<ValueByHour, int>> chartsToPlot = List.filled(
       0,
       HistoryLineChart.createMeasuredSeries(
-          List.filled(0, TempByHour(0, 0.0))));
-  List<TempByHour> temperatureList =
-      List.filled(0, TempByHour(0, 0.0), growable: true);
+          List.filled(0, ValueByHour(0, 0.0))));
+  List<ValueByHour> temperatureList =
+      List.filled(0, ValueByHour(0, 0.0), growable: true);
+  List<ValueByHour> humidityList =
+      List.filled(0, ValueByHour(0, 0.0), growable: true);
+  List<ValueByHour> boilerList =
+      List.filled(0, ValueByHour(0, 0.0), growable: true);
+  int boilerOnTime = 0; //Number or mins boiler has been on that day
+  // List<double> temps = List.filled(0, 0.0, growable: true);
+  // List<double> humids = List.filled(0, 0.0, growable: true);
   String? selectedDate;
 
   @override
   void initState() {
     measuredTempSeries = HistoryLineChart.createMeasuredSeries(
-        [TempByHour(0, 10.0), TempByHour(2400, 10.0)]);
+        [ValueByHour(0, 10.0), ValueByHour(2400, 10.0)]);
+    measuredHumiditySeries = HistoryLineChart.createMeasuredSeries(
+        [ValueByHour(0, 30.0), ValueByHour(2400, 30.0)]);
     chartsToPlot = List.filled(1, measuredTempSeries, growable: true);
     DateTime now = DateTime.now();
     todayFile = sprintf(
         "%s%02i%02i%s", [now.year, now.month, now.day, deviceChangePattern]);
     // selectedDate = sprintf("%s%02i%02i", [now.year, now.month, now.day]);
+    getTodaysFile();
     getChangeFileList();
     super.initState();
   }
@@ -53,6 +68,10 @@ class HistoryPageState extends State<HistoryPage> {
   }
 
   void getChangeFile(String changeFile) {
+    // Reset lists
+    temperatureList = List.filled(0, ValueByHour(0, 0.0), growable: true);
+    humidityList = List.filled(0, ValueByHour(0, 0.0), growable: true);
+    boilerList = List.filled(0, ValueByHour(0, 0.0), growable: true);
     print("Downloading file: $changeFile");
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
@@ -68,26 +87,74 @@ class HistoryPageState extends State<HistoryPage> {
 
   void processChangeFile(String contents) {
 //    double lastTemp = 10.0;
-    temperatureList = List.filled(0, TempByHour(0, 0.0), growable: true);
+    // temperatureList = List.filled(0, TempByHour(0, 0.0), growable: true);
+    int tempCount = 0;
+    int humidCount = 0;
     contents.split('\n').forEach((line) {
       if (line.contains(':Temp:')) {
         try {
           List<String> parts = line.split(':');
-          int hour = int.parse(parts[0].trim());
+          int time = getTime(parts[0].trim());
           double temp = double.parse(parts[2].trim());
-          temperatureList.add(TempByHour(hour, temp));
-//          lastTemp = temp;
+          temperatureList.add(ValueByHour(time, temp));
+          tempCount++;
         } on FormatException {
           print("Received incorrect temp format: $line");
         }
+      } else if (line.contains(':Humidity:')) {
+        try {
+          List<String> parts = line.split(':');
+          int time = getTime(parts[0].trim());
+          double humid = double.parse(parts[2].trim());
+          humidityList.add(ValueByHour(time, humid));
+          humidCount++;
+        } on FormatException {
+          print("Received incorrect humidity format: $line");
+        }
+      } else if (line.contains(':Boiler:')) {
+        try {
+          List<String> parts = line.split(':');
+          int time = getTime(parts[0].trim());
+          // print("timeStr = ${parts[0].trim()} time int: ${time}");
+          String status = parts[2].trim();
+          if (status == "On") {
+            boilerList.add(ValueByHour(time, 1));
+          } else {
+            boilerList.add(ValueByHour(time, 0));
+          }
+        } on FormatException {
+          print("Received incorrect boiler format: $line");
+        }
       }
     });
+    // Process boiler on time
+    DateTime lastOnTime = DateTime(0, 1, 1, 0, 0);
+    boilerOnTime = 0;
+    for (ValueByHour boilerState in boilerList) {
+      int hour = boilerState.hour ~/ 100;
+      int min = (0.6 * (boilerState.hour - (100 * hour))).round();
+      DateTime time = DateTime(0, 1, 1, hour, min);
+      // print(
+      //     "Hour = ${boilerState.hour} ${hour}:${min} State = ${boilerState.value}");
+      if (boilerState.value == 1) {
+        lastOnTime = time;
+      } else {
+        // print("${(time.difference(lastOnTime)).inMinutes}");
+        boilerOnTime += (time.difference(lastOnTime)).inMinutes;
+      }
+    }
+
+    // print("Rx $tempCount temps $humidCount humids");
     measuredTempSeries = HistoryLineChart.createMeasuredSeries(temperatureList);
+    measuredHumiditySeries =
+        HistoryLineChart.createMeasuredSeries(humidityList);
     // print("Plotting chart");
-    setState(() {
-      //Convert temperatures to the series
-      chartsToPlot = [measuredTempSeries];
-    });
+    if (mounted) {
+      setState(() {
+        //Convert temperatures to the series
+        chartsToPlot = [measuredTempSeries, measuredHumiditySeries];
+      });
+    }
   }
 
   void getChangeFileList() {
@@ -113,30 +180,32 @@ class HistoryPageState extends State<HistoryPage> {
       String dateStr = fileName.split('_')[0];
       return DropdownMenuItem<String>(value: fileName, child: Text(dateStr));
     });
-    setState(() {
-      changeEntries = entries;
-      enabled = true;
-    });
+    if (mounted) {
+      setState(() {
+        changeEntries = entries;
+        enabled = true;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     Widget returnWidget = ListView(children: [
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Container(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: ElevatedButton(
-              child: Text('Show today'),
-              onPressed: enabled ? getTodaysFile : null,
-//              color: Colors.blue,
-            )),
-      ]),
+//       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+//         Container(
+//             padding: const EdgeInsets.only(top: 8.0),
+//             child: ElevatedButton(
+//               child: Text('Show today'),
+//               onPressed: enabled ? getTodaysFile : null,
+// //              color: Colors.blue,
+//             )),
+//       ]),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Container(
           padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 10.0),
           child: Text(
-            'Or select a previous day::',
-            // style: Theme.of(context).textTheme.body1,
+            'Choose date:',
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
         Container(
@@ -158,9 +227,8 @@ class HistoryPageState extends State<HistoryPage> {
         Container(
           padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 10.0),
           child: Text(
-            "Temperature Chart of " +
-                (selectedDate != null ? formattedDateStr(selectedDate!) : ''),
-            // style: Theme.of(context).textTheme.title,
+            "Temperature Chart of ${(selectedDate != null ? formattedDateStr(selectedDate!) : '')}",
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
         )
       ]),
@@ -176,6 +244,52 @@ class HistoryPageState extends State<HistoryPage> {
           ),
         ],
       ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.only(top: 15.0, right: 8.0, left: 8.0),
+            height: 40.0,
+            // width: 400.0,
+            width: MediaQuery.of(context).size.width,
+            child: ShowRange(
+                label: "Temperature Range: ", valsByHour: temperatureList),
+          ),
+        ],
+      ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+            height: 40.0,
+            width: MediaQuery.of(context).size.width,
+            // width: MediaQuery.of(context).size.width,
+            child: ShowRange(
+                label: "Rel Humidity Range: ", valsByHour: humidityList),
+          ),
+        ],
+      ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+            height: 40.0,
+            width: MediaQuery.of(context).size.width,
+            // width: MediaQuery.of(context).size.width,
+            child: Text(
+                "Boiler on for: ${boilerOnTime ~/ 60} hours, ${boilerOnTime - 60 * (boilerOnTime ~/ 60)} mins ($boilerOnTime mins)",
+                style: Theme.of(context).textTheme.titleMedium
+                // .displaySmall!
+                // .apply(fontSizeFactor: 0.4),
+//                    style: TextStyle(
+//                      fontSize: 18.0,
+//                      fontWeight: FontWeight.bold,
+                ),
+          ),
+        ],
+      ),
     ]);
 //      ],
 //    );
@@ -183,8 +297,67 @@ class HistoryPageState extends State<HistoryPage> {
   }
 }
 
+class ShowRange extends StatelessWidget {
+  ShowRange({required this.label, required this.valsByHour});
+
+  List<ValueByHour> valsByHour;
+  String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<double> vals = valsByHour.map((val) => val.value).toList();
+    if (vals.isEmpty) {
+      vals.add(0.0);
+    }
+    return Container(
+//      decoration: BoxDecoration(
+//        border: Border.all(
+//          color: Colors.black,
+//          width: 1.0,
+//        ),
+//      ),
+      // padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Container(
+                //   // padding: const EdgeInsets.only(left: 8.0, top: 15.0),
+                //   // height: 40.0,
+                //   // width: 150.0,
+                //   child: Text(
+                //     label,
+                //     style: Theme.of(context).textTheme.titleMedium,
+                //   ),
+                // ),
+                Container(
+                  // padding: const EdgeInsets.only(bottom: 8.0, right: 10.0),
+                  child: Text(
+                      "${label} Max: ${vals.max}, Min: ${vals.min}, Avg: ${vals.average.toStringAsFixed(1)}",
+                      style: Theme.of(context).textTheme.titleMedium
+                      // .displaySmall!
+                      // .apply(fontSizeFactor: 0.4),
+//                    style: TextStyle(
+//                      fontSize: 18.0,
+//                      fontWeight: FontWeight.bold,
+//                    ),
+                      ),
+                )
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class HistoryLineChart extends StatelessWidget {
-  final List<charts.Series<TempByHour, int>> seriesList;
+  final List<charts.Series<ValueByHour, int>> seriesList;
   final void Function(charts.SelectionModel<num>)? onSelectionChanged;
 
   HistoryLineChart(this.seriesList, this.onSelectionChanged);
@@ -192,16 +365,16 @@ class HistoryLineChart extends StatelessWidget {
   double getMaxValue() {
     double maxValue = -999999999.0;
     for (charts.Series s in seriesList)
-      for (TempByHour point in s.data)
-        if (point.temperature > maxValue) maxValue = point.temperature;
+      for (ValueByHour point in s.data)
+        if (point.value > maxValue) maxValue = point.value;
     return maxValue;
   }
 
   double getMinValue() {
     double minValue = 999999999.0;
     for (charts.Series s in seriesList)
-      for (TempByHour point in s.data)
-        if (point.temperature < minValue) minValue = point.temperature;
+      for (ValueByHour point in s.data)
+        if (point.value < minValue) minValue = point.value;
     return minValue;
   }
 
@@ -245,7 +418,7 @@ class HistoryLineChart extends StatelessWidget {
             new charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
         tickFormatterSpec:
             new charts.BasicNumericTickFormatterSpec.fromNumberFormat(
-                TempByHour.hourFormat),
+                ValueByHour.hourFormat),
       ),
       defaultRenderer: new charts.LineRendererConfig(includePoints: true),
       selectionModels: [
@@ -260,19 +433,19 @@ class HistoryLineChart extends StatelessWidget {
     );
   }
 
-  static charts.Series<TempByHour, int> createMeasuredSeries(
-      List<TempByHour> timeTempPoints) {
+  static charts.Series<ValueByHour, int> createMeasuredSeries(
+      List<ValueByHour> timeTempPoints) {
     int len = timeTempPoints.length;
     print("Creating new chart with $len");
-    return new charts.Series<TempByHour, int>(
+    return new charts.Series<ValueByHour, int>(
       id: 'Measured',
-      colorFn: ((TempByHour tempByHour, __) {
+      colorFn: ((ValueByHour tempByHour, __) {
         var color;
         color = charts.MaterialPalette.green.shadeDefault;
         return color;
       }),
-      domainFn: (TempByHour tt, _) => tt.hour,
-      measureFn: (TempByHour tt, _) => tt.temperature,
+      domainFn: (ValueByHour tt, _) => tt.hour,
+      measureFn: (ValueByHour tt, _) => tt.value,
       data: timeTempPoints,
     );
   }

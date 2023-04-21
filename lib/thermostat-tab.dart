@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:charts_flutter_new/flutter.dart' as charts;
+import 'package:syncfusion_flutter_gauges/gauges.dart';
 
 import 'dropbox-api.dart';
 
@@ -72,7 +73,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
   double extTemp = 100.0;
   double setTemp = 0.0;
   double requestedTemp = 0.0;
+  double humidity = 0.0;
   DateTime? lastHeardFrom;
+  bool pirState = false;
 
   bool requestOutstanding = false;
   bool boilerOn = true;
@@ -114,7 +117,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           contents: contents);
     }
     requestOutstanding = true;
-    if (this.mounted) {
+    if (mounted) {
       setState(() {
         requestedTemp = temp;
       });
@@ -140,7 +143,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void processSetTemp(String contents) {
-    if (this.mounted) {
+    if (mounted) {
       try {
         setState(() {
           requestedTemp = double.parse(contents.trim());
@@ -155,7 +158,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void processStatus(String contents) {
-    if (this.mounted) {
+    if (mounted) {
       setState(() {
         contents.split('\n').forEach((line) {
           if (line.startsWith('Current temp:')) {
@@ -199,6 +202,12 @@ class _ThermostatPageState extends State<ThermostatPage> {
           } else if (line.startsWith('Last heard time')) {
             String dateStr = line.substring(line.indexOf(':') + 2, line.length);
             lastHeardFrom = DateTime.parse(dateStr);
+          } else if (line.startsWith('Current humidity')) {
+            String str = line.substring(line.indexOf(':') + 2, line.length);
+            humidity = double.parse(str);
+          } else if (line.startsWith('PIR:')) {
+            String str = line.substring(line.indexOf(':') + 1, line.length);
+            pirState = str.contains('1');
           }
         });
       });
@@ -255,7 +264,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
       Container(
         padding: const EdgeInsets.only(left: 8.0, top: 8.0),
         child: Text(
-          'Temperature Chart',
+          'Temperature Chart:',
           style: TextStyle(
             fontSize: 18.0,
             fontWeight: FontWeight.bold,
@@ -267,13 +276,47 @@ class _ThermostatPageState extends State<ThermostatPage> {
         child: TemperatureChart(createChartSeries(), animate: false),
       ),
       const SizedBox(height: 16.0),
+      Container(
+        padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+        child: Text(
+          'Adjust Set Temp:',
+          style: TextStyle(
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       SliderWithRange(
           requestedTempGetter: () => requestedTemp, returnNewTemp: sendNewTemp),
       SetTempButtonBar(
           minusPressed: _decRequestedTemp,
           plusPressed: _incrementRequestedTemp),
+      Container(
+        padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+        child: Text(
+          'Relative Humidity (%):',
+          style: TextStyle(
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      RHGauge(humidity: humidity),
+      Container(
+        padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+        child: Text(
+          'Status:',
+          style: TextStyle(
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       BoilerState(boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
-      const SizedBox(height: 16.0),
+      ShowPirStatus(
+        pirState: pirState,
+      ),
+// const SizedBox(height: 16.0),
       ShowDateTimeStamp(dateTimeStamp: lastHeardFrom),
 //        const SizedBox(height: 32.0),
 //        Row(
@@ -287,13 +330,13 @@ class _ThermostatPageState extends State<ThermostatPage> {
 //            ),
 //          ],
 //        ),
-      FloatingActionButton(
-        onPressed: getStatus,
-        elevation: 15,
-        tooltip: 'Refresh',
-//          shape: StadiumBorder(),
-        child: Icon(Icons.refresh),
-      ),
+//       FloatingActionButton(
+//         onPressed: getStatus,
+//         elevation: 15,
+//         tooltip: 'Refresh',
+// //          shape: StadiumBorder(),
+//         child: Icon(Icons.refresh),
+//       ),
 
 //        FloatingActionButton.extended(
 //            onPressed: getStatus,
@@ -303,66 +346,6 @@ class _ThermostatPageState extends State<ThermostatPage> {
 //          ),
     ]);
     return returnWidget;
-  }
-}
-
-class ShowDateTimeStamp extends StatelessWidget {
-  ShowDateTimeStamp({required this.dateTimeStamp});
-
-  final DateTime? dateTimeStamp;
-  final DateFormat dateFormat = new DateFormat("yyyy-MM-dd HH:mm:ss");
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-//      decoration: BoxDecoration(
-//        border: Border.all(
-//          color: Colors.black,
-//          width: 1.0,
-//        ),
-//      ),
-      padding: const EdgeInsets.all(10.0),
-      child: Row(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-//                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Text(
-                    "Last Heard from: ",
-                    style: Theme.of(context)
-                        .textTheme
-                        .displaySmall!
-                        .apply(fontSizeFactor: 0.3),
-//                    style: TextStyle(
-//                      fontSize: 18.0,
-//                      fontWeight: FontWeight.bold,
-//                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
-          Text(
-            dateTimeStamp != null
-                ? dateFormat.format(dateTimeStamp!)
-                : 'Not heard from',
-            style: Theme.of(context)
-                .textTheme
-                .displaySmall!
-                .apply(fontSizeFactor: 0.3),
-//            style: TextStyle(
-//              //color: Colors.grey[500],
-//              fontSize: 18.0,
-//            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -510,6 +493,42 @@ class SliderWithRange extends StatelessWidget {
                   .apply(fontSizeFactor: 0.5)),
         ),
       ],
+    );
+  }
+}
+
+class RHGauge extends StatelessWidget {
+  RHGauge({required this.humidity});
+
+  final double humidity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      child: SfLinearGauge(
+          minimum: 0.0,
+          maximum: 100.0,
+          orientation: LinearGaugeOrientation.horizontal,
+          majorTickStyle: LinearTickStyle(length: 20),
+          axisLabelStyle: TextStyle(fontSize: 12.0, color: Colors.black),
+          ranges: [
+            LinearGaugeRange(startValue: 0, endValue: 20.0, color: Colors.red),
+            LinearGaugeRange(
+                startValue: 20.0, endValue: 30.0, color: Colors.orange),
+            LinearGaugeRange(
+                startValue: 30.0, endValue: 60.0, color: Colors.green),
+            LinearGaugeRange(
+                startValue: 60.0, endValue: 70.0, color: Colors.orange),
+            LinearGaugeRange(
+                startValue: 70.0, endValue: 100.0, color: Colors.red),
+          ],
+          markerPointers: [LinearShapePointer(value: humidity)],
+          axisTrackStyle: LinearAxisTrackStyle(
+              color: Colors.cyan,
+              edgeStyle: LinearEdgeStyle.bothFlat,
+              thickness: 8.0,
+              borderColor: Colors.grey)),
+      margin: EdgeInsets.all(10),
     );
   }
 }
@@ -706,6 +725,123 @@ class BoilerState extends StatelessWidget {
       );
     }
     return _returnWidget;
+  }
+}
+
+class ShowPirStatus extends StatelessWidget {
+  ShowPirStatus({required this.pirState});
+
+  final bool pirState;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+//      decoration: BoxDecoration(
+//        border: Border.all(
+//          color: Colors.black,
+//          width: 1.0,
+//        ),
+//      ),
+      padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+//                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    "PIR State: ",
+                    style: Theme.of(context)
+                        .textTheme
+                        .displaySmall!
+                        .apply(fontSizeFactor: 0.3),
+//                    style: TextStyle(
+//                      fontSize: 18.0,
+//                      fontWeight: FontWeight.bold,
+//                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+          Text(
+            pirState ? "On" : "Off",
+            style: Theme.of(context)
+                .textTheme
+                .displaySmall!
+                .apply(fontSizeFactor: 0.3),
+//            style: TextStyle(
+//              //color: Colors.grey[500],
+//              fontSize: 18.0,
+//            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ShowDateTimeStamp extends StatelessWidget {
+  ShowDateTimeStamp({required this.dateTimeStamp});
+
+  final DateTime? dateTimeStamp;
+  final DateFormat dateFormat = new DateFormat("yyyy-MM-dd HH:mm:ss");
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+//      decoration: BoxDecoration(
+//        border: Border.all(
+//          color: Colors.black,
+//          width: 1.0,
+//        ),
+//      ),
+      padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+//                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    "Last Heard from: ",
+                    style: Theme.of(context)
+                        .textTheme
+                        .displaySmall!
+                        .apply(fontSizeFactor: 0.3),
+//                    style: TextStyle(
+//                      fontSize: 18.0,
+//                      fontWeight: FontWeight.bold,
+//                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+          Text(
+            dateTimeStamp != null
+                ? dateFormat.format(dateTimeStamp!)
+                : 'Not heard from',
+            style: Theme.of(context)
+                .textTheme
+                .displaySmall!
+                .apply(fontSizeFactor: 0.3),
+//            style: TextStyle(
+//              //color: Colors.grey[500],
+//              fontSize: 18.0,
+//            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

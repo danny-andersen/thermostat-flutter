@@ -3,15 +3,15 @@ import 'package:sprintf/sprintf.dart';
 import 'package:intl/intl.dart';
 
 //Used to represent the schedule as a series of Time + Temp points in a graph
-class TempByHour {
+class ValueByHour {
   final int hour; //Hours and mins time of day
-  final double temperature; //temperature at this time
-  TempByHour(this.hour, this.temperature);
-  factory TempByHour.from(DateTime time, temp) {
+  final double value; //temperature at this time
+  ValueByHour(this.hour, this.value);
+  factory ValueByHour.from(DateTime time, val) {
     String tStr = sprintf("%2i%02i", [time.hour, time.minute]);
     int hour = int.parse(tStr);
 //    print ('${time.toString()} : $tStr : $hour');
-    return TempByHour(hour, temp);
+    return ValueByHour(hour, val);
   }
   static final NumberFormat hourFormat = new NumberFormat('0000', 'en_US');
 }
@@ -40,11 +40,11 @@ class ScheduleDay {
   }
 
   String getStartAsStr() {
-    return TempByHour.hourFormat.format(dateTimeToHour(this.start));
+    return ValueByHour.hourFormat.format(dateTimeToHour(this.start));
   }
 
   String getEndAsStr() {
-    return TempByHour.hourFormat.format(dateTimeToHour(this.end));
+    return ValueByHour.hourFormat.format(dateTimeToHour(this.end));
   }
 
   String getStartToEndStr() {
@@ -125,6 +125,17 @@ class ScheduleDay {
   };
 }
 
+int getTime(String timeStr) {
+  //* Returns the time in as an integer
+  // First two digits are the hour, second two are fractions of an hour
+  // based 100 not base 60
+
+  int hour = int.parse(timeStr.substring(0, 2));
+  int min = int.parse(timeStr.substring(2, 4));
+  int time = (hour * 100) + ((100 * min) ~/ 60);
+  return time;
+}
+
 //Schedule is a simple list of ScheduleDay entries
 class Schedule {
   //The dropbox file holding this schedule
@@ -184,28 +195,28 @@ class Schedule {
   }
 
   //For each 15 mins, work out what the temperature is for the filtered list given
-  static List<TempByHour> generateTempByHourForEntries(
+  static List<ValueByHour> generateTempByHourForEntries(
       List<ScheduleDay> entries) {
     DateTime currentTime = DateTime(2000, 1, 1, 0, 0);
     DateTime end = DateTime(2000, 1, 1, 23, 59);
     //Sort entries by precedence so that most precedence (lower number) is last
     entries.sort((a, b) => b.getPrecedence().compareTo(a.getPrecedence()));
-    List<TempByHour> retEntries =
-        List.filled(0, TempByHour(0, 0), growable: true);
+    List<ValueByHour> retEntries =
+        List.filled(0, ValueByHour(0, 0), growable: true);
     double currentTemp = getCurrentTemp(currentTime, entries);
-    retEntries.add(TempByHour.from(currentTime, currentTemp));
+    retEntries.add(ValueByHour.from(currentTime, currentTemp));
     do {
       DateTime newTime = currentTime.add(Duration(minutes: 5));
       double newTemp = getCurrentTemp(newTime, entries);
       if (newTemp != currentTemp) {
         //Create an entry at old temp and new temp
-        retEntries.add(TempByHour.from(currentTime, currentTemp));
-        retEntries.add(TempByHour.from(newTime, newTemp));
+        retEntries.add(ValueByHour.from(currentTime, currentTemp));
+        retEntries.add(ValueByHour.from(newTime, newTemp));
       }
       currentTime = newTime;
       currentTemp = newTemp;
     } while (currentTime.isBefore(end));
-    retEntries.add(TempByHour.from(end, currentTemp));
+    retEntries.add(ValueByHour.from(end, currentTemp));
     return retEntries;
   }
 

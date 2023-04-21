@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:thermostat_flutter/security-tab.dart';
 import 'thermostat-tab.dart';
 import 'history-tab.dart';
 import 'holidaytab.dart';
@@ -65,7 +66,7 @@ class MyAppState extends State<MyApp> {
       ),
 //      home: ThermostatPage(title: 'Thermostat'),
       home: DefaultTabController(
-        length: 4,
+        length: 5,
         child: Scaffold(
           appBar: AppBar(
             // Here we take the value from the MyHomePage object that was created by
@@ -80,6 +81,7 @@ class MyAppState extends State<MyApp> {
                 Tab(text: 'History'),
                 Tab(text: 'Holiday'),
                 Tab(text: 'Schedule'),
+                Tab(text: 'Security'),
               ],
             ),
           ),
@@ -89,6 +91,7 @@ class MyAppState extends State<MyApp> {
               HistoryPage(oauthToken: this.oauthToken),
               HolidayPage(oauthToken: this.oauthToken),
               SchedulePage(oauthToken: this.oauthToken),
+              SecurityPage(oauthToken: this.oauthToken),
             ],
           ),
 //          floatingActionButton: FloatingActionButton(
