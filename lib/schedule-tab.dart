@@ -65,9 +65,11 @@ class SchedulePageState extends State<SchedulePage> {
     String changeFile = sprintf(
         "/%s%02i%02i_%s", [now.year, now.month, now.day, deviceChangeFile]);
     DropBoxAPIFn.getDropBoxFile(
-        oauthToken: this.oauthToken,
-        fileToDownload: changeFile,
-        callback: processChangeFile);
+      oauthToken: this.oauthToken,
+      fileToDownload: changeFile,
+      callback: processChangeFile,
+      timeoutSecs: 300,
+    );
   }
 
   void processChangeFile(String contents) {
@@ -139,6 +141,7 @@ class SchedulePageState extends State<SchedulePage> {
       oauthToken: this.oauthToken,
       fileToDownload: scheduleEntry!.fileListing.fullPathName,
       callback: processScheduleFile,
+      timeoutSecs: 300,
     );
     if (mounted) {
       setState(() {
@@ -223,6 +226,7 @@ class SchedulePageState extends State<SchedulePage> {
       oauthToken: this.oauthToken,
       fileToDownload: currentSchedulePath,
       callback: processScheduleFile,
+      timeoutSecs: 300,
     );
   }
 

@@ -184,6 +184,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "20.4.44"
+  synchronized:
+    dependency: "direct main"
+    description:
+      name: synchronized
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "3.1.0"
   term_glyph:
     dependency: transitive
     description:

@@ -57,16 +57,21 @@ class ColorByTemp {
 class ThermostatPage extends StatefulWidget {
   ThermostatPage({required this.oauthToken}) : super();
 
-  final String oauthToken;
+  String oauthToken;
+  _ThermostatPageState state = _ThermostatPageState(oauthToken: "BLANK");
+
+  void setSecret(final String token) {
+    oauthToken = token;
+    state.setSecret(oauthToken);
+  }
 
   @override
-  _ThermostatPageState createState() =>
-      _ThermostatPageState(oauthToken: this.oauthToken);
+  _ThermostatPageState createState() => state;
 }
 
 class _ThermostatPageState extends State<ThermostatPage> {
   _ThermostatPageState({required this.oauthToken});
-  final String oauthToken;
+  String oauthToken;
   final String statusFile = "/thermostat_status.txt";
   final String setTempFile = "/setTemp.txt";
   double currentTemp = 0.0;
@@ -86,8 +91,12 @@ class _ThermostatPageState extends State<ThermostatPage> {
   void initState() {
     getSetTemp();
     getStatus();
-    timer = Timer.periodic(Duration(seconds: 45), refreshStatus);
+    timer = Timer.periodic(Duration(seconds: 30), refreshStatus);
     super.initState();
+  }
+
+  void setSecret(final String token) {
+    oauthToken = token;
   }
 
   @override
@@ -125,35 +134,38 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void refreshStatus(Timer timer) {
+    getSetTemp();
     getStatus();
   }
 
   void getStatus() {
     DropBoxAPIFn.getDropBoxFile(
-        oauthToken: this.oauthToken,
-        fileToDownload: statusFile,
-        callback: processStatus);
+      oauthToken: this.oauthToken,
+      fileToDownload: statusFile,
+      callback: processStatus,
+      timeoutSecs: 30,
+    );
   }
 
   void getSetTemp() {
-    DropBoxAPIFn.getDropBoxFile(
+    if (requestOutstanding) {
+      DropBoxAPIFn.getDropBoxFile(
         oauthToken: this.oauthToken,
         fileToDownload: setTempFile,
-        callback: processSetTemp);
+        callback: processSetTemp,
+        timeoutSecs: 0,
+      );
+    }
   }
 
   void processSetTemp(String contents) {
-    if (mounted) {
-      try {
-        setState(() {
-          requestedTemp = double.parse(contents.trim());
-          if (requestedTemp.toStringAsFixed(1) != setTemp.toStringAsFixed(1)) {
-            requestOutstanding = true;
-          }
-        });
-      } on FormatException {
-        //Do nothing - no setTemp file exists
+    try {
+      requestedTemp = double.parse(contents.trim());
+      if (requestedTemp.toStringAsFixed(1) == setTemp.toStringAsFixed(1)) {
+        requestOutstanding = false;
       }
+    } on FormatException {
+      print("Received non-double Current temp format: $contents");
     }
   }
 

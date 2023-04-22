@@ -38,9 +38,11 @@ class _HolidayPageState extends State<HolidayPage> {
   void refreshCurrent() {
     //Retrieve any current holiday dates
     DropBoxAPIFn.getDropBoxFile(
-        oauthToken: this.oauthToken,
-        fileToDownload: this.currentHolidayFile,
-        callback: processCurrentHoliday);
+      oauthToken: this.oauthToken,
+      fileToDownload: this.currentHolidayFile,
+      callback: processCurrentHoliday,
+      timeoutSecs: 300,
+    );
     resetDates();
   }
 

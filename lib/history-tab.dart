@@ -76,7 +76,8 @@ class HistoryPageState extends State<HistoryPage> {
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
         fileToDownload: "/$changeFile",
-        callback: processChangeFile);
+        callback: processChangeFile,
+        timeoutSecs: 180);
   }
 
   void newChangeFileSelected(String? changeFile) {

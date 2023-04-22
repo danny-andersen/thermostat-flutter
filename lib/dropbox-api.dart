@@ -1,6 +1,49 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:synchronized/synchronized.dart';
 // import 'package:meta/meta.dart';
+
+class ContentCache {
+  final Map<String, _CacheEntry<String>> _cache = {};
+
+  String get(String key) {
+    final entry = _cache[key];
+    if (entry != null && !entry.isExpired()) {
+      return entry.value;
+    } else {
+      return "";
+    }
+  }
+
+  void set(String key, String value, int duration) {
+    if (duration != 0) {
+      //Only cache if needed
+      _cache[key] = _CacheEntry(value, Duration(seconds: duration));
+    }
+  }
+
+  void remove(String key) {
+    _cache.remove(key);
+  }
+
+  void clear() {
+    _cache.clear();
+  }
+}
+
+class _CacheEntry<T> {
+  T value;
+  final DateTime createdAt;
+  Duration duration;
+
+  _CacheEntry(this.value, this.duration) : createdAt = DateTime.now();
+
+  bool isExpired() {
+    final now = DateTime.now();
+    final elapsed = now.difference(createdAt);
+    return elapsed >= duration;
+  }
+}
 
 class FileEntry {
   final String fileName;
@@ -40,11 +83,20 @@ class FileListing {
 }
 
 class DropBoxAPIFn {
+  static ContentCache cache = ContentCache();
   static void getDropBoxFile({
     required String oauthToken,
     required String fileToDownload,
     required Function callback,
+    required int timeoutSecs,
   }) {
+    if (oauthToken == "BLANK") {
+      return;
+    }
+    String cacheEntry = cache.get(fileToDownload);
+    if (cacheEntry != '') {
+      callback(cacheEntry);
+    }
     HttpClient client = HttpClient();
     final Uri downloadUri =
         Uri.parse("https://content.dropboxapi.com/2/files/download");
@@ -59,6 +111,7 @@ class DropBoxAPIFn {
         response.transform(utf8.decoder).listen((contents) {
 //          print('Got response:');
 //          print(contents);
+          cache.set(fileToDownload, contents, timeoutSecs);
           callback(contents);
         });
       });
@@ -103,6 +156,13 @@ class DropBoxAPIFn {
     required Function callback,
     int maxResults = 100,
   }) {
+    if (oauthToken == "BLANK") {
+      return;
+    }
+    String cacheEntry = cache.get(filePattern);
+    if (cacheEntry != '') {
+      callback(FileListing.fromJson(jsonDecode(cacheEntry)));
+    }
     HttpClient client = HttpClient();
     final Uri uploadUri =
         Uri.parse("https://api.dropboxapi.com/2/files/search");

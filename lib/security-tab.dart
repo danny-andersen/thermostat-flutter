@@ -42,14 +42,20 @@ class SecurityPageState extends State<SecurityPage> {
         growable: true);
     // print("Downloading file: $changeFile");
     DropBoxAPIFn.getDropBoxFile(
-        oauthToken: oauthToken,
-        fileToDownload: "/$changeFile",
-        callback: processChangeFile);
+      oauthToken: oauthToken,
+      fileToDownload: "/$changeFile",
+      callback: processChangeFile,
+      timeoutSecs: 300,
+    );
   }
 
   void processChangeFile(String contents) {
     List<DeviceByHour> whoList =
         List.filled(0, DeviceByHour(0, "", false), growable: true);
+    //Clear existing list
+    whoByHourRows = List.filled(
+        0, DataRow(cells: List.filled(0, const DataCell(Text("")))),
+        growable: true);
 
     contents.split('\n').forEach((line) {
       if (line.contains(':Device:')) {
@@ -69,7 +75,7 @@ class SecurityPageState extends State<SecurityPage> {
     //First event for a device should be an arrived event - look for a gone event for the same device
     List<WhoByHour> whoByHourList =
         List.filled(0, WhoByHour("", 0, 0), growable: true);
-
+    Map<String, int> lastEventForDevice = Map<String, int>();
     for (final who in whoList) {
       if (who.event) {
         //Arrival
@@ -84,12 +90,14 @@ class SecurityPageState extends State<SecurityPage> {
           }
         }
       }
+      lastEventForDevice[who.device] = who.hour;
     }
     //Convert to Datarows for display if tab still on display
     if (mounted) {
       setState(() {
         for (final who in whoByHourList) {
-          whoByHourRows.add(who.getDataRow());
+          whoByHourRows.add(
+              who.getDataRow(lastEventForDevice[who.device] == who.leaveTime));
         }
       });
     }
@@ -104,17 +112,18 @@ class SecurityPageState extends State<SecurityPage> {
             child: Text(
               'Who\'s home',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 20,
                 color: Colors.black87,
               ),
             )),
       ]),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(
-            padding: const EdgeInsets.only(top: 8.0),
+            padding: const EdgeInsets.only(top: 0.0),
             child: DataTable(
                 horizontalMargin: 3,
                 columnSpacing: 10,
+                dataRowHeight: 25,
                 columns: [
                   DataColumn(label: Text("Who")),
                   DataColumn(label: Text("Time Arrived")),
@@ -150,11 +159,17 @@ class WhoByHour {
   int leaveTime; //true if arrived/new, false if left / gone
 
   WhoByHour(this.device, this.arriveTime, this.leaveTime);
-  DataRow getDataRow() {
+  DataRow getDataRow(bool lastEvent) {
+    //lastEvent is true if last time device had an event
+    //if it was a leave event show in red, else its an amber
     List<DataCell> cells = List.filled(3, DataCell(Text("")));
     TextStyle rowStyle = TextStyle(
-        color: (leaveTime == 0 ? Colors.red : Colors.green),
-        fontWeight: (leaveTime == 0 ? FontWeight.bold : FontWeight.normal));
+        color: (leaveTime == 0
+            ? Colors.green
+            : (lastEvent ? Colors.red : Colors.amber)),
+        fontWeight: (leaveTime == 0 || lastEvent
+            ? FontWeight.bold
+            : FontWeight.normal));
     cells[0] = DataCell(Text(device, style: rowStyle));
     cells[1] = DataCell(Text(
         sprintf("%02i:%02i", [getHour(arriveTime), getMin(arriveTime)]),

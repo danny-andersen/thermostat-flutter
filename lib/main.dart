@@ -19,7 +19,8 @@ class MyApp extends StatefulWidget {
 }
 
 class MyAppState extends State<MyApp> {
-  String oauthToken = "API KEY IS BLANK";
+  String oauthToken = "BLANK";
+  ThermostatPage statusPage = ThermostatPage(oauthToken: "BLANK");
   final HttpClient client = HttpClient();
   // Future<String> loadAsset() async {
   //   return await rootBundle.loadString('assets/api-key.json');
@@ -33,6 +34,8 @@ class MyAppState extends State<MyApp> {
     secret.then((Secret secret) {
       setState(() {
         oauthToken = secret.apiKey;
+        statusPage.setSecret(oauthToken);
+        statusPage.createState();
       });
     });
     super.initState();
@@ -41,26 +44,10 @@ class MyAppState extends State<MyApp> {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    // loadAsset().then((value) {
-    //   Map jsonMap = json.decode(value);
-    //   oauthToken = jsonMap["api_key"];
-    // });
-    // Future.wait([loadAsset()]).then((List<String> values) {
-    //   Map jsonMap = json.decode(values[0]);
-    //   oauthToken = jsonMap["api_key"];
-    // });
     return MaterialApp(
       title: 'Home Controller',
       theme: ThemeData(
         // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
         fontFamily: 'Roboto',
       ),
@@ -78,8 +65,8 @@ class MyAppState extends State<MyApp> {
                   text: "Status",
 //                icon: Icon(Icons.stay_current_landscape)
                 ),
-                Tab(text: 'History'),
-                Tab(text: 'Holiday'),
+                Tab(text: 'Hist'),
+                Tab(text: 'Hols'),
                 Tab(text: 'Schedule'),
                 Tab(text: 'Security'),
               ],
@@ -87,7 +74,7 @@ class MyAppState extends State<MyApp> {
           ),
           body: TabBarView(
             children: [
-              ThermostatPage(oauthToken: this.oauthToken),
+              statusPage,
               HistoryPage(oauthToken: this.oauthToken),
               HolidayPage(oauthToken: this.oauthToken),
               SchedulePage(oauthToken: this.oauthToken),
