@@ -56,8 +56,8 @@ class ColorByTemp {
 
 class ThermostatPage extends StatefulWidget {
   ThermostatPage({required this.oauthToken}) : super();
-  late _ThermostatPageState statePage;
   String oauthToken;
+  _ThermostatPageState statePage = _ThermostatPageState(oauthToken: "BLANK");
   // _ThermostatPageState state = _ThermostatPageState(oauthToken: "BLANK");
 
   @override
@@ -207,7 +207,11 @@ class _ThermostatPageState extends State<ThermostatPage> {
             try {
               minsToSetTemp = int.parse(line.split(':')[1].trim());
             } on FormatException {
-              print("Received non-int minsToSetTemp format: $line");
+              try {
+                minsToSetTemp = double.parse(line.split(':')[1].trim()).toInt();
+              } on FormatException {
+                print("Received non-int minsToSetTemp format: $line");
+              }
             }
           } else if (line.startsWith('Last heard time')) {
             String dateStr = line.substring(line.indexOf(':') + 2, line.length);

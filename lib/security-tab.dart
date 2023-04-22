@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:sprintf/sprintf.dart';
 
 import 'dropbox-api.dart';
@@ -18,6 +19,9 @@ class SecurityPageState extends State<SecurityPage> {
   final String oauthToken;
   final String deviceChangePattern = "_device_change.txt";
   String todayFile = "";
+  String? selectedDate;
+  List<DropdownMenuItem<String>>? changeEntries;
+  bool enabled = false;
   List<DataRow> whoByHourRows = List.filled(
       0, DataRow(cells: List.filled(0, const DataCell(Text("")))),
       growable: true);
@@ -28,10 +32,12 @@ class SecurityPageState extends State<SecurityPage> {
     todayFile = sprintf(
         "%s%02i%02i%s", [now.year, now.month, now.day, deviceChangePattern]);
     getTodaysFile();
+    getChangeFileList();
     super.initState();
   }
 
   void getTodaysFile() {
+    selectedDate = todayFile;
     getChangeFile(todayFile);
   }
 
@@ -47,6 +53,37 @@ class SecurityPageState extends State<SecurityPage> {
       callback: processChangeFile,
       timeoutSecs: 300,
     );
+  }
+
+  void getChangeFileList() {
+    DropBoxAPIFn.searchDropBoxFileNames(
+        oauthToken: oauthToken,
+        filePattern: deviceChangePattern,
+        callback: processChangeFileList,
+        maxResults: 31);
+  }
+
+  void newChangeFileSelected(String? changeFile) {
+    changeFile ??= "Select a file"; //Set to blank if null
+    selectedDate = changeFile;
+    getChangeFile(changeFile);
+  }
+
+  void processChangeFileList(FileListing files) {
+    //Process each file and add to dropdown
+    List<FileEntry> fileEntries = files.fileEntries;
+    List<DropdownMenuItem<String>> entries =
+        List.generate(fileEntries.length, (index) {
+      String fileName = fileEntries[index].fileName;
+      String dateStr = fileName.split('_')[0];
+      return DropdownMenuItem<String>(value: fileName, child: Text(dateStr));
+    });
+    if (mounted) {
+      setState(() {
+        changeEntries = entries;
+        enabled = true;
+      });
+    }
   }
 
   void processChangeFile(String contents) {
@@ -86,11 +123,11 @@ class SecurityPageState extends State<SecurityPage> {
         for (WhoByHour who2 in whoByHourList) {
           if (who2.device == who.device && who2.leaveTime == 0) {
             who2.leaveTime = who.hour;
+            lastEventForDevice[who.device] = who.hour;
             break;
           }
         }
       }
-      lastEventForDevice[who.device] = who.hour;
     }
     //Convert to Datarows for display if tab still on display
     if (mounted) {
@@ -103,6 +140,12 @@ class SecurityPageState extends State<SecurityPage> {
     }
   }
 
+  String formattedDateStr(String fileName) {
+    //Convert yyyymmdd to dd Month Year
+    DateTime dateTime = DateTime.parse(fileName.split('_')[0]);
+    return DateFormat.yMMMMd("en_US").format(dateTime);
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget returnWidget = ListView(children: [
@@ -110,12 +153,35 @@ class SecurityPageState extends State<SecurityPage> {
         Container(
             padding: const EdgeInsets.only(top: 8.0),
             child: Text(
-              'Who\'s home',
+              'Who\'s home on ${(selectedDate != null ? formattedDateStr(selectedDate!) : '')}',
               style: TextStyle(
                 fontSize: 20,
                 color: Colors.black87,
               ),
             )),
+      ]),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+          padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 10.0),
+          child: Text(
+            'Choose date:   ',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.only(top: 15.0, right: 8.0),
+          width: 100.0,
+          height: 50.0,
+          child: DropdownButton<String>(
+            items: changeEntries,
+            onChanged: enabled ? newChangeFileSelected : null,
+            elevation: 20,
+            isExpanded: true,
+            value: selectedDate,
+            isDense: false,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
       ]),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(

@@ -100,6 +100,7 @@ class DropBoxAPIFn {
     String cacheEntry = cache.get(fileToDownload);
     if (cacheEntry != '') {
       callback(cacheEntry);
+      return;
     }
     HttpClient client = HttpClient();
     final Uri downloadUri =
@@ -169,6 +170,7 @@ class DropBoxAPIFn {
     String cacheEntry = cache.get(filePattern);
     if (cacheEntry != '') {
       callback(FileListing.fromJson(jsonDecode(cacheEntry)));
+      return;
     }
     HttpClient client = HttpClient();
     final Uri uploadUri =
@@ -184,6 +186,7 @@ class DropBoxAPIFn {
         response.transform(utf8.decoder).listen((contents) {
 //          print('Got response:');
 //          print(contents);
+          cache.set(filePattern, contents, 600);
           callback(FileListing.fromJson(jsonDecode(contents)));
         });
       });

@@ -67,7 +67,7 @@ class MyAppState extends State<MyApp> {
                   text: "Status",
 //                icon: Icon(Icons.stay_current_landscape)
                 ),
-                Tab(text: 'Hist'),
+                Tab(text: 'History'),
                 Tab(text: 'Hols'),
                 Tab(text: 'Schedule'),
                 Tab(text: 'Security'),
