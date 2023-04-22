@@ -56,17 +56,15 @@ class ColorByTemp {
 
 class ThermostatPage extends StatefulWidget {
   ThermostatPage({required this.oauthToken}) : super();
-
+  late _ThermostatPageState statePage;
   String oauthToken;
-  _ThermostatPageState state = _ThermostatPageState(oauthToken: "BLANK");
-
-  void setSecret(final String token) {
-    oauthToken = token;
-    state.setSecret(oauthToken);
-  }
+  // _ThermostatPageState state = _ThermostatPageState(oauthToken: "BLANK");
 
   @override
-  _ThermostatPageState createState() => state;
+  _ThermostatPageState createState() {
+    statePage = _ThermostatPageState(oauthToken: oauthToken);
+    return statePage;
+  }
 }
 
 class _ThermostatPageState extends State<ThermostatPage> {

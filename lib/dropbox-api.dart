@@ -84,6 +84,7 @@ class FileListing {
 
 class DropBoxAPIFn {
   static ContentCache cache = ContentCache();
+  static String globalOauthToken = "BLANK";
   static void getDropBoxFile({
     required String oauthToken,
     required String fileToDownload,
@@ -91,7 +92,10 @@ class DropBoxAPIFn {
     required int timeoutSecs,
   }) {
     if (oauthToken == "BLANK") {
-      return;
+      oauthToken = globalOauthToken;
+      if (oauthToken == "BLANK") {
+        return;
+      }
     }
     String cacheEntry = cache.get(fileToDownload);
     if (cacheEntry != '') {
@@ -157,7 +161,10 @@ class DropBoxAPIFn {
     int maxResults = 100,
   }) {
     if (oauthToken == "BLANK") {
-      return;
+      oauthToken = DropBoxAPIFn.globalOauthToken;
+      if (oauthToken == "BLANK") {
+        return;
+      }
     }
     String cacheEntry = cache.get(filePattern);
     if (cacheEntry != '') {

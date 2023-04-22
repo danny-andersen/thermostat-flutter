@@ -191,6 +191,8 @@ class HistoryPageState extends State<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    bool evening =
+        (selectedDate == todayFile && DateTime.now().hour < 17) ? false : true;
     Widget returnWidget = ListView(children: [
 //       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
 //         Container(
@@ -281,6 +283,29 @@ class HistoryPageState extends State<HistoryPage> {
             // width: MediaQuery.of(context).size.width,
             child: Text(
                 "Boiler on for: ${boilerOnTime ~/ 60} hours, ${boilerOnTime - 60 * (boilerOnTime ~/ 60)} mins ($boilerOnTime mins)",
+                style: Theme.of(context).textTheme.titleMedium
+                // .displaySmall!
+                // .apply(fontSizeFactor: 0.4),
+//                    style: TextStyle(
+//                      fontSize: 18.0,
+//                      fontWeight: FontWeight.bold,
+                ),
+          ),
+        ],
+      ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+            height: 40.0,
+            width: MediaQuery.of(context).size.width,
+            // width: MediaQuery.of(context).size.width,
+            child: Text(
+                "Gas Cost:        £${sprintf("%2i.%02i", [
+                      ((evening ? 2 : 1) + (boilerOnTime * 2.5 / 100)).toInt(),
+                      ((boilerOnTime * 2.5) % 100).toInt()
+                    ])}",
                 style: Theme.of(context).textTheme.titleMedium
                 // .displaySmall!
                 // .apply(fontSizeFactor: 0.4),

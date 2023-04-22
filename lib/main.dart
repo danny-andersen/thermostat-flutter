@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:thermostat_flutter/dropbox-api.dart';
 import 'package:thermostat_flutter/security-tab.dart';
 import 'thermostat-tab.dart';
 import 'history-tab.dart';
@@ -34,8 +36,8 @@ class MyAppState extends State<MyApp> {
     secret.then((Secret secret) {
       setState(() {
         oauthToken = secret.apiKey;
-        statusPage.setSecret(oauthToken);
-        statusPage.createState();
+        DropBoxAPIFn.globalOauthToken = oauthToken;
+        statusPage.statePage.refreshStatus(Timer(Duration(), () {}));
       });
     });
     super.initState();
