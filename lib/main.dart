@@ -4,11 +4,12 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:thermostat_flutter/dropbox-api.dart';
-import 'package:thermostat_flutter/security-tab.dart';
-import 'thermostat-tab.dart';
-import 'history-tab.dart';
-import 'holidaytab.dart';
-import 'schedule-tab.dart';
+import 'package:thermostat_flutter/who_tab.dart';
+import 'package:thermostat_flutter/camera_tab.dart';
+import 'package:thermostat_flutter/thermostat-tab.dart';
+import 'package:thermostat_flutter/history-tab.dart';
+import 'package:thermostat_flutter/holidaytab.dart';
+import 'package:thermostat_flutter/schedule-tab.dart';
 
 void main() {
   runApp(MyApp());
@@ -55,22 +56,24 @@ class MyAppState extends State<MyApp> {
       ),
 //      home: ThermostatPage(title: 'Thermostat'),
       home: DefaultTabController(
-        length: 5,
+        length: 6,
         child: Scaffold(
           appBar: AppBar(
             // Here we take the value from the MyHomePage object that was created by
             // the App.build method, and use it to set our appbar title.
             title: Text('Thermostat'),
             bottom: TabBar(
+              isScrollable: true,
               tabs: [
                 Tab(
-                  text: "Status",
+                  text: "Stat",
 //                icon: Icon(Icons.stay_current_landscape)
                 ),
-                Tab(text: 'History'),
+                Tab(text: 'Hist'),
                 Tab(text: 'Hols'),
-                Tab(text: 'Schedule'),
-                Tab(text: 'Security'),
+                Tab(text: 'Sched'),
+                Tab(text: 'Who'),
+                Tab(text: 'Cam'),
               ],
             ),
           ),
@@ -80,7 +83,8 @@ class MyAppState extends State<MyApp> {
               HistoryPage(oauthToken: this.oauthToken),
               HolidayPage(oauthToken: this.oauthToken),
               SchedulePage(oauthToken: this.oauthToken),
-              SecurityPage(oauthToken: this.oauthToken),
+              WhoPage(oauthToken: this.oauthToken),
+              CameraPage(oauthToken: this.oauthToken),
             ],
           ),
 //          floatingActionButton: FloatingActionButton(

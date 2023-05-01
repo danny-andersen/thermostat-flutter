@@ -3,18 +3,17 @@ import 'package:intl/intl.dart';
 import 'package:sprintf/sprintf.dart';
 
 import 'dropbox-api.dart';
-import 'schedule.dart';
 
-class SecurityPage extends StatefulWidget {
-  SecurityPage({required this.oauthToken});
+class WhoPage extends StatefulWidget {
+  WhoPage({required this.oauthToken});
 
   final String oauthToken;
   @override
-  State createState() => SecurityPageState(oauthToken: this.oauthToken);
+  State createState() => WhoPageState(oauthToken: this.oauthToken);
 }
 
-class SecurityPageState extends State<SecurityPage> {
-  SecurityPageState({required this.oauthToken});
+class WhoPageState extends State<WhoPage> {
+  WhoPageState({required this.oauthToken});
 
   final String oauthToken;
   final String deviceChangePattern = "_device_change.txt";
@@ -24,6 +23,20 @@ class SecurityPageState extends State<SecurityPage> {
   bool enabled = false;
   List<DataRow> whoByHourRows = List.filled(
       0, DataRow(cells: List.filled(0, const DataCell(Text("")))),
+      growable: true);
+  List<Row> folderRows = List.filled(
+      1,
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'Image folders',
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.black87,
+              ),
+            )),
+      ]),
       growable: true);
 
   @override
@@ -198,8 +211,6 @@ class SecurityPageState extends State<SecurityPage> {
                 rows: whoByHourRows)),
       ]),
     ]);
-//      ],
-//    );
     return returnWidget;
   }
 }
