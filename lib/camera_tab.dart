@@ -37,7 +37,7 @@ class CameraPageState extends State<CameraPage> {
         folder: "/motion_images/",
         callback: processMediaFolderList,
         timeoutSecs: 600,
-        maxResults: 31);
+        maxResults: 100);
   }
 
   void getDateMedaList(String dayFolder) {

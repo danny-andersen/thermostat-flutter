@@ -64,6 +64,16 @@ class FileEntry {
     return returnIcon;
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'name': fileName,
+      'path_display': fullPathName,
+      'server_modified': lastModified.toString(),
+      '.tag': isFolder ? 'folder' : 'file',
+      'size': size
+    };
+  }
+
   factory FileEntry.fromJson(Map<String, dynamic> json) {
     String fn = json['name'];
     String path = json['path_display'];
@@ -94,12 +104,14 @@ class FileMatch {
 
 class FileListing {
   final List<FileEntry> fileEntries;
-  FileListing(this.fileEntries);
+  final bool isFolderListing;
+  FileListing(this.fileEntries, this.isFolderListing);
 
   factory FileListing.fromJson(Map<String, dynamic> json) {
     List<FileEntry> entries = List.filled(
         0, FileEntry("", "", DateTime.now(), 0, false),
         growable: true);
+    bool isFolderList = false;
     if (json.containsKey('matches')) {
       var list = json['matches'] as List;
       List<FileMatch> matches = list
@@ -107,11 +119,19 @@ class FileListing {
           .toList();
       entries = matches.map((match) => match.fileEntry).toList();
     } else if (json.containsKey('entries')) {
+      isFolderList = true;
       List list = json['entries'];
       entries = list.map((js) => FileEntry.fromJson(js)).toList();
     }
     entries.sort((a, b) => b.fileName.compareTo(a.fileName));
-    return FileListing(entries);
+    return FileListing(entries, isFolderList);
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      isFolderListing ? 'entries' : 'matches':
+          fileEntries.map((entry) => entry.toJson()).toList()
+    };
   }
 }
 
@@ -246,7 +266,11 @@ class DropBoxAPIFn {
     required String oauthToken,
     required String folder,
     required Function callback,
+    // Timeout of 0 - dont cache
     required int timeoutSecs,
+    bool refreshCache = false,
+    //Set to unempty if a continuation call
+    String cursor = "",
     int maxResults = 100,
   }) {
     if (oauthToken == "BLANK") {
@@ -255,28 +279,65 @@ class DropBoxAPIFn {
         return;
       }
     }
-    String cacheEntry = String.fromCharCodes(cache.get(folder));
-    if (cacheEntry != '') {
-      callback(FileListing.fromJson(jsonDecode(cacheEntry)));
-      return;
+
+    if (refreshCache || timeoutSecs == 0) {
+      cache.remove(folder);
+    } else if (cursor == '') {
+      String cacheEntry = String.fromCharCodes(cache.get(folder));
+      if (cacheEntry != '') {
+        //Only use the cache entry if not a continue call
+        callback(FileListing.fromJson(jsonDecode(cacheEntry)));
+        return;
+      }
     }
     HttpClient client = HttpClient();
-    final Uri uploadUri =
-        Uri.parse("https://api.dropboxapi.com/2/files/list_folder");
+    final Uri uploadUri = Uri.parse(
+        "https://api.dropboxapi.com/2/files/list_folder${cursor != '' ? '/continue' : ''}");
     try {
       client.postUrl(uploadUri).then((HttpClientRequest request) {
         request.headers.add("Authorization", "Bearer $oauthToken");
         request.headers.add(HttpHeaders.contentTypeHeader, "application/json");
-        request.write("{\"path\": \"$folder\"}");
+        if (cursor != '') {
+          request.write("{\"cursor\": \"$cursor\"}");
+        } else {
+          request.write("{\"path\": \"$folder\"}");
+        }
         return request.close();
       }).then((HttpClientResponse response) async {
         String contents = await response.transform(utf8.decoder).join();
-        // print('Got response:');
-        // print(contents.toString());
-        final List<int> codeUnits = contents.codeUnits;
-        final Uint8List bytes = Uint8List.fromList(codeUnits);
-        cache.set(folder, bytes, timeoutSecs);
-        callback(FileListing.fromJson(jsonDecode(contents)));
+        print('Got response:');
+        print(contents);
+        var json = jsonDecode(contents);
+        FileListing entries = FileListing.fromJson(json);
+        String cacheEntry = String.fromCharCodes(cache.get(folder));
+        if (cacheEntry != '') {
+          //Add the cache entries to the new entries
+          FileListing newEntries = FileListing.fromJson(jsonDecode(cacheEntry));
+          entries.fileEntries.addAll(newEntries.fileEntries);
+          //Add to the cache
+          String newStr = jsonEncode(entries.toJson());
+          final List<int> codeUnits = newStr.codeUnits;
+          final Uint8List bytes = Uint8List.fromList(codeUnits);
+          cache.set(folder, bytes, timeoutSecs);
+        } else {
+          final List<int> codeUnits = contents.codeUnits;
+          final Uint8List bytes = Uint8List.fromList(codeUnits);
+          cache.set(folder, bytes, timeoutSecs);
+        }
+        if (json['has_more']) {
+          cursor = json['cursor'];
+          //Need to recursively call continue url and add to list
+          print("Recursive call");
+          listFolder(
+              oauthToken: oauthToken,
+              folder: folder,
+              callback: callback,
+              timeoutSecs: timeoutSecs,
+              cursor: cursor,
+              maxResults: maxResults);
+        } else {
+          callback(entries);
+        }
       });
     } on HttpException catch (he) {
       print("Got HttpException during search: ${he.toString()}");
