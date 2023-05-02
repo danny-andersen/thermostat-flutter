@@ -305,8 +305,8 @@ class DropBoxAPIFn {
         return request.close();
       }).then((HttpClientResponse response) async {
         String contents = await response.transform(utf8.decoder).join();
-        print('Got response:');
-        print(contents);
+        // print('Got response:');
+        // print(contents);
         var json = jsonDecode(contents);
         FileListing entries = FileListing.fromJson(json);
         String cacheEntry = String.fromCharCodes(cache.get(folder));
@@ -327,7 +327,7 @@ class DropBoxAPIFn {
         if (json['has_more']) {
           cursor = json['cursor'];
           //Need to recursively call continue url and add to list
-          print("Recursive call");
+          // print("Recursive call");
           listFolder(
               oauthToken: oauthToken,
               folder: folder,
