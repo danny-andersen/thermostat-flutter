@@ -77,11 +77,17 @@ class ImageScreenState extends State<ImageScreen> {
     }
     String time = parts[3].split('-')[0].split('T')[1];
     String title =
-        "Image    Source: $source Date: $date Time: ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
+        "$source Image $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
+    // "Image    Source: $source Date: $date Time: ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
 
     return Scaffold(
         appBar: AppBar(
-          title: Text(title),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+            ),
+          ),
         ),
         body: GestureDetector(
           onHorizontalDragEnd: (details) {
@@ -90,14 +96,14 @@ class ImageScreenState extends State<ImageScreen> {
               // Left swipe - get next image
               while (++fileIndex < mediaList.length) {
                 String fileName = mediaList[fileIndex].fileName;
-                print("Index: $fileIndex, File: $fileName");
+                // print("Index: $fileIndex, File: $fileName");
                 if (fileName.endsWith(".jpeg")) {
                   getImage(fileName, fileIndex);
                   break;
                   // setState(() {
                   //   isLoadingImage = index;
                   // });
-                } else {}
+                }
               }
               if (fileIndex >= mediaList.length) {
                 fileIndex = mediaList.length - 1;
@@ -105,14 +111,14 @@ class ImageScreenState extends State<ImageScreen> {
             } else {
               while (--fileIndex > 0) {
                 String fileName = mediaList[fileIndex].fileName;
-                print("Index: $fileIndex, File: $fileName");
+                // print("Index: $fileIndex, File: $fileName");
                 if (fileName.endsWith(".jpeg")) {
                   getImage(fileName, fileIndex);
                   break;
                   // setState(() {
                   //   isLoadingImage = index;
                   // });
-                } else {}
+                }
               }
               if (fileIndex < 0) fileIndex = 0;
             }

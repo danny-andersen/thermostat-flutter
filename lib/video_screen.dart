@@ -63,13 +63,19 @@ class VideoScreenState extends State<VideoScreen> {
         fileIndex: index);
   }
 
+  void _initVideoPlayer(VideoPlayerController vc) async {
+    /// Initialize the video player
+    await vc.initialize();
+  }
+
   void showVideo(
       final String name, final Uint8List data, String path, final int index) {
     if (mounted) {
-      final dataUrl = Uri.dataFromBytes(data).toString();
+      final mime = (name.endsWith(".mp4")) ? "video/mp4" : "video/mpeg";
+      final dataUrl = Uri.dataFromBytes(data, mimeType: mime).toString();
       final VideoPlayerController videoController =
           VideoPlayerController.network(dataUrl);
-      videoController.initialize();
+      _initVideoPlayer(videoController);
       ChewieController chewie = ChewieController(
         videoPlayerController: videoController,
         autoPlay: true,
@@ -93,11 +99,17 @@ class VideoScreenState extends State<VideoScreen> {
     }
     String time = parts[3].split('-')[0].split('T')[1];
     String title =
-        "Video    Source: $source Date: $date Time: ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
+        "$source Video $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
+    // "Video    Source: $source Date: $date Time: ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
 
     return Scaffold(
         appBar: AppBar(
-          title: Text(title),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+            ),
+          ),
         ),
         body: GestureDetector(
           onHorizontalDragEnd: (details) {
@@ -106,14 +118,13 @@ class VideoScreenState extends State<VideoScreen> {
               // Left swipe - get next image
               while (++fileIndex < mediaList.length) {
                 String fileName = mediaList[fileIndex].fileName;
-                print("Index: $fileIndex, File: $fileName");
-                if (fileName.endsWith(".jpeg")) {
+                if (fileName.endsWith(".mpeg") || fileName.endsWith(".mp4")) {
                   getVideo(fileName, fileIndex);
-                  break;
                   // setState(() {
                   //   isLoadingImage = index;
                   // });
-                } else {}
+                  break;
+                }
               }
               if (fileIndex >= mediaList.length) {
                 fileIndex = mediaList.length - 1;
@@ -121,14 +132,13 @@ class VideoScreenState extends State<VideoScreen> {
             } else {
               while (--fileIndex > 0) {
                 String fileName = mediaList[fileIndex].fileName;
-                print("Index: $fileIndex, File: $fileName");
-                if (fileName.endsWith(".jpeg")) {
+                if (fileName.endsWith(".mpeg") || fileName.endsWith(".mp4")) {
                   getVideo(fileName, fileIndex);
-                  break;
                   // setState(() {
                   //   isLoadingImage = index;
                   // });
-                } else {}
+                  break;
+                }
               }
               if (fileIndex < 0) fileIndex = 0;
             }
