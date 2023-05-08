@@ -186,7 +186,10 @@ class DropBoxAPIFn {
         } else {
           Uint8List contents =
               await consolidateHttpClientResponseBytes(response);
-          cache.set(fileToDownload, contents, timeoutSecs);
+          if (contentType == ContentType.image) {
+            //Only cache images, not videos
+            cache.set(fileToDownload, contents, timeoutSecs);
+          }
           callback(fileToDownload, contents, folder, fileIndex);
         }
       });
