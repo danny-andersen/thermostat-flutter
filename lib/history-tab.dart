@@ -77,6 +77,7 @@ class HistoryPageState extends State<HistoryPage> {
         oauthToken: oauthToken,
         fileToDownload: "/$changeFile",
         callback: processChangeFile,
+        contentType: ContentType.text,
         timeoutSecs: 180);
   }
 

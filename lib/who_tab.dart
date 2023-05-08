@@ -64,6 +64,7 @@ class WhoPageState extends State<WhoPage> {
       oauthToken: oauthToken,
       fileToDownload: "/$changeFile",
       callback: processChangeFile,
+      contentType: ContentType.text,
       timeoutSecs: 300,
     );
   }

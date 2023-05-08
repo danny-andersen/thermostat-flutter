@@ -41,6 +41,7 @@ class _HolidayPageState extends State<HolidayPage> {
       oauthToken: this.oauthToken,
       fileToDownload: this.currentHolidayFile,
       callback: processCurrentHoliday,
+      contentType: ContentType.text,
       timeoutSecs: 0,
     );
     resetDates();

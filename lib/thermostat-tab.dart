@@ -141,6 +141,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
       oauthToken: this.oauthToken,
       fileToDownload: statusFile,
       callback: processStatus,
+      contentType: ContentType.text,
       timeoutSecs: 30,
     );
   }
@@ -151,6 +152,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
         oauthToken: this.oauthToken,
         fileToDownload: setTempFile,
         callback: processSetTemp,
+        contentType: ContentType.text,
         timeoutSecs: 0,
       );
     }

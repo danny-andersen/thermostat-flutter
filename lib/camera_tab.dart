@@ -65,16 +65,19 @@ class CameraPageState extends State<CameraPage> {
     }
   }
 
-  void getImage(String fileName) {
+  void getImage(String fileName, int index) {
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
-        fileToDownload: fileName,
+        fileToDownload: "${mediaFolders[folderVisible].fullPathName}/$fileName",
         callback: showImage,
-        isText: false,
-        timeoutSecs: 600);
+        contentType: ContentType.image,
+        timeoutSecs: 600,
+        folder: mediaFolders[folderVisible].fullPathName,
+        fileIndex: index);
   }
 
-  void showImage(final String filename, final Uint8List imageData) {
+  void showImage(final String filename, final Uint8List imageData, String path,
+      int index) {
     if (mounted) {
       setState(() {
         isLoadingImage = -1;
@@ -83,9 +86,13 @@ class CameraPageState extends State<CameraPage> {
           context,
           MaterialPageRoute(
             builder: (context) => ImageScreen(
-                oauthToken: oauthToken,
-                imageName: filename,
-                imageData: imageData),
+              oauthToken: oauthToken,
+              imageName: filename,
+              imageData: imageData,
+              mediaList: mediaFiles,
+              folderPath: path,
+              fileIndex: index,
+            ),
           ));
     }
   }
@@ -103,12 +110,12 @@ class CameraPageState extends State<CameraPage> {
             onTap: () {
               print("${mediaFolders[folderVisible].fullPathName}/$fileName");
               if (fileName.endsWith(".jpeg")) {
-                getImage(
-                    "${mediaFolders[folderVisible].fullPathName}/$fileName");
+                getImage(fileName, index);
                 setState(() {
                   isLoadingImage = index;
                 });
-              } else {}
+              } else if (fileName.endsWith(".mpeg") ||
+                  fileName.endsWith(".mp4")) {}
             },
             child: Text(
               fileName,

@@ -68,6 +68,7 @@ class SchedulePageState extends State<SchedulePage> {
       oauthToken: this.oauthToken,
       fileToDownload: changeFile,
       callback: processChangeFile,
+      contentType: ContentType.text,
       timeoutSecs: 300,
     );
   }
@@ -141,6 +142,7 @@ class SchedulePageState extends State<SchedulePage> {
       oauthToken: this.oauthToken,
       fileToDownload: scheduleEntry!.fileListing.fullPathName,
       callback: processScheduleFile,
+      contentType: ContentType.text,
       timeoutSecs: 300,
     );
     if (mounted) {
@@ -226,6 +228,7 @@ class SchedulePageState extends State<SchedulePage> {
       oauthToken: this.oauthToken,
       fileToDownload: currentSchedulePath,
       callback: processScheduleFile,
+      contentType: ContentType.text,
       timeoutSecs: 300,
     );
   }

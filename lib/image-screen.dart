@@ -7,44 +7,62 @@ class ImageScreen extends StatefulWidget {
   final String imageName;
   final Uint8List imageData;
   final String oauthToken;
+  final List<FileEntry> mediaList;
+  final String folderPath;
+  final int fileIndex;
 
   ImageScreen(
       {required this.oauthToken,
       required this.imageName,
-      required this.imageData});
+      required this.imageData,
+      required this.mediaList,
+      required this.folderPath,
+      required this.fileIndex});
 
   @override
   State createState() => ImageScreenState(
-        oauthToken: this.oauthToken,
-        imageName: this.imageName,
-        imageData: this.imageData,
-      );
+      oauthToken: this.oauthToken,
+      imageName: this.imageName,
+      imageData: this.imageData,
+      mediaList: this.mediaList,
+      folderPath: this.folderPath,
+      fileIndex: this.fileIndex);
 }
 
 class ImageScreenState extends State<ImageScreen> {
   ImageScreenState(
       {required this.oauthToken,
       required this.imageName,
-      required this.imageData});
+      required this.imageData,
+      required this.mediaList,
+      required this.folderPath,
+      required this.fileIndex});
 
   final String oauthToken;
   String imageName;
   Uint8List imageData;
+  final List<FileEntry> mediaList;
+  final String folderPath;
+  int fileIndex;
 
-  void getImage(String fileName) {
+  void getImage(String fileName, int index) {
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
-        fileToDownload: fileName,
+        fileToDownload: "$folderPath/$fileName",
         callback: showImage,
-        isText: false,
-        timeoutSecs: 600);
+        contentType: ContentType.image,
+        timeoutSecs: 600,
+        folder: folderPath,
+        fileIndex: index);
   }
 
-  void showImage(final String filename, final Uint8List data) {
+  void showImage(
+      final String name, final Uint8List data, String path, final int index) {
     if (mounted) {
       setState(() {
-        imageData = imageData;
-        imageName = filename;
+        imageData = data;
+        imageName = name;
+        fileIndex = index;
       });
     }
   }
@@ -70,6 +88,33 @@ class ImageScreenState extends State<ImageScreen> {
             // Check if swipe was left-to-right or right-to-left
             if (details.velocity.pixelsPerSecond.dx < 0) {
               // Left swipe - get next image
+              while (++fileIndex < mediaList.length) {
+                String fileName = mediaList[fileIndex].fileName;
+                print("Index: $fileIndex, File: $fileName");
+                if (fileName.endsWith(".jpeg")) {
+                  getImage(fileName, fileIndex);
+                  break;
+                  // setState(() {
+                  //   isLoadingImage = index;
+                  // });
+                } else {}
+              }
+              if (fileIndex >= mediaList.length) {
+                fileIndex = mediaList.length - 1;
+              }
+            } else {
+              while (--fileIndex > 0) {
+                String fileName = mediaList[fileIndex].fileName;
+                print("Index: $fileIndex, File: $fileName");
+                if (fileName.endsWith(".jpeg")) {
+                  getImage(fileName, fileIndex);
+                  break;
+                  // setState(() {
+                  //   isLoadingImage = index;
+                  // });
+                } else {}
+              }
+              if (fileIndex < 0) fileIndex = 0;
             }
           },
           child: Center(
