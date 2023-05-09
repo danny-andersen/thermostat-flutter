@@ -117,7 +117,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   void sendNewTemp(double temp, bool send) {
     if (send) {
-      String contents = "${requestedTemp.toStringAsFixed(1)} \n";
+      String contents = requestedTemp.toStringAsFixed(1);
       DropBoxAPIFn.sendDropBoxFile(
           oauthToken: this.oauthToken,
           fileToUpload: setTempFile,
@@ -159,13 +159,17 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void processSetTemp(String contents) {
-    try {
-      requestedTemp = double.parse(contents.trim());
-      if (requestedTemp.toStringAsFixed(1) == setTemp.toStringAsFixed(1)) {
-        requestOutstanding = false;
+    if (contents.contains("path/not_found/")) {
+      requestOutstanding = false;
+    } else {
+      try {
+        requestedTemp = double.parse(contents.trim());
+        if (requestedTemp.toStringAsFixed(1) == setTemp.toStringAsFixed(1)) {
+          requestOutstanding = false;
+        }
+      } on FormatException {
+        print("Set Temp: Received non-double Current temp format: $contents");
       }
-    } on FormatException {
-      print("Received non-double Current temp format: $contents");
     }
   }
 

@@ -72,7 +72,7 @@ class HistoryPageState extends State<HistoryPage> {
     temperatureList = List.filled(0, ValueByHour(0, 0.0), growable: true);
     humidityList = List.filled(0, ValueByHour(0, 0.0), growable: true);
     boilerList = List.filled(0, ValueByHour(0, 0.0), growable: true);
-    print("Downloading file: $changeFile");
+    // print("Downloading file: $changeFile");
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
         fileToDownload: "/$changeFile",
@@ -463,7 +463,7 @@ class HistoryLineChart extends StatelessWidget {
   static charts.Series<ValueByHour, int> createMeasuredSeries(
       List<ValueByHour> timeTempPoints) {
     int len = timeTempPoints.length;
-    print("Creating new chart with $len");
+    // print("Creating new chart with $len");
     return new charts.Series<ValueByHour, int>(
       id: 'Measured',
       colorFn: ((ValueByHour tempByHour, __) {

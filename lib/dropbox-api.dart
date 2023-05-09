@@ -205,6 +205,12 @@ class DropBoxAPIFn {
     Function? callback,
     String? callbackMsg,
   }) {
+    if (oauthToken == "BLANK") {
+      oauthToken = DropBoxAPIFn.globalOauthToken;
+      if (oauthToken == "BLANK") {
+        return;
+      }
+    }
     HttpClient client = HttpClient();
     final Uri uploadUri =
         Uri.parse("https://content.dropboxapi.com/2/files/upload");
