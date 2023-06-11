@@ -44,6 +44,7 @@ class ImageScreenState extends State<ImageScreen> {
   final List<FileEntry> mediaList;
   final String folderPath;
   int fileIndex;
+  bool isLoadingImage = false;
 
   void getImage(String fileName, int index) {
     DropBoxAPIFn.getDropBoxFile(
@@ -63,6 +64,7 @@ class ImageScreenState extends State<ImageScreen> {
         imageData = data;
         imageName = name;
         fileIndex = index;
+        isLoadingImage = false;
       });
     }
   }
@@ -77,55 +79,125 @@ class ImageScreenState extends State<ImageScreen> {
     }
     String time = parts[3].split('-')[0].split('T')[1];
     String title =
-        "$source Image $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
+        "Image ${mediaList.length - fileIndex} of ${mediaList.length} $source $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
     // "Image    Source: $source Date: $date Time: ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
 
     return Scaffold(
         appBar: AppBar(
-          title: Text(
+          title: Center(
+              child: Text(
             title,
-            style: TextStyle(
-              fontSize: 18,
+            style: const TextStyle(
+              fontSize: 12,
             ),
-          ),
+          )),
         ),
-        body: GestureDetector(
-          onHorizontalDragEnd: (details) {
-            // Check if swipe was left-to-right or right-to-left
-            if (details.velocity.pixelsPerSecond.dx < 0) {
-              // Left swipe - get next image
-              while (++fileIndex < mediaList.length) {
-                String fileName = mediaList[fileIndex].fileName;
-                // print("Index: $fileIndex, File: $fileName");
-                if (fileName.endsWith(".jpeg")) {
-                  getImage(fileName, fileIndex);
-                  break;
-                  // setState(() {
-                  //   isLoadingImage = index;
-                  // });
+        body: Center(
+            child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Visibility(
+                    visible: fileIndex == mediaList.length - 1,
+                    child: const Text("First image",
+                        style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold))),
+                const SizedBox(width: 20),
+                ElevatedButton(
+                  child: const Text('<<'),
+                  onPressed: () {
+                    setState(() {
+                      isLoadingImage = true;
+                    });
+                    getPrevious();
+                  },
+                ),
+                const SizedBox(width: 20),
+                ElevatedButton(
+                    child: const Text('>>'),
+                    onPressed: () {
+                      setState(() {
+                        isLoadingImage = true;
+                      });
+                      getNext();
+                    }),
+                const SizedBox(width: 20),
+                Visibility(
+                    visible: fileIndex == 0,
+                    child: const Text("Last image",
+                        style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold))),
+                const SizedBox(width: 20),
+                Visibility(
+                    visible: isLoadingImage,
+                    child: const CircularProgressIndicator()),
+              ],
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onHorizontalDragEnd: (details) {
+                // Check if swipe was left-to-right or right-to-left
+                if (details.velocity.pixelsPerSecond.dx < 0) {
+                  // Left swipe - get next image (which is earlier)
+                  setState(() {
+                    isLoadingImage = true;
+                  });
+                  getNext();
+                } else {
+                  setState(() {
+                    isLoadingImage = true;
+                  });
+                  getPrevious();
                 }
-              }
-              if (fileIndex >= mediaList.length) {
-                fileIndex = mediaList.length - 1;
-              }
-            } else {
-              while (--fileIndex > 0) {
-                String fileName = mediaList[fileIndex].fileName;
-                // print("Index: $fileIndex, File: $fileName");
-                if (fileName.endsWith(".jpeg")) {
-                  getImage(fileName, fileIndex);
-                  break;
-                  // setState(() {
-                  //   isLoadingImage = index;
-                  // });
-                }
-              }
-              if (fileIndex < 0) fileIndex = 0;
-            }
-          },
-          child: Center(
-            child: Image.memory(imageData),
-          ),
-        ));
+              },
+              child: Center(
+                child: Image.memory(imageData),
+              ),
+            )
+          ],
+        )));
+  }
+
+  getNext() {
+    while (--fileIndex >= 0) {
+      String fileName = mediaList[fileIndex].fileName;
+      // print("Index: $fileIndex, File: $fileName");
+      if (fileName.endsWith(".jpeg")) {
+        getImage(fileName, fileIndex);
+        break;
+        // setState(() {
+        //   isLoadingImage = index;
+        // });
+      }
+    }
+    if (fileIndex < 0) {
+      fileIndex = 0;
+      isLoadingImage = false;
+    }
+  }
+
+  getPrevious() {
+    while (++fileIndex < mediaList.length) {
+      String fileName = mediaList[fileIndex].fileName;
+      // print("Index: $fileIndex, File: $fileName");
+      if (fileName.endsWith(".jpeg")) {
+        getImage(fileName, fileIndex);
+        break;
+        // setState(() {
+        //   isLoadingImage = index;
+        // });
+      }
+    }
+    if (fileIndex >= mediaList.length) {
+      fileIndex = mediaList.length - 1;
+      isLoadingImage = false;
+    }
   }
 }

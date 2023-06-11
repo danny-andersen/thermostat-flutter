@@ -5,6 +5,9 @@ import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:typed_data';
 
+// import 'package:timeline_list/timeline.dart';
+// import 'package:timeline_list/timeline_model.dart';
+
 import 'dropbox-api.dart';
 import 'image-screen.dart';
 import 'video_screen.dart';
@@ -24,6 +27,7 @@ class CameraPageState extends State<CameraPage> {
   int folderVisible = -1;
   bool isLoadingMediaList = false;
   int isLoadingImage = -1;
+  String currentFolder = "";
   List<FileEntry> mediaFiles = List.filled(
       0, FileEntry("", "", DateTime.now(), 0, false),
       growable: true);
@@ -154,6 +158,21 @@ class CameraPageState extends State<CameraPage> {
   Widget build(BuildContext context) {
     List<Row> fileRows = List.generate(mediaFiles.length, (index) {
       String fileName = mediaFiles[index].fileName;
+      List<String> parts = fileName.split('-');
+      String time = parts[0].split('T')[1];
+      String date = parts[0].split('T')[0];
+      String source = "Webcam";
+      if (parts[1].contains("pi")) {
+        source = "PiCam";
+      }
+      String media = "Video";
+      if (parts[1].contains("jpeg")) {
+        media = "Photo";
+      }
+
+      String title =
+          "${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)} -> $source $media";
+
       return Row(children: [
         Icon(mediaFiles[index].getIcon()),
         const SizedBox(
@@ -161,7 +180,7 @@ class CameraPageState extends State<CameraPage> {
         Column(children: [
           GestureDetector(
             onTap: () {
-              print("${mediaFolders[folderVisible].fullPathName}/$fileName");
+              // print("${mediaFolders[folderVisible].fullPathName}/$fileName");
               if (fileName.endsWith(".jpeg")) {
                 getImage(fileName, index);
                 setState(() {
@@ -176,7 +195,7 @@ class CameraPageState extends State<CameraPage> {
               }
             },
             child: Text(
-              fileName,
+              title,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -190,7 +209,7 @@ class CameraPageState extends State<CameraPage> {
       ]);
     });
     List<Row> folderRows = List.generate(mediaFolders.length, (index) {
-      String fileName = mediaFolders[index].fileName;
+      String folderName = mediaFolders[index].fileName;
       return Row(children: [
         const Icon(Icons.folder),
         const SizedBox(
@@ -203,7 +222,8 @@ class CameraPageState extends State<CameraPage> {
                   isLoadingMediaList = true;
                   folderVisible = index;
                 });
-                getDateMedaList(fileName);
+                currentFolder = folderName;
+                getDateMedaList(folderName);
               } else {
                 setState(() {
                   folderVisible = -1;
@@ -211,7 +231,7 @@ class CameraPageState extends State<CameraPage> {
               }
             },
             child: Text(
-              fileName,
+              folderName,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -219,20 +239,66 @@ class CameraPageState extends State<CameraPage> {
             ),
           ),
           Visibility(
-            visible: index == folderVisible,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: isLoadingMediaList
-                  ? const CircularProgressIndicator()
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: fileRows),
-            ),
-          ),
+              visible: index == folderVisible,
+              child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: currentFolder == folderName
+                      ? isLoadingMediaList
+                          ? const CircularProgressIndicator()
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: fileRows)
+                      : const SizedBox(width: 1))),
         ]),
       ]);
     });
     Widget returnWidget = ListView(children: folderRows);
     return returnWidget;
   }
+
+  // Widget getTimeLine() {
+  //   if (mediaFiles.isNotEmpty) {
+  //     List<TimelineModel> timeLines =
+  //         List.generate(mediaFiles.length, growable: false, (index) {
+  //       String fileName = mediaFiles[index].fileName;
+  //       return TimelineModel(
+  //         Column(children: [
+  //           GestureDetector(
+  //             onTap: () {
+  //               // print("${mediaFolders[folderVisible].fullPathName}/$fileName");
+  //               if (fileName.endsWith(".jpeg")) {
+  //                 getImage(fileName, index);
+  //                 setState(() {
+  //                   isLoadingImage = index;
+  //                 });
+  //               } else if (fileName.endsWith(".mpeg") ||
+  //                   fileName.endsWith(".mp4")) {
+  //                 getVideo(fileName, index);
+  //                 setState(() {
+  //                   isLoadingImage = index;
+  //                 });
+  //               }
+  //             },
+  //             child: Text(
+  //               fileName,
+  //               style: const TextStyle(
+  //                 fontSize: 16,
+  //                 fontWeight: FontWeight.bold,
+  //               ),
+  //             ),
+  //           ),
+  //         ]),
+  //         position: index % 2 == 0
+  //             ? TimelineItemPosition.right
+  //             : TimelineItemPosition.left,
+  //         icon: Icon(mediaFiles[index].getIcon()),
+  //         isFirst: index == 0,
+  //         isLast: index == mediaFiles.length - 1,
+  //       );
+  //     });
+  //     return Timeline(children: timeLines, position: TimelinePosition.Center);
+  //   } else {
+  //     return Text("Please wait...");
+  //   }
+  // }
 }
