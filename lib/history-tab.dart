@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
 
 class HistoryPage extends StatefulWidget {
-  HistoryPage({required this.oauthToken});
+  const HistoryPage({super.key, required this.oauthToken});
 
   final String oauthToken;
 
@@ -90,8 +90,6 @@ class HistoryPageState extends State<HistoryPage> {
   void processChangeFile(String contents) {
 //    double lastTemp = 10.0;
     // temperatureList = List.filled(0, TempByHour(0, 0.0), growable: true);
-    int tempCount = 0;
-    int humidCount = 0;
     contents.split('\n').forEach((line) {
       if (line.contains(':Temp:')) {
         try {
@@ -99,7 +97,6 @@ class HistoryPageState extends State<HistoryPage> {
           int time = getTime(parts[0].trim());
           double temp = double.parse(parts[2].trim());
           temperatureList.add(ValueByHour(time, temp));
-          tempCount++;
         } on FormatException {
           print("Received incorrect temp format: $line");
         }
@@ -109,7 +106,6 @@ class HistoryPageState extends State<HistoryPage> {
           int time = getTime(parts[0].trim());
           double humid = double.parse(parts[2].trim());
           humidityList.add(ValueByHour(time, humid));
-          humidCount++;
         } on FormatException {
           print("Received incorrect humidity format: $line");
         }
@@ -325,7 +321,7 @@ class HistoryPageState extends State<HistoryPage> {
 }
 
 class ShowRange extends StatelessWidget {
-  ShowRange({required this.label, required this.valsByHour});
+  ShowRange({super.key, required this.label, required this.valsByHour});
 
   List<ValueByHour> valsByHour;
   String label;
@@ -364,7 +360,7 @@ class ShowRange extends StatelessWidget {
                 Container(
                   // padding: const EdgeInsets.only(bottom: 8.0, right: 10.0),
                   child: Text(
-                      "${label} Max: ${vals.max}, Min: ${vals.min}, Avg: ${vals.average.toStringAsFixed(1)}",
+                      "$label Max: ${vals.max}, Min: ${vals.min}, Avg: ${vals.average.toStringAsFixed(1)}",
                       style: Theme.of(context).textTheme.titleMedium
                       // .displaySmall!
                       // .apply(fontSizeFactor: 0.4),
@@ -387,21 +383,23 @@ class HistoryLineChart extends StatelessWidget {
   final List<charts.Series<ValueByHour, int>> seriesList;
   final void Function(charts.SelectionModel<num>)? onSelectionChanged;
 
-  HistoryLineChart(this.seriesList, this.onSelectionChanged);
+  const HistoryLineChart(this.seriesList, this.onSelectionChanged, {super.key});
 
   double getMaxValue() {
     double maxValue = -999999999.0;
     for (charts.Series s in seriesList)
-      for (ValueByHour point in s.data)
+      for (ValueByHour point in s.data) {
         if (point.value > maxValue) maxValue = point.value;
+      }
     return maxValue;
   }
 
   double getMinValue() {
     double minValue = 999999999.0;
     for (charts.Series s in seriesList)
-      for (ValueByHour point in s.data)
+      for (ValueByHour point in s.data) {
         if (point.value < minValue) minValue = point.value;
+      }
     return minValue;
   }
 
@@ -430,26 +428,25 @@ class HistoryLineChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double maxValue = getMaxValue();
-    return new charts.LineChart(
+    return charts.LineChart(
       seriesList,
       animate: true,
-      primaryMeasureAxis: new charts.NumericAxisSpec(
-        viewport:
-            new charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
-        tickProviderSpec: new charts.BasicNumericTickProviderSpec(
+      primaryMeasureAxis: charts.NumericAxisSpec(
+        viewport: charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
+        tickProviderSpec: const charts.BasicNumericTickProviderSpec(
             zeroBound: false, desiredTickCount: 14),
       ),
-      domainAxis: new charts.NumericAxisSpec(
-        viewport: new charts.NumericExtents(0, 2400),
+      domainAxis: charts.NumericAxisSpec(
+        viewport: const charts.NumericExtents(0, 2400),
         tickProviderSpec:
-            new charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
+            const charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
         tickFormatterSpec:
-            new charts.BasicNumericTickFormatterSpec.fromNumberFormat(
+            charts.BasicNumericTickFormatterSpec.fromNumberFormat(
                 ValueByHour.hourFormat),
       ),
-      defaultRenderer: new charts.LineRendererConfig(includePoints: true),
+      defaultRenderer: charts.LineRendererConfig(includePoints: true),
       selectionModels: [
-        new charts.SelectionModelConfig(
+        charts.SelectionModelConfig(
           type: charts.SelectionModelType.info,
           changedListener: onSelectionChanged,
         )
@@ -462,12 +459,11 @@ class HistoryLineChart extends StatelessWidget {
 
   static charts.Series<ValueByHour, int> createMeasuredSeries(
       List<ValueByHour> timeTempPoints) {
-    int len = timeTempPoints.length;
     // print("Creating new chart with $len");
-    return new charts.Series<ValueByHour, int>(
+    return charts.Series<ValueByHour, int>(
       id: 'Measured',
       colorFn: ((ValueByHour tempByHour, __) {
-        var color;
+        charts.Color color;
         color = charts.MaterialPalette.green.shadeDefault;
         return color;
       }),

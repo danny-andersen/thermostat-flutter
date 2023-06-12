@@ -12,11 +12,11 @@ import 'package:thermostat_flutter/holidaytab.dart';
 import 'package:thermostat_flutter/schedule-tab.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
-  MyApp({super.key});
+  const MyApp({super.key});
   @override
   State createState() => MyAppState();
 }
@@ -38,7 +38,7 @@ class MyAppState extends State<MyApp> {
       setState(() {
         oauthToken = secret.apiKey;
         DropBoxAPIFn.globalOauthToken = oauthToken;
-        statusPage.statePage.refreshStatus(Timer(Duration(), () {}));
+        statusPage.statePage.refreshStatus(Timer(const Duration(), () {}));
       });
     });
     super.initState();
@@ -61,8 +61,8 @@ class MyAppState extends State<MyApp> {
           appBar: AppBar(
             // Here we take the value from the MyHomePage object that was created by
             // the App.build method, and use it to set our appbar title.
-            title: Text('Thermostat'),
-            bottom: TabBar(
+            title: const Text('Thermostat'),
+            bottom: const TabBar(
               isScrollable: true,
               tabs: [
                 Tab(
@@ -80,11 +80,11 @@ class MyAppState extends State<MyApp> {
           body: TabBarView(
             children: [
               statusPage,
-              HistoryPage(oauthToken: this.oauthToken),
-              HolidayPage(oauthToken: this.oauthToken),
-              SchedulePage(oauthToken: this.oauthToken),
-              WhoPage(oauthToken: this.oauthToken),
-              CameraPage(oauthToken: this.oauthToken),
+              HistoryPage(oauthToken: oauthToken),
+              HolidayPage(oauthToken: oauthToken),
+              SchedulePage(oauthToken: oauthToken),
+              WhoPage(oauthToken: oauthToken),
+              CameraPage(oauthToken: oauthToken),
             ],
           ),
 //          floatingActionButton: FloatingActionButton(

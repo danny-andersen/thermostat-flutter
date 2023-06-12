@@ -5,11 +5,11 @@ import 'package:sprintf/sprintf.dart';
 import 'dropbox-api.dart';
 
 class WhoPage extends StatefulWidget {
-  WhoPage({required this.oauthToken});
+  const WhoPage({super.key, required this.oauthToken});
 
   final String oauthToken;
   @override
-  State createState() => WhoPageState(oauthToken: this.oauthToken);
+  State createState() => WhoPageState(oauthToken: oauthToken);
 }
 
 class WhoPageState extends State<WhoPage> {
@@ -29,7 +29,7 @@ class WhoPageState extends State<WhoPage> {
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(
             padding: const EdgeInsets.only(top: 8.0),
-            child: Text(
+            child: const Text(
               'Image folders',
               style: TextStyle(
                 fontSize: 20,
@@ -126,7 +126,7 @@ class WhoPageState extends State<WhoPage> {
     //First event for a device should be an arrived event - look for a gone event for the same device
     List<WhoByHour> whoByHourList =
         List.filled(0, WhoByHour("", 0, 0), growable: true);
-    Map<String, int> lastEventForDevice = Map<String, int>();
+    Map<String, int> lastEventForDevice = <String, int>{};
     for (final who in whoList) {
       if (who.event) {
         //Arrival
@@ -168,7 +168,7 @@ class WhoPageState extends State<WhoPage> {
             padding: const EdgeInsets.only(top: 8.0),
             child: Text(
               'Who\'s home on ${(selectedDate != null ? formattedDateStr(selectedDate!) : '')}',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 20,
                 color: Colors.black87,
               ),
@@ -204,7 +204,7 @@ class WhoPageState extends State<WhoPage> {
                 horizontalMargin: 3,
                 columnSpacing: 10,
                 dataRowHeight: 25,
-                columns: [
+                columns: const [
                   DataColumn(label: Text("Who")),
                   DataColumn(label: Text("Time Arrived")),
                   DataColumn(label: Text("Time Left"))
@@ -240,7 +240,7 @@ class WhoByHour {
   DataRow getDataRow(bool lastEvent) {
     //lastEvent is true if last time device had an event
     //if it was a leave event show in red, else its an amber
-    List<DataCell> cells = List.filled(3, DataCell(Text("")));
+    List<DataCell> cells = List.filled(3, const DataCell(Text("")));
     TextStyle rowStyle = TextStyle(
         color: (leaveTime == 0
             ? Colors.green
@@ -266,6 +266,5 @@ class WhoByHour {
 
   static getMin(int time) {
     return time % 100;
-    ;
   }
 }

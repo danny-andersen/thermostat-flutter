@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'dropbox-api.dart';
 
 class HolidayPage extends StatefulWidget {
-  HolidayPage({required this.oauthToken});
+  const HolidayPage({super.key, required this.oauthToken});
 
   final String oauthToken;
   @override
@@ -20,9 +20,9 @@ class _HolidayPageState extends State<HolidayPage> {
   final String holidayFile = "/holiday.txt";
 
   DateTime _fromDate = DateTime(2022);
-  TimeOfDay _fromTime = TimeOfDay(hour: 0, minute: 0);
+  TimeOfDay _fromTime = const TimeOfDay(hour: 0, minute: 0);
   DateTime _toDate = DateTime(2022);
-  TimeOfDay _toTime = TimeOfDay(hour: 0, minute: 0);
+  TimeOfDay _toTime = const TimeOfDay(hour: 0, minute: 0);
   double holidayTemp = 10.0;
   int nextHours = 1;
   bool holidaySet = false;
@@ -38,8 +38,8 @@ class _HolidayPageState extends State<HolidayPage> {
   void refreshCurrent() {
     //Retrieve any current holiday dates
     DropBoxAPIFn.getDropBoxFile(
-      oauthToken: this.oauthToken,
-      fileToDownload: this.currentHolidayFile,
+      oauthToken: oauthToken,
+      fileToDownload: currentHolidayFile,
       callback: processCurrentHoliday,
       contentType: ContentType.text,
       timeoutSecs: 0,
@@ -51,7 +51,7 @@ class _HolidayPageState extends State<HolidayPage> {
     DateTime now = DateTime.now();
     _fromDate = DateTime(now.year, now.month, now.day, now.hour);
     _fromTime = TimeOfDay(hour: _fromDate.hour, minute: 0);
-    _toDate = _fromDate.add(Duration(hours: 1));
+    _toDate = _fromDate.add(const Duration(hours: 1));
     _toTime = TimeOfDay(
       hour: _toDate.hour,
       minute: _toDate.minute,
@@ -62,7 +62,7 @@ class _HolidayPageState extends State<HolidayPage> {
 //    print("Got current holiday: " + contents);
     DateTime newFromDate = DateTime(2022);
     DateTime newToDate = DateTime(2022);
-    if (this.mounted) {
+    if (mounted) {
       setState(() {
         contents.split('\n').forEach((line) {
           List<String> fields = line.split(',');
@@ -120,7 +120,7 @@ class _HolidayPageState extends State<HolidayPage> {
   }
 
   void minusPressed() {
-    if (this.mounted) {
+    if (mounted) {
       setState(() {
         if (nextHours > 1) {
           nextHours -= 1;
@@ -133,7 +133,7 @@ class _HolidayPageState extends State<HolidayPage> {
   }
 
   void plusPressed() {
-    if (this.mounted) {
+    if (mounted) {
       setState(() {
         nextHours += 1;
         resetDates();
@@ -152,17 +152,17 @@ class _HolidayPageState extends State<HolidayPage> {
     buff.writeln("Temp,$holidayTemp");
     String contents = buff.toString();
     DropBoxAPIFn.sendDropBoxFile(
-        oauthToken: this.oauthToken,
+        oauthToken: oauthToken,
         fileToUpload: currentHolidayFile,
         contents: contents);
     DropBoxAPIFn.sendDropBoxFile(
-      oauthToken: this.oauthToken,
+      oauthToken: oauthToken,
       fileToUpload: holidayFile,
       contents: contents,
       callback: notifyFileSent,
       callbackMsg: 'New Holiday Schedule sent!',
     );
-    if (this.mounted) {
+    if (mounted) {
       setState(() {
         refreshCurrent();
       });
@@ -176,16 +176,16 @@ class _HolidayPageState extends State<HolidayPage> {
     buff.writeln("Temp,$holidayTemp");
     String contents = buff.toString();
     DropBoxAPIFn.sendDropBoxFile(
-        oauthToken: this.oauthToken,
+        oauthToken: oauthToken,
         fileToUpload: currentHolidayFile,
         contents: contents);
     DropBoxAPIFn.sendDropBoxFile(
-        oauthToken: this.oauthToken,
+        oauthToken: oauthToken,
         fileToUpload: holidayFile,
         contents: contents,
         callback: notifyFileSent,
         callbackMsg: 'Holiday cancelled!');
-    if (this.mounted) {
+    if (mounted) {
       setState(() {
         refreshCurrent();
       });
@@ -204,9 +204,9 @@ class _HolidayPageState extends State<HolidayPage> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [const Text('OK')],
+                children: [Text('OK')],
               ),
             )
           ],
@@ -234,14 +234,14 @@ class _HolidayPageState extends State<HolidayPage> {
         ),
         const SizedBox(height: 8.0),
         _DateTimePicker(
-          key: Key("From"),
+          key: const Key("From"),
           labelText: 'From',
           selectedDate: _fromDate,
           selectedTime: _fromTime,
           selectDate: (DateTime date) {
             setState(() {
               _fromDate = date;
-              _toDate = _fromDate.add(Duration(hours: 1));
+              _toDate = _fromDate.add(const Duration(hours: 1));
             });
           },
           selectTime: (TimeOfDay time) {
@@ -249,13 +249,13 @@ class _HolidayPageState extends State<HolidayPage> {
               _fromTime = time;
               _fromDate = DateTime(_fromDate.year, _fromDate.month,
                   _fromDate.day, _fromTime.hour, _fromTime.minute);
-              _toTime =
-                  TimeOfDay.fromDateTime(_fromDate.add(Duration(hours: 1)));
+              _toTime = TimeOfDay.fromDateTime(
+                  _fromDate.add(const Duration(hours: 1)));
             });
           },
         ),
         _DateTimePicker(
-          key: Key("To"),
+          key: const Key("To"),
           labelText: 'To',
           selectedDate: _toDate,
           selectedTime: _toTime,
@@ -283,13 +283,13 @@ class _HolidayPageState extends State<HolidayPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             ElevatedButton(
-                child: Icon(
+                onPressed: minusPressed,
+                style: const ButtonStyle(
+                    backgroundColor: MaterialStatePropertyAll(Colors.blue)),
+                child: const Icon(
                   Icons.remove,
                   color: Colors.white,
-                ),
-                onPressed: minusPressed,
-                style: ButtonStyle(
-                    backgroundColor: MaterialStatePropertyAll(Colors.blue))),
+                )),
             Text(
               ' $nextHours hours  ',
               style: textStyle,
@@ -299,27 +299,27 @@ class _HolidayPageState extends State<HolidayPage> {
 //                  .apply(fontSizeFactor: 0.5),
             ),
             ElevatedButton(
-                child: Icon(
+                onPressed: plusPressed,
+                style: const ButtonStyle(
+                    backgroundColor: MaterialStatePropertyAll(Colors.blue)),
+                child: const Icon(
                   Icons.add,
                   color: Colors.white,
-                ),
-                onPressed: plusPressed,
-                style: ButtonStyle(
-                    backgroundColor: MaterialStatePropertyAll(Colors.blue)))
+                ))
           ],
         ),
         const SizedBox(height: 32.0),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
           ElevatedButton(
+              onPressed: sendNewHoliday,
+              style: const ButtonStyle(
+                  backgroundColor: MaterialStatePropertyAll(Colors.blue)),
               child: Text(
                 "Send New Holiday Schedule",
                 style: textStyle!.apply(
                   color: Colors.white,
                 ),
-              ),
-              onPressed: sendNewHoliday,
-              style: ButtonStyle(
-                  backgroundColor: MaterialStatePropertyAll(Colors.blue)))
+              ))
         ]),
         const SizedBox(height: 32.0),
         Text(
@@ -328,22 +328,21 @@ class _HolidayPageState extends State<HolidayPage> {
         ),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
           ElevatedButton(
+              onPressed: holidaySet ? cancelHoliday : null,
+              style: const ButtonStyle(
+                  backgroundColor: MaterialStatePropertyAll(Colors.blue)),
               child: Text(
                 "Cancel",
                 style: textStyle.apply(
                   color: Colors.white,
                 ),
-              ),
-              onPressed: holidaySet ? cancelHoliday : null,
-              style: ButtonStyle(
-                  backgroundColor: MaterialStatePropertyAll(Colors.blue)))
+              ))
         ]),
       ],
     );
   }
 //      ),
 //    );
-
 }
 
 class _DateTimePicker extends StatelessWidget {
@@ -368,13 +367,13 @@ class _DateTimePicker extends StatelessWidget {
         initialDate: selectedDate,
         firstDate: DateTime(2015, 8),
         lastDate: DateTime(2101)))!;
-    if (picked != null && picked != selectedDate) selectDate(picked);
+    if (picked != selectedDate) selectDate(picked);
   }
 
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay picked =
         (await showTimePicker(context: context, initialTime: selectedTime))!;
-    if (picked != null && picked != selectedTime) selectTime(picked);
+    if (picked != selectedTime) selectTime(picked);
   }
 
   @override
@@ -413,9 +412,8 @@ class _DateTimePicker extends StatelessWidget {
 }
 
 class _InputDropdown extends StatelessWidget {
-  const _InputDropdown(
+  _InputDropdown(
       {required Key key,
-      this.child,
       this.labelText,
       required this.valueText,
       required this.valueStyle,
@@ -426,7 +424,7 @@ class _InputDropdown extends StatelessWidget {
   final String valueText;
   final TextStyle valueStyle;
   final VoidCallback onPressed;
-  final Widget? child;
+  Widget? child;
 
   @override
   Widget build(BuildContext context) {

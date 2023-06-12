@@ -5,11 +5,11 @@ import 'schedule.dart';
 import 'package:sprintf/sprintf.dart';
 
 class SchedulePage extends StatefulWidget {
-  SchedulePage({required this.oauthToken});
+  const SchedulePage({super.key, required this.oauthToken});
 
   final String oauthToken;
   @override
-  State createState() => SchedulePageState(oauthToken: this.oauthToken);
+  State createState() => SchedulePageState(oauthToken: oauthToken);
 }
 
 class SchedulePageState extends State<SchedulePage> {
@@ -65,7 +65,7 @@ class SchedulePageState extends State<SchedulePage> {
     String changeFile = sprintf(
         "/%s%02i%02i_%s", [now.year, now.month, now.day, deviceChangeFile]);
     DropBoxAPIFn.getDropBoxFile(
-      oauthToken: this.oauthToken,
+      oauthToken: oauthToken,
       fileToDownload: changeFile,
       callback: processChangeFile,
       contentType: ContentType.text,
@@ -114,20 +114,20 @@ class SchedulePageState extends State<SchedulePage> {
 
   void processScheduleFiles(FileListing files) {
     //Process each file and add to dropdown
-    this.scheduleEntries =
-        List.filled(0, DropdownMenuItem(child: new Text("")), growable: true);
+    scheduleEntries =
+        List.filled(0, const DropdownMenuItem(child: Text("")), growable: true);
     if (mounted) {
       setState(() {
         for (FileEntry file in files.fileEntries) {
           //      print("Adding ${file.fileName}");
           ScheduleEntry schedule = ScheduleEntry.fromFileEntry(file);
-          this.scheduleEntries!.add(DropdownMenuItem<ScheduleEntry>(
+          scheduleEntries!.add(DropdownMenuItem<ScheduleEntry>(
                 value: schedule,
-                child: new Text(schedule.name),
+                child: Text(schedule.name),
               ));
           if (file.fileName.compareTo(currentScheduleFile) == 0) {
-            this.currentSchedulePath = file.fullPathName;
-            this.selectedScheduleEntry = schedule;
+            currentSchedulePath = file.fullPathName;
+            selectedScheduleEntry = schedule;
           }
         }
         showNowSchedule();
@@ -139,7 +139,7 @@ class SchedulePageState extends State<SchedulePage> {
   void scheduleSelected(ScheduleEntry? scheduleEntry) {
 //    print('Selected ${scheduleEntry.name}');
     DropBoxAPIFn.getDropBoxFile(
-      oauthToken: this.oauthToken,
+      oauthToken: oauthToken,
       fileToDownload: scheduleEntry!.fileListing.fullPathName,
       callback: processScheduleFile,
       contentType: ContentType.text,
@@ -147,9 +147,9 @@ class SchedulePageState extends State<SchedulePage> {
     );
     if (mounted) {
       setState(() {
-        this.scheduleDays = null;
-        this.selectedScheduleEntry = scheduleEntry;
-        generateHourTempSeries(this.selectedDayRange!);
+        scheduleDays = null;
+        selectedScheduleEntry = scheduleEntry;
+        generateHourTempSeries(selectedDayRange!);
       });
     }
   }
@@ -157,21 +157,25 @@ class SchedulePageState extends State<SchedulePage> {
   void processScheduleFile(String contents) {
     if (mounted) {
       setState(() {
-        this.selectedSchedule =
-            Schedule.fromFile(this.selectedScheduleEntry!, contents);
-        this.newSchedule = this.selectedSchedule!.copy();
-        Set<String> dayRangeSet = Set();
-        for (ScheduleDay day in this.selectedSchedule!.days)
+        selectedSchedule =
+            Schedule.fromFile(selectedScheduleEntry!, contents);
+        newSchedule = selectedSchedule!.copy();
+        Set<String> dayRangeSet = {};
+        for (ScheduleDay day in selectedSchedule!.days) {
           dayRangeSet.add(day.dayRange);
-        for (String day in ScheduleDay.daysofWeek) dayRangeSet.add(day);
-        this.scheduleDays = List.filled(
-            0, DropdownMenuItem(child: new Text("")),
+        }
+        for (String day in ScheduleDay.daysofWeek) {
+          dayRangeSet.add(day);
+        }
+        scheduleDays = List.filled(
+            0, const DropdownMenuItem(child: Text("")),
             growable: true);
-        for (String dayRange in dayRangeSet)
-          this.scheduleDays!.add(DropdownMenuItem<String>(
+        for (String dayRange in dayRangeSet) {
+          scheduleDays!.add(DropdownMenuItem<String>(
                 value: dayRange,
-                child: new Text(dayRange),
+                child: Text(dayRange),
               ));
+        }
       });
     }
     if (showNowSchedulePressed) {
@@ -183,11 +187,11 @@ class SchedulePageState extends State<SchedulePage> {
   void daySelected(String? day) {
     if (mounted) {
       setState(() {
-        this.selectedDayRange = day;
+        selectedDayRange = day;
         generateHourTempSeries(day!);
-        this.timeRanges = getScheduleTimes();
-        this.selectedScheduleTimeRange =
-            this.selectedSchedule!.filterEntriesByDayRange(day)[0];
+        timeRanges = getScheduleTimes();
+        selectedScheduleTimeRange =
+            selectedSchedule!.filterEntriesByDayRange(day)[0];
         //      print (this.selectedScheduleTimeRange .getStartToEndStr());
       });
     }
@@ -196,9 +200,9 @@ class SchedulePageState extends State<SchedulePage> {
   void timeRangeSelected(ScheduleDay? day) {
     if (mounted) {
       setState(() {
-        this.selectedScheduleTimeRange = day;
-        this.newTempFieldController.text = day!.temperature.toStringAsFixed(1);
-        this.newTempFieldController.addListener(newTempSet);
+        selectedScheduleTimeRange = day;
+        newTempFieldController.text = day!.temperature.toStringAsFixed(1);
+        newTempFieldController.addListener(newTempSet);
         //      print (this.selectedScheduleTimeRange .getStartToEndStr());
       });
     }
@@ -213,19 +217,19 @@ class SchedulePageState extends State<SchedulePage> {
   //Process schedule for selected day to create Series to plot
   void generateHourTempSeries(String day) {
     List<ScheduleDay> dayEntries =
-        this.selectedSchedule!.filterEntriesByDayRange(day);
+        selectedSchedule!.filterEntriesByDayRange(day);
     List<ValueByHour> tempPoints =
         Schedule.generateTempByHourForEntries(dayEntries);
 //    tempPoints.forEach((th) => print("Time: ${th.hour} Temp: ${th.temperature}"));
-    this.hourTempSeries = PointsLineChart.createScheduleSeries(
-        tempPoints, this.selectedScheduleTimeRange);
+    hourTempSeries = PointsLineChart.createScheduleSeries(
+        tempPoints, selectedScheduleTimeRange);
     chartsToPlot = [hourTempSeries!, measuredTempSeries!];
   }
 
   void showNowSchedule() {
     showNowSchedulePressed = true;
     DropBoxAPIFn.getDropBoxFile(
-      oauthToken: this.oauthToken,
+      oauthToken: oauthToken,
       fileToDownload: currentSchedulePath,
       callback: processScheduleFile,
       contentType: ContentType.text,
@@ -249,15 +253,17 @@ class SchedulePageState extends State<SchedulePage> {
           .forEach((day) {
         if (day.isInTimeRange(dtime)) {
           selectedDay = day;
-        } else if (day.isDefaultTimeRange()) defaultDay = day;
+        } else if (day.isDefaultTimeRange()) {
+          defaultDay = day;
+        }
       });
     }
     selectedDay ??= defaultDay;
     if (mounted) {
       setState(() {
-        this.selectedScheduleTimeRange = selectedDay;
-        this.timeRanges = getScheduleTimes();
-        generateHourTempSeries(this.selectedDayRange!);
+        selectedScheduleTimeRange = selectedDay;
+        timeRanges = getScheduleTimes();
+        generateHourTempSeries(selectedDayRange!);
         //      print (selectedDay.getStartToEndStr());
       });
     }
@@ -265,12 +271,12 @@ class SchedulePageState extends State<SchedulePage> {
 
   List<DropdownMenuItem<ScheduleDay>> getScheduleTimes() {
     List<DropdownMenuItem<ScheduleDay>> retList =
-        List.filled(0, DropdownMenuItem(child: Text(" ")), growable: true);
+        List.filled(0, const DropdownMenuItem(child: Text(" ")), growable: true);
     selectedSchedule!
-        .filterEntriesByDayRange(this.selectedDayRange!)
+        .filterEntriesByDayRange(selectedDayRange!)
         .forEach((day) => retList.add(DropdownMenuItem<ScheduleDay>(
               value: day,
-              child: new Text(day.getStartToEndStr()),
+              child: Text(day.getStartToEndStr()),
             )));
     return retList;
   }
@@ -304,7 +310,7 @@ class SchedulePageState extends State<SchedulePage> {
             onChanged: scheduleSelected,
             elevation: 20,
             isExpanded: true,
-            value: this.selectedScheduleEntry,
+            value: selectedScheduleEntry,
             isDense: false,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -322,11 +328,11 @@ class SchedulePageState extends State<SchedulePage> {
           height: 50.0,
 //          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width, maxHeight: 30),
           child: DropdownButton<String>(
-            items: this.scheduleDays,
+            items: scheduleDays,
             onChanged: daySelected,
             elevation: 20,
             isExpanded: true,
-            value: this.selectedDayRange,
+            value: selectedDayRange,
             isDense: false,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -340,7 +346,7 @@ class SchedulePageState extends State<SchedulePage> {
             height: 300.0,
             width: MediaQuery.of(context).size.width,
             //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
-            child: PointsLineChart(this.chartsToPlot!, onChartSelectionChanged),
+            child: PointsLineChart(chartsToPlot!, onChartSelectionChanged),
           ),
         ],
       ),
@@ -360,11 +366,11 @@ class SchedulePageState extends State<SchedulePage> {
             width: 110.0,
 //            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width, minWidth: 50.0),
             child: DropdownButton<ScheduleDay>(
-              items: this.timeRanges,
+              items: timeRanges,
               onChanged: timeRangeSelected,
               elevation: 25,
               isExpanded: true,
-              value: this.selectedScheduleTimeRange,
+              value: selectedScheduleTimeRange,
               isDense: true,
               style: Theme.of(context).textTheme.titleSmall,
             ),
@@ -372,9 +378,9 @@ class SchedulePageState extends State<SchedulePage> {
           Container(
             padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 8.0),
             child: Text(
-              this.selectedScheduleTimeRange == null
+              selectedScheduleTimeRange == null
                   ? '   '
-                  : 'Temp: ${this.selectedScheduleTimeRange!.temperature}\u00B0C',
+                  : 'Temp: ${selectedScheduleTimeRange!.temperature}\u00B0C',
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
@@ -418,28 +424,30 @@ class PointsLineChart extends StatelessWidget {
   final List<charts.Series<dynamic, num>> seriesList;
   final Function(charts.SelectionModel)? onSelectionChanged;
 
-  PointsLineChart(this.seriesList, this.onSelectionChanged);
+  const PointsLineChart(this.seriesList, this.onSelectionChanged, {super.key});
 
   /// Creates a [LineChart] with sample data and no transition.
   factory PointsLineChart.withSampleData() {
-    return new PointsLineChart(_createSampleData(), null
+    return PointsLineChart(_createSampleData(), null
         // Disable animations for image tests.
         );
   }
 
   double getMaxValue() {
     double maxValue = -999999999.0;
-    for (charts.Series s in this.seriesList)
-      for (ValueByHour point in s.data)
+    for (charts.Series s in seriesList)
+      for (ValueByHour point in s.data) {
         if (point.value > maxValue) maxValue = point.value;
+      }
     return maxValue;
   }
 
   double getMinValue() {
     double minValue = 999999999.0;
-    for (charts.Series s in this.seriesList)
-      for (ValueByHour point in s.data)
+    for (charts.Series s in seriesList)
+      for (ValueByHour point in s.data) {
         if (point.value < minValue) minValue = point.value;
+      }
     return minValue;
   }
 
@@ -449,49 +457,52 @@ class PointsLineChart extends StatelessWidget {
         charts.LineAnnotationSegment(0, charts.RangeAnnotationAxisType.domain),
         growable: true);
     int nowTime = ValueByHour.from(DateTime.now(), 0.0).hour;
-    lines.add(new charts.LineAnnotationSegment(
+    lines.add(charts.LineAnnotationSegment(
       nowTime,
       charts.RangeAnnotationAxisType.domain,
       color: charts.MaterialPalette.red.shadeDefault,
       startLabel: ValueByHour.hourFormat.format(nowTime),
       labelAnchor: charts.AnnotationLabelAnchor.middle,
     ));
-    for (charts.Series s in this.seriesList)
+    for (charts.Series s in seriesList) {
       if (s.id.contains("Scheduled")) {
-        for (ValueByHour point in s.data)
-          if (point.value != minValue)
-            lines.add(new charts.LineAnnotationSegment(
+        for (ValueByHour point in s.data) {
+          if (point.value != minValue) {
+            lines.add(charts.LineAnnotationSegment(
                 point.hour, charts.RangeAnnotationAxisType.domain,
                 startLabel: ValueByHour.hourFormat.format(point.hour)));
+        }
+          }
       }
+    }
     return charts.RangeAnnotation(lines);
   }
 
   @override
   Widget build(BuildContext context) {
     double maxValue = getMaxValue();
-    return new charts.LineChart(
+    return charts.LineChart(
       seriesList,
       animate: true,
-      primaryMeasureAxis: new charts.NumericAxisSpec(
+      primaryMeasureAxis: charts.NumericAxisSpec(
         viewport:
-            new charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
-        tickProviderSpec: new charts.BasicNumericTickProviderSpec(
+            charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
+        tickProviderSpec: const charts.BasicNumericTickProviderSpec(
             zeroBound: false, desiredTickCount: 14),
       ),
-      domainAxis: new charts.NumericAxisSpec(
-        viewport: new charts.NumericExtents(0, 2400),
+      domainAxis: charts.NumericAxisSpec(
+        viewport: const charts.NumericExtents(0, 2400),
         tickProviderSpec:
-            new charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
+            const charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
         tickFormatterSpec:
-            new charts.BasicNumericTickFormatterSpec.fromNumberFormat(
+            charts.BasicNumericTickFormatterSpec.fromNumberFormat(
                 ValueByHour.hourFormat),
       ),
-      defaultRenderer: new charts.LineRendererConfig(includePoints: true),
+      defaultRenderer: charts.LineRendererConfig(includePoints: true),
       selectionModels: [
-        new charts.SelectionModelConfig(
+        charts.SelectionModelConfig(
           type: charts.SelectionModelType.info,
-          changedListener: this.onSelectionChanged,
+          changedListener: onSelectionChanged,
         )
       ],
       behaviors: [
@@ -502,10 +513,10 @@ class PointsLineChart extends StatelessWidget {
 
   static charts.Series<ValueByHour, int> createScheduleSeries(
       List<ValueByHour> timeTempPoints, ScheduleDay? selectedDay) {
-    return new charts.Series<ValueByHour, int>(
+    return charts.Series<ValueByHour, int>(
       id: 'Scheduled',
       colorFn: ((ValueByHour tempByHour, __) {
-        var color;
+        charts.Color color;
         DateTime hourTime = ScheduleDay.hourToDateTime(tempByHour.hour);
         if (selectedDay != null && selectedDay.isInTimeRange(hourTime)) {
           color = charts.MaterialPalette.red.shadeDefault;
@@ -522,10 +533,10 @@ class PointsLineChart extends StatelessWidget {
 
   static charts.Series<ValueByHour, int> createMeasuredSeries(
       List<ValueByHour> timeTempPoints) {
-    return new charts.Series<ValueByHour, int>(
+    return charts.Series<ValueByHour, int>(
       id: 'Measured',
       colorFn: ((ValueByHour tempByHour, __) {
-        var color;
+        charts.Color color;
         color = charts.MaterialPalette.green.shadeDefault;
         return color;
       }),
@@ -538,13 +549,13 @@ class PointsLineChart extends StatelessWidget {
   /// Create one series with sample hard coded data.
   static List<charts.Series<ValueByHour, int>> _createSampleData() {
     final data = [
-      new ValueByHour(900, 17.0),
-      new ValueByHour(1100, 17.0),
-      new ValueByHour(1115, 10.0),
-      new ValueByHour(1629, 10.0),
-      new ValueByHour(1630, 18.5),
-      new ValueByHour(2200, 18.5),
-      new ValueByHour(2201, 10.0),
+      ValueByHour(900, 17.0),
+      ValueByHour(1100, 17.0),
+      ValueByHour(1115, 10.0),
+      ValueByHour(1629, 10.0),
+      ValueByHour(1630, 18.5),
+      ValueByHour(2200, 18.5),
+      ValueByHour(2201, 10.0),
     ];
 
     return [createScheduleSeries(data, null)];

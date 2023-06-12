@@ -11,8 +11,8 @@ class ImageScreen extends StatefulWidget {
   final String folderPath;
   final int fileIndex;
 
-  ImageScreen(
-      {required this.oauthToken,
+  const ImageScreen(
+      {super.key, required this.oauthToken,
       required this.imageName,
       required this.imageData,
       required this.mediaList,
@@ -21,12 +21,12 @@ class ImageScreen extends StatefulWidget {
 
   @override
   State createState() => ImageScreenState(
-      oauthToken: this.oauthToken,
-      imageName: this.imageName,
-      imageData: this.imageData,
-      mediaList: this.mediaList,
-      folderPath: this.folderPath,
-      fileIndex: this.fileIndex);
+      oauthToken: oauthToken,
+      imageName: imageName,
+      imageData: imageData,
+      mediaList: mediaList,
+      folderPath: folderPath,
+      fileIndex: fileIndex);
 }
 
 class ImageScreenState extends State<ImageScreen> {
@@ -80,7 +80,6 @@ class ImageScreenState extends State<ImageScreen> {
     String time = parts[3].split('-')[0].split('T')[1];
     String title =
         "Image ${mediaList.length - fileIndex} of ${mediaList.length} $source $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
-    // "Image    Source: $source Date: $date Time: ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
 
     return Scaffold(
         appBar: AppBar(

@@ -13,7 +13,7 @@ class ValueByHour {
 //    print ('${time.toString()} : $tStr : $hour');
     return ValueByHour(hour, val);
   }
-  static final NumberFormat hourFormat = new NumberFormat('0000', 'en_US');
+  static final NumberFormat hourFormat = NumberFormat('0000', 'en_US');
 }
 
 //A schedule entry. This represents the temperature to set the thermostat
@@ -40,38 +40,38 @@ class ScheduleDay {
   }
 
   String getStartAsStr() {
-    return ValueByHour.hourFormat.format(dateTimeToHour(this.start));
+    return ValueByHour.hourFormat.format(dateTimeToHour(start));
   }
 
   String getEndAsStr() {
-    return ValueByHour.hourFormat.format(dateTimeToHour(this.end));
+    return ValueByHour.hourFormat.format(dateTimeToHour(end));
   }
 
   String getStartToEndStr() {
-    return '${this.getStartAsStr()}-${this.getEndAsStr()}';
+    return '${getStartAsStr()}-${getEndAsStr()}';
   }
 
   bool isDefaultTimeRange() {
-    return this.start.isAtSameMomentAs(zeroTime) &&
-        this.end.isAtSameMomentAs(zeroTime);
+    return start.isAtSameMomentAs(zeroTime) &&
+        end.isAtSameMomentAs(zeroTime);
   }
 
   bool isInTimeRange(DateTime time) {
 //    print ("IN: $time start: $start ${this.start.isAtSameMomentAs(time)} end: $end temp in: ${this.temperature.toStringAsFixed(1).compareTo(temp.toStringAsFixed(1))}");
-    return ((this.start.isAtSameMomentAs(time) ||
-            this.end.isAtSameMomentAs(time)) ||
-        (time.isAfter(this.start) && time.isBefore(this.end)));
+    return ((start.isAtSameMomentAs(time) ||
+            end.isAtSameMomentAs(time)) ||
+        (time.isAfter(start) && time.isBefore(end)));
   }
 
   //Determine if the given day (or dayRange) is in the range of this entry
   bool isDayInRange(String day) {
     bool isInRange = false;
-    if (day == this.dayRange)
+    if (day == dayRange) {
       isInRange = true;
-    else if (dayRangeDays.keys.contains(this.dayRange) &&
+    } else if (dayRangeDays.keys.contains(dayRange) &&
         daysofWeek.contains(day)) {
       //Its a single day and we are a dayrange
-      isInRange = dayRangeDays[this.dayRange]!.contains(day);
+      isInRange = dayRangeDays[dayRange]!.contains(day);
     }
     return isInRange;
   }
@@ -81,12 +81,12 @@ class ScheduleDay {
   //has a higher precedence than one that specified a temperature for the same time but for a day range, say Mon-Fri
   int getPrecedence() {
     int precedence = 99;
-    if (dayRangeDays.containsKey(this.dayRange)) {
-      precedence = dayRangeDays[this.dayRange]!.length;
-    } else if (daysofWeek.contains(this.dayRange)) {
+    if (dayRangeDays.containsKey(dayRange)) {
+      precedence = dayRangeDays[dayRange]!.length;
+    } else if (daysofWeek.contains(dayRange)) {
       precedence = 1;
     } else {
-      throw new FormatException(
+      throw FormatException(
           "Day range in schedule not recognised: $this.dayRange");
     }
     return precedence;
@@ -148,7 +148,7 @@ class Schedule {
 
   Schedule copy() {
     //Create a copy based on the original file
-    return Schedule.fromFile(this.file, this.fileContents);
+    return Schedule.fromFile(file, fileContents);
   }
 
   factory Schedule.fromFile(ScheduleEntry file, String contents) {
@@ -188,7 +188,7 @@ class Schedule {
         0, ScheduleDay("", DateTime(2022), DateTime(2022), 0),
         growable: true);
 
-    for (ScheduleDay day in this.days) {
+    for (ScheduleDay day in days) {
       if (day.isDayInRange(dayRange)) dayEntries.add(day);
     }
     return dayEntries;
@@ -206,7 +206,7 @@ class Schedule {
     double currentTemp = getCurrentTemp(currentTime, entries);
     retEntries.add(ValueByHour.from(currentTime, currentTemp));
     do {
-      DateTime newTime = currentTime.add(Duration(minutes: 5));
+      DateTime newTime = currentTime.add(const Duration(minutes: 5));
       double newTemp = getCurrentTemp(newTime, entries);
       if (newTemp != currentTemp) {
         //Create an entry at old temp and new temp
@@ -224,11 +224,11 @@ class Schedule {
   //Sorted entries must be in reverse precedence order
   static double getCurrentTemp(DateTime now, List<ScheduleDay> sortedEntries) {
     double retTemp = 10.0;
-    sortedEntries.forEach((entry) {
+    for (var entry in sortedEntries) {
       if (now.compareTo(entry.start) >= 0 && now.compareTo(entry.end) <= 0) {
         retTemp = entry.temperature;
       }
-    });
+    }
     return retTemp;
   }
 }

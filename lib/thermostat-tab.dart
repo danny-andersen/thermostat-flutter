@@ -23,17 +23,19 @@ class ColorByTemp {
 
   static Color findActiveColor(double temp) {
     Color returnColor = Colors.red[700]!;
-    if (temp <= maxDarkBlue)
+    if (temp <= maxDarkBlue) {
       returnColor = Colors.indigo;
-    else if (temp <= maxBlue)
+    } else if (temp <= maxBlue) {
       returnColor = Colors.blue;
-    else if (temp <= maxYellow)
+    } else if (temp <= maxYellow) {
       returnColor = Colors.yellow;
-    else if (temp <= maxOrange)
+    } else if (temp <= maxOrange) {
       returnColor = Colors.orange;
-    else if (temp <= maxRed)
+    } else if (temp <= maxRed) {
       returnColor = Colors.red;
-    else if (temp <= maxRed2) returnColor = Colors.red[600]!;
+    } else if (temp <= maxRed2) {
+      returnColor = Colors.red[600]!;
+    }
     return returnColor;
   }
 
@@ -45,17 +47,19 @@ class ColorByTemp {
 
   static Color findInActiveColor(double temp) {
     Color returnColor = Colors.red;
-    if (temp <= maxBlue)
+    if (temp <= maxBlue) {
       returnColor = Colors.amber;
-    else if (temp <= maxYellow)
+    } else if (temp <= maxYellow) {
       returnColor = Colors.orange;
-    else if (temp <= maxOrange) returnColor = Colors.red;
+    } else if (temp <= maxOrange) {
+      returnColor = Colors.red;
+    }
     return returnColor;
   }
 }
 
 class ThermostatPage extends StatefulWidget {
-  ThermostatPage({required this.oauthToken}) : super();
+  ThermostatPage({super.key, required this.oauthToken});
   String oauthToken;
   _ThermostatPageState statePage = _ThermostatPageState(oauthToken: "BLANK");
   // _ThermostatPageState state = _ThermostatPageState(oauthToken: "BLANK");
@@ -83,13 +87,13 @@ class _ThermostatPageState extends State<ThermostatPage> {
   bool requestOutstanding = false;
   bool boilerOn = true;
   int minsToSetTemp = 0;
-  Timer timer = Timer(Duration(), () {});
+  Timer timer = Timer(const Duration(), () {});
 
   @override
   void initState() {
     getSetTemp();
     getStatus();
-    timer = Timer.periodic(Duration(seconds: 30), refreshStatus);
+    timer = Timer.periodic(const Duration(seconds: 30), refreshStatus);
     super.initState();
   }
 
@@ -119,7 +123,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
     if (send) {
       String contents = requestedTemp.toStringAsFixed(1);
       DropBoxAPIFn.sendDropBoxFile(
-          oauthToken: this.oauthToken,
+          oauthToken: oauthToken,
           fileToUpload: setTempFile,
           contents: contents);
     }
@@ -138,7 +142,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   void getStatus() {
     DropBoxAPIFn.getDropBoxFile(
-      oauthToken: this.oauthToken,
+      oauthToken: oauthToken,
       fileToDownload: statusFile,
       callback: processStatus,
       contentType: ContentType.text,
@@ -149,7 +153,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   void getSetTemp() {
     if (requestOutstanding) {
       DropBoxAPIFn.getDropBoxFile(
-        oauthToken: this.oauthToken,
+        oauthToken: oauthToken,
         fileToDownload: setTempFile,
         callback: processSetTemp,
         contentType: ContentType.text,
@@ -236,20 +240,20 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   List<charts.Series<TypeTemp, String>> createChartSeries() {
     List<TypeTemp> data = [
-      new TypeTemp('House', currentTemp),
-      new TypeTemp('Thermostat', setTemp),
+      TypeTemp('House', currentTemp),
+      TypeTemp('Thermostat', setTemp),
     ];
 
     if (requestedTemp != setTemp) {
       data.add(
-        new TypeTemp('Requested', requestedTemp),
+        TypeTemp('Requested', requestedTemp),
       );
     }
     if (extTemp != 100.0) {
-      data.add(new TypeTemp('Outside', extTemp));
+      data.add(TypeTemp('Outside', extTemp));
     }
     return [
-      new charts.Series<TypeTemp, String>(
+      charts.Series<TypeTemp, String>(
         id: 'Temperature',
         domainFn: (TypeTemp tempByType, _) => tempByType.type,
         measureFn: (TypeTemp tempByType, _) => tempByType.temp,
@@ -260,11 +264,11 @@ class _ThermostatPageState extends State<ThermostatPage> {
         fillColorFn: (TypeTemp tempByType, _) =>
             ColorByTemp.findActiveChartColor(tempByType.temp),
         insideLabelStyleAccessorFn: (TypeTemp tempByTemp, _) {
-          return new charts.TextStyleSpec(
+          return const charts.TextStyleSpec(
               fontSize: 18, color: charts.MaterialPalette.white);
         },
         outsideLabelStyleAccessorFn: (TypeTemp tempByTemp, _) {
-          return new charts.TextStyleSpec(
+          return const charts.TextStyleSpec(
               fontSize: 18, color: charts.MaterialPalette.black);
         },
       ),
@@ -283,7 +287,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
     Widget returnWidget = ListView(children: [
       Container(
         padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-        child: Text(
+        child: const Text(
           'Temperature Chart:',
           style: TextStyle(
             fontSize: 18.0,
@@ -291,14 +295,14 @@ class _ThermostatPageState extends State<ThermostatPage> {
           ),
         ),
       ),
-      Container(
+      SizedBox(
         height: 250,
         child: TemperatureChart(createChartSeries(), animate: false),
       ),
       const SizedBox(height: 16.0),
       Container(
         padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-        child: Text(
+        child: const Text(
           'Adjust Set Temp:',
           style: TextStyle(
             fontSize: 18.0,
@@ -313,7 +317,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           plusPressed: _incrementRequestedTemp),
       Container(
         padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-        child: Text(
+        child: const Text(
           'Relative Humidity (%):',
           style: TextStyle(
             fontSize: 18.0,
@@ -324,7 +328,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
       RHGauge(humidity: humidity),
       Container(
         padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-        child: Text(
+        child: const Text(
           'Status:',
           style: TextStyle(
             fontSize: 18.0,
@@ -370,7 +374,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
 }
 
 class SetTempButtonBar extends StatelessWidget {
-  SetTempButtonBar({required this.minusPressed, required this.plusPressed});
+  const SetTempButtonBar({super.key, required this.minusPressed, required this.plusPressed});
 
   final Function() minusPressed;
   final Function() plusPressed;
@@ -388,28 +392,26 @@ class SetTempButtonBar extends StatelessWidget {
 
       children: [
         ElevatedButton(
-            child: Icon(Icons.arrow_downward),
-//                        tooltip: "Decrease Set Temp by 0.1 degree",
             onPressed: minusPressed,
-            style: ButtonStyle(
+            style: const ButtonStyle(
                 textStyle:
                     MaterialStatePropertyAll(TextStyle(color: Colors.white)),
-                backgroundColor: MaterialStatePropertyAll(Colors.blue))),
+                backgroundColor: MaterialStatePropertyAll(Colors.blue)),
+            child: const Icon(Icons.arrow_downward)),
         ElevatedButton(
-            child: Icon(Icons.arrow_upward),
-//                      tooltip: "Increase Set Temp by 0.1 degree",
             onPressed: plusPressed,
-            style: ButtonStyle(
+            style: const ButtonStyle(
                 textStyle:
                     MaterialStatePropertyAll(TextStyle(color: Colors.white)),
-                backgroundColor: MaterialStatePropertyAll(Colors.red))),
+                backgroundColor: MaterialStatePropertyAll(Colors.red)),
+            child: const Icon(Icons.arrow_upward)),
       ],
     );
   }
 }
 
 class ActionButtons extends StatelessWidget {
-  ActionButtons({required this.minusPressed, required this.plusPressed});
+  const ActionButtons({super.key, required this.minusPressed, required this.plusPressed});
 
   final Function() minusPressed;
   final Function() plusPressed;
@@ -433,7 +435,7 @@ class ActionButtons extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                   IconButton(
-                    icon: Icon(Icons.remove),
+                    icon: const Icon(Icons.remove),
                     tooltip: "Decrease Set Temp by 0.5 degree",
                     onPressed: minusPressed,
                     color: Colors.blue,
@@ -444,7 +446,7 @@ class ActionButtons extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 IconButton(
-                  icon: Icon(Icons.add),
+                  icon: const Icon(Icons.add),
                   color: Colors.red,
                   tooltip: "Increase Set Temp by 0.5 degree",
                   onPressed: plusPressed,
@@ -457,8 +459,8 @@ class ActionButtons extends StatelessWidget {
 }
 
 class SliderWithRange extends StatelessWidget {
-  SliderWithRange(
-      {required this.requestedTempGetter, required this.returnNewTemp});
+  const SliderWithRange(
+      {super.key, required this.requestedTempGetter, required this.returnNewTemp});
 
   final ValueGetter<double> requestedTempGetter;
   final Function(double newTemp, bool endChange) returnNewTemp;
@@ -518,20 +520,21 @@ class SliderWithRange extends StatelessWidget {
 }
 
 class RHGauge extends StatelessWidget {
-  RHGauge({required this.humidity});
+  const RHGauge({super.key, required this.humidity});
 
   final double humidity;
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.all(10),
       child: SfLinearGauge(
           minimum: 0.0,
           maximum: 100.0,
           orientation: LinearGaugeOrientation.horizontal,
-          majorTickStyle: LinearTickStyle(length: 20),
-          axisLabelStyle: TextStyle(fontSize: 12.0, color: Colors.black),
-          ranges: [
+          majorTickStyle: const LinearTickStyle(length: 20),
+          axisLabelStyle: const TextStyle(fontSize: 12.0, color: Colors.black),
+          ranges: const [
             LinearGaugeRange(startValue: 0, endValue: 20.0, color: Colors.red),
             LinearGaugeRange(
                 startValue: 20.0, endValue: 30.0, color: Colors.orange),
@@ -543,19 +546,18 @@ class RHGauge extends StatelessWidget {
                 startValue: 70.0, endValue: 100.0, color: Colors.red),
           ],
           markerPointers: [LinearShapePointer(value: humidity)],
-          axisTrackStyle: LinearAxisTrackStyle(
+          axisTrackStyle: const LinearAxisTrackStyle(
               color: Colors.cyan,
               edgeStyle: LinearEdgeStyle.bothFlat,
               thickness: 8.0,
               borderColor: Colors.grey)),
-      margin: EdgeInsets.all(10),
     );
   }
 }
 
 class LabelWithDoubleState extends StatelessWidget {
-  LabelWithDoubleState(
-      {required this.label,
+  const LabelWithDoubleState(
+      {super.key, required this.label,
       required this.valueGetter,
       required this.textStyle});
 
@@ -601,7 +603,7 @@ class LabelWithDoubleState extends StatelessWidget {
             ),
           ),
           Text(
-            '${(valueGetter() == 100.0 ? '' : valueGetter().toStringAsFixed(1) + '\u00B0C')}',
+            (valueGetter() == 100.0 ? '' : '${valueGetter().toStringAsFixed(1)}\u00B0C'),
             style: textStyle,
 //            Theme.of(context)
 //                .textTheme
@@ -619,7 +621,7 @@ class LabelWithDoubleState extends StatelessWidget {
 }
 
 class LabelWithIntState extends StatelessWidget {
-  LabelWithIntState({required this.label, required this.valueGetter});
+  const LabelWithIntState({super.key, required this.label, required this.valueGetter});
 
   final String label;
   final ValueGetter<int> valueGetter;
@@ -663,17 +665,17 @@ class LabelWithIntState extends StatelessWidget {
 }
 
 class BoilerState extends StatelessWidget {
-  BoilerState({required this.boilerOn, required this.minsToTemp});
+  const BoilerState({super.key, required this.boilerOn, required this.minsToTemp});
 
   final ValueGetter<bool> boilerOn;
   final ValueGetter<int> minsToTemp;
 
   @override
   Widget build(BuildContext context) {
-    Widget _returnWidget;
+    Widget returnWidget;
     TextStyle dispStyle = Theme.of(context).textTheme.titleMedium!;
     if (boilerOn()) {
-      _returnWidget = Container(
+      returnWidget = Container(
         padding: const EdgeInsets.all(10.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -716,7 +718,7 @@ class BoilerState extends StatelessWidget {
         ),
       );
     } else {
-      _returnWidget = Container(
+      returnWidget = Container(
         padding: const EdgeInsets.all(10.0),
         child: Row(
           mainAxisSize: MainAxisSize.max,
@@ -744,12 +746,12 @@ class BoilerState extends StatelessWidget {
         ),
       );
     }
-    return _returnWidget;
+    return returnWidget;
   }
 }
 
 class ShowPirStatus extends StatelessWidget {
-  ShowPirStatus({required this.pirState});
+  const ShowPirStatus({super.key, required this.pirState});
 
   final bool pirState;
 
@@ -806,10 +808,10 @@ class ShowPirStatus extends StatelessWidget {
 }
 
 class ShowDateTimeStamp extends StatelessWidget {
-  ShowDateTimeStamp({required this.dateTimeStamp});
+  ShowDateTimeStamp({super.key, required this.dateTimeStamp});
 
   final DateTime? dateTimeStamp;
-  final DateFormat dateFormat = new DateFormat("yyyy-MM-dd HH:mm:ss");
+  final DateFormat dateFormat = DateFormat("yyyy-MM-dd HH:mm:ss");
 
   @override
   Widget build(BuildContext context) {
@@ -869,21 +871,21 @@ class TemperatureChart extends StatelessWidget {
   List<charts.Series<dynamic, String>> seriesList;
   bool? animate = true;
 
-  TemperatureChart(this.seriesList, {this.animate});
+  TemperatureChart(this.seriesList, {super.key, this.animate});
 
   // The [BarLabelDecorator] has settings to set the text style for all labels
   // for inside the bar and outside the bar. To be able to control each datum's
   // style, set the style accessor functions on the series.
   @override
   Widget build(BuildContext context) {
-    return new charts.BarChart(
+    return charts.BarChart(
       seriesList,
       animate: animate,
       vertical: false,
-      barRendererDecorator: new charts.BarLabelDecorator<String>(),
+      barRendererDecorator: charts.BarLabelDecorator<String>(),
       // Hide domain axis.
       domainAxis:
-          new charts.OrdinalAxisSpec(renderSpec: new charts.NoneRenderSpec()),
+          const charts.OrdinalAxisSpec(renderSpec: charts.NoneRenderSpec()),
     );
   }
 }

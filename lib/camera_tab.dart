@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
@@ -13,11 +11,11 @@ import 'image-screen.dart';
 import 'video_screen.dart';
 
 class CameraPage extends StatefulWidget {
-  CameraPage({required this.oauthToken});
+  const CameraPage({super.key, required this.oauthToken});
 
   final String oauthToken;
   @override
-  State createState() => CameraPageState(oauthToken: this.oauthToken);
+  State createState() => CameraPageState(oauthToken: oauthToken);
 }
 
 class CameraPageState extends State<CameraPage> {
@@ -160,7 +158,6 @@ class CameraPageState extends State<CameraPage> {
       String fileName = mediaFiles[index].fileName;
       List<String> parts = fileName.split('-');
       String time = parts[0].split('T')[1];
-      String date = parts[0].split('T')[0];
       String source = "Webcam";
       if (parts[1].contains("pi")) {
         source = "PiCam";
@@ -241,7 +238,7 @@ class CameraPageState extends State<CameraPage> {
           Visibility(
               visible: index == folderVisible,
               child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: currentFolder == folderName
                       ? isLoadingMediaList
                           ? const CircularProgressIndicator()
