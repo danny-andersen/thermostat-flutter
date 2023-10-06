@@ -12,7 +12,8 @@ class ImageScreen extends StatefulWidget {
   final int fileIndex;
 
   const ImageScreen(
-      {super.key, required this.oauthToken,
+      {super.key,
+      required this.oauthToken,
       required this.imageName,
       required this.imageData,
       required this.mediaList,
@@ -165,6 +166,7 @@ class ImageScreenState extends State<ImageScreen> {
   }
 
   getNext() {
+    int startIndex = fileIndex;
     while (--fileIndex >= 0) {
       String fileName = mediaList[fileIndex].fileName;
       // print("Index: $fileIndex, File: $fileName");
@@ -177,12 +179,15 @@ class ImageScreenState extends State<ImageScreen> {
       }
     }
     if (fileIndex < 0) {
-      fileIndex = 0;
-      isLoadingImage = false;
+      fileIndex = startIndex;
+      setState(() {
+        isLoadingImage = false;
+      });
     }
   }
 
   getPrevious() {
+    int startIndex = fileIndex;
     while (++fileIndex < mediaList.length) {
       String fileName = mediaList[fileIndex].fileName;
       // print("Index: $fileIndex, File: $fileName");
@@ -195,8 +200,10 @@ class ImageScreenState extends State<ImageScreen> {
       }
     }
     if (fileIndex >= mediaList.length) {
-      fileIndex = mediaList.length - 1;
-      isLoadingImage = false;
+      fileIndex = startIndex;
+      setState(() {
+        isLoadingImage = false;
+      });
     }
   }
 }

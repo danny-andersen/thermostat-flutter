@@ -7,35 +7,32 @@ import 'package:video_player/video_player.dart';
 
 class VideoScreen extends StatefulWidget {
   final String videoName;
-  final ChewieController chewieController;
   final String oauthToken;
   final List<FileEntry> mediaList;
   final String folderPath;
   final int fileIndex;
 
-  VideoScreen(
-      {required this.oauthToken,
+  const VideoScreen(
+      {super.key,
+      required this.oauthToken,
       required this.videoName,
-      required this.chewieController,
       required this.mediaList,
       required this.folderPath,
       required this.fileIndex});
 
   @override
   State createState() => VideoScreenState(
-      oauthToken: this.oauthToken,
-      videoName: this.videoName,
-      chewieController: this.chewieController,
-      mediaList: this.mediaList,
-      folderPath: this.folderPath,
-      fileIndex: this.fileIndex);
+      oauthToken: oauthToken,
+      videoName: videoName,
+      mediaList: mediaList,
+      folderPath: folderPath,
+      fileIndex: fileIndex);
 }
 
 class VideoScreenState extends State<VideoScreen> {
   VideoScreenState(
       {required this.oauthToken,
       required this.videoName,
-      required this.chewieController,
       required this.mediaList,
       required this.folderPath,
       required this.fileIndex});
@@ -45,17 +42,25 @@ class VideoScreenState extends State<VideoScreen> {
   final List<FileEntry> mediaList;
   final String folderPath;
   int fileIndex;
-  ChewieController chewieController;
+  late ChewieController chewieController;
+  late VideoPlayerController videoController;
+  bool isLoadingImage = true;
 
   @override
   void initState() {
+    getVideo(videoName, fileIndex);
     super.initState();
+  }
+
+  void disposePlayer() {
+    videoController.dispose();
+    chewieController.dispose();
   }
 
   void getVideo(String fileName, int index) {
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
-        fileToDownload: "$folderPath/$fileName",
+        fileToDownload: fileName,
         callback: showVideo,
         contentType: ContentType.video,
         timeoutSecs: 0,
@@ -73,18 +78,24 @@ class VideoScreenState extends State<VideoScreen> {
     if (mounted) {
       final mime = (name.endsWith(".mp4")) ? "video/mp4" : "video/mpeg";
       final dataUrl = Uri.dataFromBytes(data, mimeType: mime).toString();
-      final VideoPlayerController videoController =
-          VideoPlayerController.network(dataUrl);
-      _initVideoPlayer(videoController);
+      videoController = VideoPlayerController.network(dataUrl);
+      // _initVideoPlayer(videoController);
       ChewieController chewie = ChewieController(
         videoPlayerController: videoController,
-        autoPlay: true,
-        looping: true,
+        autoPlay: false,
+        allowFullScreen: true,
+        fullScreenByDefault: false,
+        showControls: true,
+        showControlsOnInitialize: true,
+        // aspectRatio: 5 / 8,
+        // looping: true,
+        // autoInitialize: true,
       );
       setState(() {
         chewieController = chewie;
         videoName = name;
         fileIndex = index;
+        isLoadingImage = false;
       });
     }
   }
@@ -99,53 +110,126 @@ class VideoScreenState extends State<VideoScreen> {
     }
     String time = parts[3].split('-')[0].split('T')[1];
     String title =
-        "$source Video $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
-    // "Video    Source: $source Date: $date Time: ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
+        "Video ${mediaList.length - fileIndex} of ${mediaList.length} $source $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
 
     return Scaffold(
         appBar: AppBar(
           title: Text(
             title,
-            style: TextStyle(
-              fontSize: 18,
+            style: const TextStyle(
+              fontSize: 12,
             ),
           ),
         ),
-        body: GestureDetector(
-          onHorizontalDragEnd: (details) {
-            // Check if swipe was left-to-right or right-to-left
-            if (details.velocity.pixelsPerSecond.dx < 0) {
-              // Left swipe - get next image
-              while (++fileIndex < mediaList.length) {
-                String fileName = mediaList[fileIndex].fileName;
-                if (fileName.endsWith(".mpeg") || fileName.endsWith(".mp4")) {
-                  getVideo(fileName, fileIndex);
-                  // setState(() {
-                  //   isLoadingImage = index;
-                  // });
-                  break;
+        body: Center(
+            child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Visibility(
+                    visible: fileIndex == mediaList.length - 1,
+                    child: const Text("At First",
+                        style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold))),
+                const SizedBox(width: 20),
+                ElevatedButton(
+                  child: const Text('<<'),
+                  onPressed: () {
+                    setState(() {
+                      isLoadingImage = true;
+                    });
+                    getPrevious();
+                  },
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                    child: const Text('>>'),
+                    onPressed: () {
+                      setState(() {
+                        isLoadingImage = true;
+                      });
+                      getNext();
+                    }),
+                const SizedBox(width: 10),
+                Visibility(
+                    visible: fileIndex == 0,
+                    child: const Text("At Last",
+                        style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold))),
+                const SizedBox(width: 10),
+                Visibility(
+                    visible: isLoadingImage,
+                    child: const CircularProgressIndicator()),
+              ],
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onHorizontalDragEnd: (details) {
+                // Check if swipe was left-to-right or right-to-left
+                if (details.velocity.pixelsPerSecond.dx < 0) {
+                  setState(() {
+                    isLoadingImage = true;
+                  });
+                  getNext();
+                } else {
+                  setState(() {
+                    isLoadingImage = true;
+                  });
+                  getPrevious();
                 }
-              }
-              if (fileIndex >= mediaList.length) {
-                fileIndex = mediaList.length - 1;
-              }
-            } else {
-              while (--fileIndex > 0) {
-                String fileName = mediaList[fileIndex].fileName;
-                if (fileName.endsWith(".mpeg") || fileName.endsWith(".mp4")) {
-                  getVideo(fileName, fileIndex);
-                  // setState(() {
-                  //   isLoadingImage = index;
-                  // });
-                  break;
-                }
-              }
-              if (fileIndex < 0) fileIndex = 0;
-            }
-          },
-          child: Center(
-            child: Chewie(controller: chewieController),
-          ),
-        ));
+              },
+              child: isLoadingImage
+                  ? const SizedBox(
+                      height: 10,
+                      width: 10,
+                    )
+                  : Chewie(controller: chewieController),
+            ),
+            const SizedBox(height: 10),
+          ],
+        )));
+  }
+
+  getNext() {
+    int startIndex = fileIndex;
+    while (--fileIndex > 0) {
+      String fileName = mediaList[fileIndex].fileName;
+      if (fileName.endsWith(".mpeg") || fileName.endsWith(".mp4")) {
+        disposePlayer();
+        getVideo("$folderPath/$fileName", fileIndex);
+        break;
+      }
+    }
+    if (fileIndex < 0) {
+      fileIndex = startIndex;
+      setState(() {
+        isLoadingImage = false;
+      });
+    }
+  }
+
+  getPrevious() {
+    int startIndex = fileIndex;
+    while (++fileIndex < mediaList.length) {
+      String fileName = mediaList[fileIndex].fileName;
+      if (fileName.endsWith(".mpeg") || fileName.endsWith(".mp4")) {
+        disposePlayer();
+        getVideo("$folderPath/$fileName", fileIndex);
+        break;
+      }
+    }
+    if (fileIndex >= mediaList.length) {
+      fileIndex = startIndex;
+      setState(() {
+        isLoadingImage = false;
+      });
+    }
   }
 }

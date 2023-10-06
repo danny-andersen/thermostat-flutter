@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:chewie/chewie.dart';
-import 'package:video_player/video_player.dart';
 import 'dart:typed_data';
 
 // import 'package:timeline_list/timeline.dart';
@@ -74,46 +72,20 @@ class CameraPageState extends State<CameraPage> {
   }
 
   void getVideo(String fileName, int index) {
-    DropBoxAPIFn.getDropBoxFile(
-        oauthToken: oauthToken,
-        fileToDownload: "${mediaFolders[folderVisible].fullPathName}/$fileName",
-        callback: showVideo,
-        contentType: ContentType.video,
-        timeoutSecs: 0,
-        folder: mediaFolders[folderVisible].fullPathName,
-        fileIndex: index);
-  }
-
-  void _initVideoPlayer(VideoPlayerController vc) async {
-    /// Initialize the video player
-    await vc.initialize();
-  }
-
-  void showVideo(final String filename, final Uint8List videoData, String path,
-      int index) {
     if (mounted) {
-      final dataUrl = Uri.dataFromBytes(videoData).toString();
-      final VideoPlayerController videoController =
-          VideoPlayerController.network(dataUrl);
-      _initVideoPlayer(videoController);
-      ChewieController chewie = ChewieController(
-        videoPlayerController: videoController,
-        autoPlay: true,
-        looping: true,
-      );
-      setState(() {
-        isLoadingImage = -1;
-      });
+      //   setState(() {
+      //     isLoadingImage = -1;
+      //   });
 
       Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => VideoScreen(
               oauthToken: oauthToken,
-              videoName: filename,
-              chewieController: chewie,
+              videoName:
+                  "${mediaFolders[folderVisible].fullPathName}/$fileName",
               mediaList: mediaFiles,
-              folderPath: path,
+              folderPath: mediaFolders[folderVisible].fullPathName,
               fileIndex: index,
             ),
           ));

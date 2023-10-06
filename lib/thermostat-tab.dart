@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:charts_flutter_new/flutter.dart' as charts;
 import 'package:syncfusion_flutter_gauges/gauges.dart';
@@ -75,13 +76,17 @@ class _ThermostatPageState extends State<ThermostatPage> {
   _ThermostatPageState({required this.oauthToken});
   String oauthToken;
   final String statusFile = "/thermostat_status.txt";
+  final String externalstatusFile = "/external_status.txt";
   final String setTempFile = "/setTemp.txt";
   double currentTemp = 0.0;
+  double forecastExtTemp = 100.0;
   double extTemp = 100.0;
   double setTemp = 0.0;
   double requestedTemp = 0.0;
   double humidity = 0.0;
+  double extHumidity = 0.0;
   DateTime? lastHeardFrom;
+  DateTime? extLastHeardFrom;
   bool pirState = false;
 
   bool requestOutstanding = false;
@@ -91,9 +96,8 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   @override
   void initState() {
-    getSetTemp();
-    getStatus();
     timer = Timer.periodic(const Duration(seconds: 30), refreshStatus);
+    refreshStatus(timer);
     super.initState();
   }
 
@@ -136,8 +140,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void refreshStatus(Timer timer) {
-    getSetTemp();
+    // getSetTemp();
     getStatus();
+    getExternalStatus();
   }
 
   void getStatus() {
@@ -146,36 +151,46 @@ class _ThermostatPageState extends State<ThermostatPage> {
       fileToDownload: statusFile,
       callback: processStatus,
       contentType: ContentType.text,
-      timeoutSecs: 30,
+      timeoutSecs: 5,
     );
   }
 
-  void getSetTemp() {
-    if (requestOutstanding) {
-      DropBoxAPIFn.getDropBoxFile(
-        oauthToken: oauthToken,
-        fileToDownload: setTempFile,
-        callback: processSetTemp,
-        contentType: ContentType.text,
-        timeoutSecs: 0,
-      );
-    }
+  void getExternalStatus() {
+    DropBoxAPIFn.getDropBoxFile(
+      oauthToken: oauthToken,
+      fileToDownload: externalstatusFile,
+      callback: processExternalStatus,
+      contentType: ContentType.text,
+      timeoutSecs: 5,
+    );
   }
 
-  void processSetTemp(String contents) {
-    if (contents.contains("path/not_found/")) {
-      requestOutstanding = false;
-    } else {
-      try {
-        requestedTemp = double.parse(contents.trim());
-        if (requestedTemp.toStringAsFixed(1) == setTemp.toStringAsFixed(1)) {
-          requestOutstanding = false;
-        }
-      } on FormatException {
-        print("Set Temp: Received non-double Current temp format: $contents");
-      }
-    }
-  }
+  // void getSetTemp() {
+  //   if (requestOutstanding) {
+  //     DropBoxAPIFn.getDropBoxFile(
+  //       oauthToken: oauthToken,
+  //       fileToDownload: setTempFile,
+  //       callback: processSetTemp,
+  //       contentType: ContentType.text,
+  //       timeoutSecs: 0,
+  //     );
+  //   }
+  // }
+
+  // void processSetTemp(String contents) {
+  //   if (contents.contains("path/not_found/")) {
+  //     requestOutstanding = false;
+  //   } else {
+  //     try {
+  //       requestedTemp = double.parse(contents.trim());
+  //       if (requestedTemp.toStringAsFixed(1) == setTemp.toStringAsFixed(1)) {
+  //         requestOutstanding = false;
+  //       }
+  //     } on FormatException {
+  //       print("Set Temp: Received non-double Current temp format: $contents");
+  //     }
+  //   }
+  // }
 
   void processStatus(String contents) {
     if (mounted) {
@@ -203,12 +218,12 @@ class _ThermostatPageState extends State<ThermostatPage> {
             }
           } else if (line.startsWith('External temp:')) {
             if (line.split(':')[1].trim().startsWith('Not Set')) {
-              extTemp = 100.0;
+              forecastExtTemp = 100.0;
             } else {
               try {
-                extTemp = double.parse(line.split(':')[1].trim());
+                forecastExtTemp = double.parse(line.split(':')[1].trim());
               } on FormatException {
-                print("Received non-double extTemp format: $line");
+                print("Received non-double forecast extTemp format: $line");
               }
             }
           } else if (line.startsWith('Heat on?')) {
@@ -238,6 +253,38 @@ class _ThermostatPageState extends State<ThermostatPage> {
     }
   }
 
+  void processExternalStatus(String contents) {
+    if (mounted) {
+      setState(() {
+        contents.split('\n').forEach((line) {
+          if (line.startsWith('Current temp:')) {
+            try {
+              extTemp = double.parse(line.split(':')[1].trim());
+            } on FormatException {
+              print("Received non-double Current temp format: $line");
+            }
+          } else if (line.startsWith('External temp:')) {
+            if (line.split(':')[1].trim().startsWith('Not Set')) {
+              extTemp = 100.0;
+            } else {
+              try {
+                extTemp = double.parse(line.split(':')[1].trim());
+              } on FormatException {
+                print("Received non-double extTemp format: $line");
+              }
+            }
+          } else if (line.startsWith('Last heard time')) {
+            String dateStr = line.substring(line.indexOf(':') + 2, line.length);
+            extLastHeardFrom = DateTime.parse(dateStr);
+          } else if (line.startsWith('Current humidity')) {
+            String str = line.substring(line.indexOf(':') + 2, line.length);
+            extHumidity = double.parse(str);
+          }
+        });
+      });
+    }
+  }
+
   List<charts.Series<TypeTemp, String>> createChartSeries() {
     List<TypeTemp> data = [
       TypeTemp('House', currentTemp),
@@ -251,6 +298,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
     }
     if (extTemp != 100.0) {
       data.add(TypeTemp('Outside', extTemp));
+    }
+    if (forecastExtTemp != 100.0) {
+      data.add(TypeTemp('Forecast', forecastExtTemp));
     }
     return [
       charts.Series<TypeTemp, String>(
@@ -285,53 +335,78 @@ class _ThermostatPageState extends State<ThermostatPage> {
     // than having to individually change instances of widgets.
 //    final TextStyle textStyle = Theme.of(context).textTheme.title;
     Widget returnWidget = ListView(children: [
-      Container(
-        padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-        child: const Text(
-          'Temperature Chart:',
-          style: TextStyle(
-            fontSize: 18.0,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      // Container(
+      //   padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+      //   child: const Text(
+      //     'Temperature Chart:',
+      //     style: TextStyle(
+      //       fontSize: 18.0,
+      //       fontWeight: FontWeight.bold,
+      //     ),
+      //   ),
+      // ),
       SizedBox(
-        height: 250,
-        child: TemperatureChart(createChartSeries(), animate: false),
+        // height: 250,
+        // child: TemperatureChart(createChartSeries(), animate: false),
+        height: 350,
+        child: TemperatureGauge(currentTemp, setTemp, extTemp, forecastExtTemp),
       ),
-      const SizedBox(height: 16.0),
+      // const SizedBox(height: 16.0),
       Container(
-        padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+        padding: const EdgeInsets.only(left: 8.0),
         child: const Text(
           'Adjust Set Temp:',
           style: TextStyle(
-            fontSize: 18.0,
+            fontSize: 14.0,
             fontWeight: FontWeight.bold,
           ),
         ),
       ),
-      SliderWithRange(
-          requestedTempGetter: () => requestedTemp, returnNewTemp: sendNewTemp),
+      // SliderWithRange(
+      //     requestedTempGetter: () => requestedTemp, returnNewTemp: sendNewTemp),
       SetTempButtonBar(
-          minusPressed: _decRequestedTemp,
-          plusPressed: _incrementRequestedTemp),
+        minusPressed: _decRequestedTemp,
+        plusPressed: _incrementRequestedTemp,
+        requestTemp: requestedTemp,
+        sendNew: sendNewTemp,
+      ),
       Container(
         padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-        child: const Text(
-          'Relative Humidity (%):',
-          style: TextStyle(
-            fontSize: 18.0,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: RichText(
+            text: TextSpan(
+                text: 'Relative Humidity,',
+                style: TextStyle(
+                  fontSize: 14.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                children: <TextSpan>[
+              TextSpan(
+                  text: ' Inside + ',
+                  style: TextStyle(
+                    fontSize: 14.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  )),
+              TextSpan(
+                  text: ' Outside (%):',
+                  style: TextStyle(
+                    fontSize: 14.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  )),
+            ])),
       ),
-      RHGauge(humidity: humidity),
+      RHGauge(
+        humidity: humidity,
+        extHumidity: extHumidity,
+      ),
       Container(
         padding: const EdgeInsets.only(left: 8.0, top: 8.0),
         child: const Text(
           'Status:',
           style: TextStyle(
-            fontSize: 18.0,
+            fontSize: 14.0,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -341,43 +416,25 @@ class _ThermostatPageState extends State<ThermostatPage> {
         pirState: pirState,
       ),
 // const SizedBox(height: 16.0),
-      ShowDateTimeStamp(dateTimeStamp: lastHeardFrom),
-//        const SizedBox(height: 32.0),
-//        Row(
-//          mainAxisAlignment: MainAxisAlignment.center,
-//          children: <Widget>[
-//            RaisedButton(
-//              child: Icon(Icons.refresh),
-//              color: Colors.blue,
-//              textColor: Colors.white,
-//              onPressed: getStatus,
-//            ),
-//          ],
-//        ),
-//       FloatingActionButton(
-//         onPressed: getStatus,
-//         elevation: 15,
-//         tooltip: 'Refresh',
-// //          shape: StadiumBorder(),
-//         child: Icon(Icons.refresh),
-//       ),
-
-//        FloatingActionButton.extended(
-//            onPressed: getStatus,
-//            tooltip: 'Refresh',
-//            label: Text('Refresh'),
-//            icon: Icon(Icons.refresh),
-//          ),
+      ShowDateTimeStamp(device: "Thermostat", dateTimeStamp: lastHeardFrom),
+      ShowDateTimeStamp(device: "External", dateTimeStamp: extLastHeardFrom),
     ]);
     return returnWidget;
   }
 }
 
 class SetTempButtonBar extends StatelessWidget {
-  const SetTempButtonBar({super.key, required this.minusPressed, required this.plusPressed});
+  const SetTempButtonBar(
+      {super.key,
+      required this.minusPressed,
+      required this.plusPressed,
+      required this.requestTemp,
+      required this.sendNew});
 
   final Function() minusPressed;
   final Function() plusPressed;
+  final Function(double, bool) sendNew;
+  final double requestTemp;
 
   @override
   Widget build(BuildContext context) {
@@ -398,6 +455,37 @@ class SetTempButtonBar extends StatelessWidget {
                     MaterialStatePropertyAll(TextStyle(color: Colors.white)),
                 backgroundColor: MaterialStatePropertyAll(Colors.blue)),
             child: const Icon(Icons.arrow_downward)),
+        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          SizedBox(
+              width: 50,
+              child: TextField(
+                controller: TextEditingController(text: "$requestTemp"),
+                style: Theme.of(context)
+                    .textTheme
+                    .displaySmall!
+                    .apply(fontSizeFactor: 0.5),
+                keyboardType: TextInputType.number,
+                maxLines: 1,
+                minLines: 1,
+                onSubmitted: (String value) async {
+                  double temp = double.parse(value);
+                  if (temp < 10) temp = 10;
+                  if (temp > 25) temp = 25;
+                  sendNew(temp, true);
+                },
+
+                // inputFormatters: [
+                //   FilteringTextInputFormatter.digitsOnly
+                // ], // Only numbers can be entered
+              )),
+          Text(
+            "\u00B0C",
+            style: Theme.of(context)
+                .textTheme
+                .displaySmall!
+                .apply(fontSizeFactor: 0.5),
+          )
+        ]),
         ElevatedButton(
             onPressed: plusPressed,
             style: const ButtonStyle(
@@ -411,7 +499,8 @@ class SetTempButtonBar extends StatelessWidget {
 }
 
 class ActionButtons extends StatelessWidget {
-  const ActionButtons({super.key, required this.minusPressed, required this.plusPressed});
+  const ActionButtons(
+      {super.key, required this.minusPressed, required this.plusPressed});
 
   final Function() minusPressed;
   final Function() plusPressed;
@@ -436,7 +525,7 @@ class ActionButtons extends StatelessWidget {
                     children: <Widget>[
                   IconButton(
                     icon: const Icon(Icons.remove),
-                    tooltip: "Decrease Set Temp by 0.5 degree",
+                    tooltip: "Decrease Set Temp by 0.5\u00B0C",
                     onPressed: minusPressed,
                     color: Colors.blue,
                   )
@@ -448,7 +537,7 @@ class ActionButtons extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.add),
                   color: Colors.red,
-                  tooltip: "Increase Set Temp by 0.5 degree",
+                  tooltip: "Increase Set Temp by 0.5\u00B0C",
                   onPressed: plusPressed,
                 )
               ],
@@ -460,7 +549,9 @@ class ActionButtons extends StatelessWidget {
 
 class SliderWithRange extends StatelessWidget {
   const SliderWithRange(
-      {super.key, required this.requestedTempGetter, required this.returnNewTemp});
+      {super.key,
+      required this.requestedTempGetter,
+      required this.returnNewTemp});
 
   final ValueGetter<double> requestedTempGetter;
   final Function(double newTemp, bool endChange) returnNewTemp;
@@ -487,23 +578,37 @@ class SliderWithRange extends StatelessWidget {
                   .apply(fontSizeFactor: 0.5)),
         ),
         Flexible(
-          flex: 1,
-          child: Slider(
-            value: requestedTempGetter() >= 10.0 ? requestedTempGetter() : 10.0,
-            min: 10.0,
-            max: 25.0,
-            divisions: 75,
-            activeColor: ColorByTemp.findActiveColor(requestedTempGetter()),
-            inactiveColor: ColorByTemp.findInActiveColor(requestedTempGetter()),
-            label: requestedTempGetter().toStringAsFixed(1),
-            onChanged: (double newValue) {
-              returnNewTemp(newValue, false);
-            },
-            onChangeEnd: (endValue) {
-              returnNewTemp(endValue, true);
-            },
-          ),
-        ),
+            flex: 1,
+            child: SliderTheme(
+              data: SliderThemeData(
+                trackHeight: 4.0,
+                activeTrackColor: Colors.blue,
+                inactiveTrackColor: Colors.grey,
+                thumbColor: Colors.blue,
+                overlayColor: Colors.blue.withOpacity(0.3),
+                tickMarkShape: RoundSliderTickMarkShape(
+                  tickMarkRadius: 8.0,
+                ),
+              ),
+              child: Slider(
+                value: requestedTempGetter() >= 10.0
+                    ? requestedTempGetter()
+                    : 10.0,
+                min: 10.0,
+                max: 25.0,
+                divisions: 75,
+                activeColor: ColorByTemp.findActiveColor(requestedTempGetter()),
+                inactiveColor:
+                    ColorByTemp.findInActiveColor(requestedTempGetter()),
+                label: requestedTempGetter().toStringAsFixed(1),
+                onChanged: (double newValue) {
+                  returnNewTemp(newValue, false);
+                },
+                onChangeEnd: (endValue) {
+                  returnNewTemp(endValue, true);
+                },
+              ),
+            )),
         Container(
 //                  width: 50.0,
           alignment: Alignment.center,
@@ -520,9 +625,10 @@ class SliderWithRange extends StatelessWidget {
 }
 
 class RHGauge extends StatelessWidget {
-  const RHGauge({super.key, required this.humidity});
+  const RHGauge({super.key, required this.humidity, required this.extHumidity});
 
   final double humidity;
+  final double extHumidity;
 
   @override
   Widget build(BuildContext context) {
@@ -545,7 +651,10 @@ class RHGauge extends StatelessWidget {
             LinearGaugeRange(
                 startValue: 70.0, endValue: 100.0, color: Colors.red),
           ],
-          markerPointers: [LinearShapePointer(value: humidity)],
+          markerPointers: [
+            LinearShapePointer(value: humidity, color: Colors.green),
+            LinearShapePointer(value: extHumidity, color: Colors.red)
+          ],
           axisTrackStyle: const LinearAxisTrackStyle(
               color: Colors.cyan,
               edgeStyle: LinearEdgeStyle.bothFlat,
@@ -557,7 +666,8 @@ class RHGauge extends StatelessWidget {
 
 class LabelWithDoubleState extends StatelessWidget {
   const LabelWithDoubleState(
-      {super.key, required this.label,
+      {super.key,
+      required this.label,
       required this.valueGetter,
       required this.textStyle});
 
@@ -603,7 +713,9 @@ class LabelWithDoubleState extends StatelessWidget {
             ),
           ),
           Text(
-            (valueGetter() == 100.0 ? '' : '${valueGetter().toStringAsFixed(1)}\u00B0C'),
+            (valueGetter() == 100.0
+                ? ''
+                : '${valueGetter().toStringAsFixed(1)}\u00B0C'),
             style: textStyle,
 //            Theme.of(context)
 //                .textTheme
@@ -621,7 +733,8 @@ class LabelWithDoubleState extends StatelessWidget {
 }
 
 class LabelWithIntState extends StatelessWidget {
-  const LabelWithIntState({super.key, required this.label, required this.valueGetter});
+  const LabelWithIntState(
+      {super.key, required this.label, required this.valueGetter});
 
   final String label;
   final ValueGetter<int> valueGetter;
@@ -665,7 +778,8 @@ class LabelWithIntState extends StatelessWidget {
 }
 
 class BoilerState extends StatelessWidget {
-  const BoilerState({super.key, required this.boilerOn, required this.minsToTemp});
+  const BoilerState(
+      {super.key, required this.boilerOn, required this.minsToTemp});
 
   final ValueGetter<bool> boilerOn;
   final ValueGetter<int> minsToTemp;
@@ -676,50 +790,72 @@ class BoilerState extends StatelessWidget {
     TextStyle dispStyle = Theme.of(context).textTheme.titleMedium!;
     if (boilerOn()) {
       returnWidget = Container(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+        // padding: const EdgeInsets.all(10.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          // crossAxisAlignment: CrossAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Container(
+            Expanded(
+                child: Container(
 //                  padding: const EdgeInsets.only(bottom: 8.0),
               child: Text(
-                "Boiler is On",
-                style: dispStyle.apply(color: Colors.green),
+                "Boiler is on - Mins to Set Temp:",
+                // style: dispStyle.apply(color: Colors.green),
+                style: Theme.of(context)
+                    .textTheme
+                    .displaySmall!
+                    .apply(fontSizeFactor: 0.3)
+                    .apply(color: Colors.green),
 //                    ),
               ),
-            ),
+            )),
             Container(
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          //                  padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Text(
-                            "Mins to Set Temp:",
-                            style: dispStyle.apply(color: Colors.green),
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '${minsToTemp()}',
-                    style: dispStyle.apply(color: Colors.green),
-                  ),
-                ],
+              child: Text(
+                '${minsToTemp()}',
+                style: Theme.of(context)
+                    .textTheme
+                    .displaySmall!
+                    .apply(fontSizeFactor: 0.3)
+                    .apply(color: Colors.green),
               ),
+              // Row(
+              //   mainAxisSize: MainAxisSize.max,
+              //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              //   children: [
+              //     Expanded(
+              //       child: Column(
+              //         crossAxisAlignment: CrossAxisAlignment.start,
+              //         children: [
+              //           Container(
+              //             //                  padding: const EdgeInsets.only(bottom: 8.0),
+              //             child: Text(
+              //               "Boiler is on - Mins to Set Temp:",
+              //               style: dispStyle.apply(color: Colors.green),
+              //             ),
+              //           )
+              //         ],
+              //       ),
+              //     ),
+              //     Text(
+              //       '${minsToTemp()}',
+              //       style: Theme.of(context)
+              //           .textTheme
+              //           .displaySmall!
+              //           .apply(fontSizeFactor: 0.3)
+              //           .apply(color: Colors.green),
+              //     ),
+              //   ],
+              // ),
             )
           ],
         ),
       );
     } else {
       returnWidget = Container(
-        padding: const EdgeInsets.all(10.0),
+        // padding: const EdgeInsets.all(10.0),
+        padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
         child: Row(
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -732,7 +868,12 @@ class BoilerState extends StatelessWidget {
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                     child: Text(
                       "Boiler is Off",
-                      style: dispStyle.apply(color: Colors.red),
+                      // style: dispStyle.apply(color: Colors.red),
+                      style: Theme.of(context)
+                          .textTheme
+                          .displaySmall!
+                          .apply(fontSizeFactor: 0.3)
+                          .apply(color: Colors.red),
 //                    style: TextStyle(
 //                      fontSize: 18.0,
 //                      fontWeight: FontWeight.bold,
@@ -808,9 +949,11 @@ class ShowPirStatus extends StatelessWidget {
 }
 
 class ShowDateTimeStamp extends StatelessWidget {
-  ShowDateTimeStamp({super.key, required this.dateTimeStamp});
+  ShowDateTimeStamp(
+      {super.key, required this.device, required this.dateTimeStamp});
 
   final DateTime? dateTimeStamp;
+  final String? device;
   final DateFormat dateFormat = DateFormat("yyyy-MM-dd HH:mm:ss");
 
   @override
@@ -834,7 +977,7 @@ class ShowDateTimeStamp extends StatelessWidget {
                 Container(
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                   child: Text(
-                    "Last Heard from: ",
+                    "Last Heard from $device: ",
                     style: Theme.of(context)
                         .textTheme
                         .displaySmall!
@@ -886,6 +1029,108 @@ class TemperatureChart extends StatelessWidget {
       // Hide domain axis.
       domainAxis:
           const charts.OrdinalAxisSpec(renderSpec: charts.NoneRenderSpec()),
+    );
+  }
+}
+
+class TemperatureGauge extends StatelessWidget {
+  TemperatureGauge(this.currentTemperature, this.setTemperature, this.extTemp,
+      this.forecastTemp);
+
+  double currentTemperature; // Initial temperature
+  double setTemperature; // Initial set temperature
+  double extTemp;
+  double forecastTemp;
+
+  static const double maxDarkBlue = 5.0;
+  static const double maxBlue = 15.0;
+  static const double maxYellow = 17.0;
+  static const double maxOrange = 19.0;
+  static const double maxRed = 21.0;
+  static const double maxRed2 = 25.0;
+  static const double deepRed = 35.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SfRadialGauge(
+            axes: <RadialAxis>[
+              RadialAxis(
+                minimum: 5,
+                maximum: 35,
+                interval: 2,
+                ranges: [
+                  GaugeRange(
+                      startValue: maxDarkBlue,
+                      endValue: maxBlue,
+                      color: Colors.blue),
+                  GaugeRange(
+                      startValue: maxBlue,
+                      endValue: maxYellow,
+                      color: Colors.yellow),
+                  GaugeRange(
+                      startValue: maxYellow,
+                      endValue: maxOrange,
+                      color: Colors.orange),
+                  GaugeRange(
+                      startValue: maxOrange,
+                      endValue: maxRed,
+                      color: Colors.deepOrange),
+                  GaugeRange(
+                      startValue: maxRed, endValue: maxRed2, color: Colors.red),
+                  GaugeRange(
+                      startValue: maxRed2,
+                      endValue: deepRed,
+                      color: Colors.red[900]),
+                ],
+                pointers: <GaugePointer>[
+                  NeedlePointer(
+                    value: currentTemperature,
+                    enableAnimation: true,
+                    animationType: AnimationType.ease,
+                    needleEndWidth: 5,
+                    lengthUnit: GaugeSizeUnit.factor,
+                    needleLength: 0.8,
+                    needleColor: currentTemperature > setTemperature
+                        ? Colors.red
+                        : Colors.blue,
+                  ),
+                  NeedlePointer(
+                    value: setTemperature,
+                    enableAnimation: true,
+                    animationType: AnimationType.ease,
+                    lengthUnit: GaugeSizeUnit.factor,
+                    needleLength: 0.8,
+                    needleEndWidth: 5,
+                    needleColor: Colors.black,
+                  ),
+                  MarkerPointer(
+                      value: extTemp,
+                      color: Colors.green[900],
+                      markerType: MarkerType.rectangle),
+                ],
+                annotations: <GaugeAnnotation>[
+                  GaugeAnnotation(
+                    widget: Text(
+                      'Temperature: $currentTemperature°C\nSet Temp:$setTemperature°C\nOutside Temp:$extTemp°C\nForecast:$forecastTemp°C',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    angle: 90,
+                    positionFactor: 0.5,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
