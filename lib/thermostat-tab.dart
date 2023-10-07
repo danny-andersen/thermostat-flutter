@@ -87,7 +87,8 @@ class _ThermostatPageState extends State<ThermostatPage> {
   double extHumidity = 0.0;
   DateTime? lastHeardFrom;
   DateTime? extLastHeardFrom;
-  bool pirState = false;
+  bool intPirState = false;
+  bool extPirState = false;
 
   bool requestOutstanding = false;
   bool boilerOn = true;
@@ -246,7 +247,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
             humidity = double.parse(str);
           } else if (line.startsWith('PIR:')) {
             String str = line.substring(line.indexOf(':') + 1, line.length);
-            pirState = str.contains('1');
+            intPirState = str.contains('1');
           }
         });
       });
@@ -263,22 +264,15 @@ class _ThermostatPageState extends State<ThermostatPage> {
             } on FormatException {
               print("Received non-double Current temp format: $line");
             }
-          } else if (line.startsWith('External temp:')) {
-            if (line.split(':')[1].trim().startsWith('Not Set')) {
-              extTemp = 100.0;
-            } else {
-              try {
-                extTemp = double.parse(line.split(':')[1].trim());
-              } on FormatException {
-                print("Received non-double extTemp format: $line");
-              }
-            }
           } else if (line.startsWith('Last heard time')) {
             String dateStr = line.substring(line.indexOf(':') + 2, line.length);
             extLastHeardFrom = DateTime.parse(dateStr);
           } else if (line.startsWith('Current humidity')) {
             String str = line.substring(line.indexOf(':') + 2, line.length);
             extHumidity = double.parse(str);
+          } else if (line.startsWith('PIR:')) {
+            String str = line.substring(line.indexOf(':') + 1, line.length);
+            extPirState = str.contains('1');
           }
         });
       });
@@ -413,7 +407,12 @@ class _ThermostatPageState extends State<ThermostatPage> {
       ),
       BoilerState(boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
       ShowPirStatus(
-        pirState: pirState,
+        pirStr: "Internal",
+        pirState: intPirState,
+      ),
+      ShowPirStatus(
+        pirStr: "External",
+        pirState: extPirState,
       ),
 // const SizedBox(height: 16.0),
       ShowDateTimeStamp(device: "Thermostat", dateTimeStamp: lastHeardFrom),
@@ -892,8 +891,10 @@ class BoilerState extends StatelessWidget {
 }
 
 class ShowPirStatus extends StatelessWidget {
-  const ShowPirStatus({super.key, required this.pirState});
+  const ShowPirStatus(
+      {super.key, required this.pirStr, required this.pirState});
 
+  final String pirStr;
   final bool pirState;
 
   @override
@@ -917,11 +918,15 @@ class ShowPirStatus extends StatelessWidget {
                 Container(
 //                  padding: const EdgeInsets.only(bottom: 8.0),
                   child: Text(
-                    "PIR State: ",
+                    "$pirStr Event: ",
                     style: Theme.of(context)
                         .textTheme
                         .displaySmall!
-                        .apply(fontSizeFactor: 0.3),
+                        .apply(fontSizeFactor: pirState ? 0.4 : 0.3)
+                        .apply(fontWeightDelta: pirState ? 4 : 0)
+                        .apply(
+                            backgroundColor:
+                                pirState ? Colors.red : Colors.white),
 //                    style: TextStyle(
 //                      fontSize: 18.0,
 //                      fontWeight: FontWeight.bold,
@@ -932,11 +937,13 @@ class ShowPirStatus extends StatelessWidget {
             ),
           ),
           Text(
-            pirState ? "On" : "Off",
+            pirState ? "Active" : "None",
             style: Theme.of(context)
                 .textTheme
                 .displaySmall!
-                .apply(fontSizeFactor: 0.3),
+                .apply(fontSizeFactor: pirState ? 0.4 : 0.3)
+                .apply(fontWeightDelta: pirState ? 4 : 0)
+                .apply(backgroundColor: pirState ? Colors.red : Colors.white),
 //            style: TextStyle(
 //              //color: Colors.grey[500],
 //              fontSize: 18.0,
@@ -1115,7 +1122,7 @@ class TemperatureGauge extends StatelessWidget {
                 annotations: <GaugeAnnotation>[
                   GaugeAnnotation(
                     widget: Text(
-                      'Temperature: $currentTemperature°C\nSet Temp:$setTemperature°C\nOutside Temp:$extTemp°C\nForecast:$forecastTemp°C',
+                      'Internal Temp: $currentTemperature°C\nSet Temp:$setTemperature°C\nOutside Temp:$extTemp°C\nForecast:$forecastTemp°C',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
