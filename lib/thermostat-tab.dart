@@ -343,13 +343,14 @@ class _ThermostatPageState extends State<ThermostatPage> {
         // height: 250,
         // child: TemperatureChart(createChartSeries(), animate: false),
         height: 350,
-        child: TemperatureGauge(currentTemp, setTemp, extTemp, forecastExtTemp),
+        child: TemperatureGauge(
+            currentTemp, setTemp, extTemp, forecastExtTemp, boilerOn),
       ),
       // const SizedBox(height: 16.0),
       Container(
         padding: const EdgeInsets.only(left: 8.0),
         child: const Text(
-          'Adjust Set Temp:',
+          'Increase / Decrease Temperature:',
           style: TextStyle(
             fontSize: 14.0,
             fontWeight: FontWeight.bold,
@@ -405,7 +406,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           ),
         ),
       ),
-      BoilerState(boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
+      // BoilerState(boilerOn: () => boilerOn, minsToTemp: () => minsToSetTemp),
       ShowPirStatus(
         pirStr: "Internal",
         pirState: intPirState,
@@ -1042,12 +1043,13 @@ class TemperatureChart extends StatelessWidget {
 
 class TemperatureGauge extends StatelessWidget {
   TemperatureGauge(this.currentTemperature, this.setTemperature, this.extTemp,
-      this.forecastTemp);
+      this.forecastTemp, this.boilerState);
 
   double currentTemperature; // Initial temperature
   double setTemperature; // Initial set temperature
   double extTemp;
   double forecastTemp;
+  bool boilerState;
 
   static const double maxDarkBlue = 5.0;
   static const double maxBlue = 15.0;
@@ -1112,23 +1114,58 @@ class TemperatureGauge extends StatelessWidget {
                     lengthUnit: GaugeSizeUnit.factor,
                     needleLength: 0.8,
                     needleEndWidth: 5,
-                    needleColor: Colors.black,
+                    needleColor: Colors.grey,
                   ),
                   MarkerPointer(
                       value: extTemp,
-                      color: Colors.green[900],
+                      color: Colors.green[600],
+                      enableAnimation: true,
+                      animationType: AnimationType.ease,
                       markerType: MarkerType.rectangle),
                 ],
                 annotations: <GaugeAnnotation>[
                   GaugeAnnotation(
-                    widget: Text(
-                      'Internal Temp: $currentTemperature°C\nSet Temp:$setTemperature°C\nOutside Temp:$extTemp°C\nForecast:$forecastTemp°C',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    widget: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Internal Temp: $currentTemperature°C',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Set Temp: $setTemperature°C',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Outside Temp: $extTemp°C',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Forecast: $forecastTemp°C',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          boilerState
+                              ? Icon(Icons.local_fire_department_rounded,
+                                  color: Colors.red, size: 50.0)
+                              : Icon(Icons.local_fire_department_sharp,
+                                  color: Colors.grey[300], size: 50.0),
+                        ]),
                     angle: 90,
                     positionFactor: 0.5,
                   ),
