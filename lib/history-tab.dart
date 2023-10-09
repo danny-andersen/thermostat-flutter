@@ -20,6 +20,7 @@ class HistoryPageState extends State<HistoryPage> {
 
   final String oauthToken;
   final String deviceChangePattern = "_device_change.txt";
+  final String externalChangePattern = "_cam2_change.txt";
 
   // HttpClient httpClient = HttpClient();
   List<DropdownMenuItem<String>>? changeEntries;
@@ -28,7 +29,13 @@ class HistoryPageState extends State<HistoryPage> {
   charts.Series<ValueByHour, int> measuredTempSeries =
       HistoryLineChart.createMeasuredSeries(
           List.filled(0, ValueByHour(0, 0.0)));
+  charts.Series<ValueByHour, int> extMeasuredTempSeries =
+      HistoryLineChart.createMeasuredSeries(
+          List.filled(0, ValueByHour(0, 0.0)));
   charts.Series<ValueByHour, int> measuredHumiditySeries =
+      HistoryLineChart.createMeasuredSeries(
+          List.filled(0, ValueByHour(0, 0.0)));
+  charts.Series<ValueByHour, int> extMeasuredHumiditySeries =
       HistoryLineChart.createMeasuredSeries(
           List.filled(0, ValueByHour(0, 0.0)));
   List<charts.Series<ValueByHour, int>> chartsToPlot = List.filled(
@@ -37,7 +44,11 @@ class HistoryPageState extends State<HistoryPage> {
           List.filled(0, ValueByHour(0, 0.0))));
   List<ValueByHour> temperatureList =
       List.filled(0, ValueByHour(0, 0.0), growable: true);
+  List<ValueByHour> extTemperatureList =
+      List.filled(0, ValueByHour(0, 0.0), growable: true);
   List<ValueByHour> humidityList =
+      List.filled(0, ValueByHour(0, 0.0), growable: true);
+  List<ValueByHour> extHumidityList =
       List.filled(0, ValueByHour(0, 0.0), growable: true);
   List<ValueByHour> boilerList =
       List.filled(0, ValueByHour(0, 0.0), growable: true);
@@ -51,6 +62,10 @@ class HistoryPageState extends State<HistoryPage> {
     measuredTempSeries = HistoryLineChart.createMeasuredSeries(
         [ValueByHour(0, 10.0), ValueByHour(2400, 10.0)]);
     measuredHumiditySeries = HistoryLineChart.createMeasuredSeries(
+        [ValueByHour(0, 30.0), ValueByHour(2400, 30.0)]);
+    extMeasuredTempSeries = HistoryLineChart.createMeasuredSeries(
+        [ValueByHour(0, 10.0), ValueByHour(2400, 10.0)]);
+    extMeasuredHumiditySeries = HistoryLineChart.createMeasuredSeries(
         [ValueByHour(0, 30.0), ValueByHour(2400, 30.0)]);
     chartsToPlot = List.filled(1, measuredTempSeries, growable: true);
     DateTime now = DateTime.now();
@@ -71,6 +86,8 @@ class HistoryPageState extends State<HistoryPage> {
     // Reset lists
     temperatureList = List.filled(0, ValueByHour(0, 0.0), growable: true);
     humidityList = List.filled(0, ValueByHour(0, 0.0), growable: true);
+    extTemperatureList = List.filled(0, ValueByHour(0, 0.0), growable: true);
+    extHumidityList = List.filled(0, ValueByHour(0, 0.0), growable: true);
     boilerList = List.filled(0, ValueByHour(0, 0.0), growable: true);
     // print("Downloading file: $changeFile");
     DropBoxAPIFn.getDropBoxFile(
@@ -78,7 +95,14 @@ class HistoryPageState extends State<HistoryPage> {
         fileToDownload: "/$changeFile",
         callback: processChangeFile,
         contentType: ContentType.text,
-        timeoutSecs: 180);
+        timeoutSecs: 60);
+    String extChangeFile = "${changeFile.split('_')[0]}$externalChangePattern";
+    DropBoxAPIFn.getDropBoxFile(
+        oauthToken: oauthToken,
+        fileToDownload: "/$extChangeFile",
+        callback: processExtChangeFile,
+        contentType: ContentType.text,
+        timeoutSecs: 60);
   }
 
   void newChangeFileSelected(String? changeFile) {
@@ -90,41 +114,7 @@ class HistoryPageState extends State<HistoryPage> {
   void processChangeFile(String contents) {
 //    double lastTemp = 10.0;
     // temperatureList = List.filled(0, TempByHour(0, 0.0), growable: true);
-    contents.split('\n').forEach((line) {
-      if (line.contains(':Temp:')) {
-        try {
-          List<String> parts = line.split(':');
-          int time = getTime(parts[0].trim());
-          double temp = double.parse(parts[2].trim());
-          temperatureList.add(ValueByHour(time, temp));
-        } on FormatException {
-          print("Received incorrect temp format: $line");
-        }
-      } else if (line.contains(':Humidity:')) {
-        try {
-          List<String> parts = line.split(':');
-          int time = getTime(parts[0].trim());
-          double humid = double.parse(parts[2].trim());
-          humidityList.add(ValueByHour(time, humid));
-        } on FormatException {
-          print("Received incorrect humidity format: $line");
-        }
-      } else if (line.contains(':Boiler:')) {
-        try {
-          List<String> parts = line.split(':');
-          int time = getTime(parts[0].trim());
-          // print("timeStr = ${parts[0].trim()} time int: ${time}");
-          String status = parts[2].trim();
-          if (status == "On") {
-            boilerList.add(ValueByHour(time, 1));
-          } else {
-            boilerList.add(ValueByHour(time, 0));
-          }
-        } on FormatException {
-          print("Received incorrect boiler format: $line");
-        }
-      }
-    });
+    processCommonContents(contents, temperatureList, humidityList);
     // Process boiler on time
     DateTime lastOnTime = DateTime(0, 1, 1, 0, 0);
     boilerOnTime = 0;
@@ -150,9 +140,73 @@ class HistoryPageState extends State<HistoryPage> {
     if (mounted) {
       setState(() {
         //Convert temperatures to the series
-        chartsToPlot = [measuredTempSeries, measuredHumiditySeries];
+        chartsToPlot = [
+          measuredTempSeries,
+          measuredHumiditySeries,
+          extMeasuredTempSeries,
+          extMeasuredHumiditySeries
+        ];
       });
     }
+  }
+
+  void processExtChangeFile(String contents) {
+    processCommonContents(contents, extTemperatureList, extHumidityList);
+    // print("Rx $tempCount temps $humidCount humids");
+    extMeasuredTempSeries =
+        HistoryLineChart.createMeasuredSeries(extTemperatureList);
+    extMeasuredHumiditySeries =
+        HistoryLineChart.createMeasuredSeries(extHumidityList);
+    // print("Plotting chart");
+    if (mounted) {
+      setState(() {
+        //Convert temperatures to the series
+        chartsToPlot = [
+          measuredTempSeries,
+          measuredHumiditySeries,
+          extMeasuredTempSeries,
+          extMeasuredHumiditySeries
+        ];
+      });
+    }
+  }
+
+  void processCommonContents(contents, tempList, humidList) {
+    contents.split('\n').forEach((line) {
+      if (line.contains(':Temp:')) {
+        try {
+          List<String> parts = line.split(':');
+          int time = getTime(parts[0].trim());
+          double temp = double.parse(parts[2].trim());
+          tempList.add(ValueByHour(time, temp));
+        } on FormatException {
+          print("Received incorrect temp format: $line");
+        }
+      } else if (line.contains(':Humidity:')) {
+        try {
+          List<String> parts = line.split(':');
+          int time = getTime(parts[0].trim());
+          double humid = double.parse(parts[2].trim());
+          humidList.add(ValueByHour(time, humid));
+        } on FormatException {
+          print("Received incorrect humidity format: $line");
+        }
+      } else if (line.contains(':Boiler:')) {
+        try {
+          List<String> parts = line.split(':');
+          int time = getTime(parts[0].trim());
+          // print("timeStr = ${parts[0].trim()} time int: ${time}");
+          String status = parts[2].trim();
+          if (status == "On") {
+            boilerList.add(ValueByHour(time, 1));
+          } else {
+            boilerList.add(ValueByHour(time, 0));
+          }
+        } on FormatException {
+          print("Received incorrect boiler format: $line");
+        }
+      }
+    });
   }
 
   void getChangeFileList() {
@@ -237,7 +291,7 @@ class HistoryPageState extends State<HistoryPage> {
         children: [
           Container(
             padding: const EdgeInsets.only(left: 3.0, top: 20.0, right: 0.0),
-            height: 300.0,
+            height: 400.0,
             width: MediaQuery.of(context).size.width,
             //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
             child: HistoryLineChart(chartsToPlot, null),

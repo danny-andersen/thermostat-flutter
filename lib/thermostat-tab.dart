@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:charts_flutter_new/flutter.dart' as charts;
 import 'package:syncfusion_flutter_gauges/gauges.dart';
@@ -368,7 +367,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
       Container(
         padding: const EdgeInsets.only(left: 8.0, top: 8.0),
         child: RichText(
-            text: TextSpan(
+            text: const TextSpan(
                 text: 'Relative Humidity,',
                 style: TextStyle(
                   fontSize: 14.0,
@@ -586,7 +585,7 @@ class SliderWithRange extends StatelessWidget {
                 inactiveTrackColor: Colors.grey,
                 thumbColor: Colors.blue,
                 overlayColor: Colors.blue.withOpacity(0.3),
-                tickMarkShape: RoundSliderTickMarkShape(
+                tickMarkShape: const RoundSliderTickMarkShape(
                   tickMarkRadius: 8.0,
                 ),
               ),
@@ -1043,7 +1042,7 @@ class TemperatureChart extends StatelessWidget {
 
 class TemperatureGauge extends StatelessWidget {
   TemperatureGauge(this.currentTemperature, this.setTemperature, this.extTemp,
-      this.forecastTemp, this.boilerState);
+      this.forecastTemp, this.boilerState, {super.key});
 
   double currentTemperature; // Initial temperature
   double setTemperature; // Initial set temperature
@@ -1131,7 +1130,7 @@ class TemperatureGauge extends StatelessWidget {
                           Text(
                             'Internal Temp: $currentTemperature°C',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1139,7 +1138,7 @@ class TemperatureGauge extends StatelessWidget {
                           Text(
                             'Set Temp: $setTemperature°C',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1147,7 +1146,7 @@ class TemperatureGauge extends StatelessWidget {
                           Text(
                             'Outside Temp: $extTemp°C',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1155,13 +1154,13 @@ class TemperatureGauge extends StatelessWidget {
                           Text(
                             'Forecast: $forecastTemp°C',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           boilerState
-                              ? Icon(Icons.local_fire_department_rounded,
+                              ? const Icon(Icons.local_fire_department_rounded,
                                   color: Colors.red, size: 50.0)
                               : Icon(Icons.local_fire_department_sharp,
                                   color: Colors.grey[300], size: 50.0),
