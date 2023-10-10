@@ -1042,7 +1042,8 @@ class TemperatureChart extends StatelessWidget {
 
 class TemperatureGauge extends StatelessWidget {
   TemperatureGauge(this.currentTemperature, this.setTemperature, this.extTemp,
-      this.forecastTemp, this.boilerState, {super.key});
+      this.forecastTemp, this.boilerState,
+      {super.key});
 
   double currentTemperature; // Initial temperature
   double setTemperature; // Initial set temperature
@@ -1060,6 +1061,17 @@ class TemperatureGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double minRange = 5;
+    double maxRange = 25;
+    if (extTemp < minRange) {
+      minRange = extTemp - 1;
+      maxRange = minRange + 20;
+    } else if (extTemp > maxRange) {
+      maxRange = extTemp + 1;
+      minRange = maxRange - 20;
+    }
+    if (minRange > 10) minRange = 10;
+    if (maxRange < currentTemperature + 5) maxRange = currentTemperature + 5;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1067,9 +1079,9 @@ class TemperatureGauge extends StatelessWidget {
           SfRadialGauge(
             axes: <RadialAxis>[
               RadialAxis(
-                minimum: 5,
-                maximum: 35,
-                interval: 2,
+                minimum: minRange,
+                maximum: maxRange,
+                interval: 1,
                 ranges: [
                   GaugeRange(
                       startValue: maxDarkBlue,
@@ -1133,6 +1145,7 @@ class TemperatureGauge extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
+                              color: Colors.red,
                             ),
                           ),
                           Text(
@@ -1141,6 +1154,7 @@ class TemperatureGauge extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
+                              color: Colors.grey,
                             ),
                           ),
                           Text(
@@ -1149,6 +1163,7 @@ class TemperatureGauge extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
+                              color: Colors.green,
                             ),
                           ),
                           Text(
