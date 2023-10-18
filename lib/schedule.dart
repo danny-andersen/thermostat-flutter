@@ -8,12 +8,14 @@ class ValueByHour {
   final double value; //temperature at this time
   ValueByHour(this.hour, this.value);
   factory ValueByHour.from(DateTime time, val) {
-    String tStr = sprintf("%2i%02i", [time.hour, time.minute]);
-    int hour = int.parse(tStr);
-//    print ('${time.toString()} : $tStr : $hour');
-    return ValueByHour(hour, val);
+    return ValueByHour(getHourInt(time), val);
   }
   static final NumberFormat hourFormat = NumberFormat('0000', 'en_US');
+  static getHourInt(DateTime time) {
+    String tStr = sprintf("%2i%02i", [time.hour, time.minute]);
+    int hour = int.parse(tStr);
+    return hour;
+  }
 }
 
 //A schedule entry. This represents the temperature to set the thermostat
@@ -52,14 +54,12 @@ class ScheduleDay {
   }
 
   bool isDefaultTimeRange() {
-    return start.isAtSameMomentAs(zeroTime) &&
-        end.isAtSameMomentAs(zeroTime);
+    return start.isAtSameMomentAs(zeroTime) && end.isAtSameMomentAs(zeroTime);
   }
 
   bool isInTimeRange(DateTime time) {
 //    print ("IN: $time start: $start ${this.start.isAtSameMomentAs(time)} end: $end temp in: ${this.temperature.toStringAsFixed(1).compareTo(temp.toStringAsFixed(1))}");
-    return ((start.isAtSameMomentAs(time) ||
-            end.isAtSameMomentAs(time)) ||
+    return ((start.isAtSameMomentAs(time) || end.isAtSameMomentAs(time)) ||
         (time.isAfter(start) && time.isBefore(end)));
   }
 

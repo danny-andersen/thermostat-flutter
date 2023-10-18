@@ -44,6 +44,8 @@ dependencies:
   synchronized: ^3.1.0
   chewie: ^1.4.0
   video_player: ^2.6.1
+  fl_chart: ^0.64.0
+  format: ^1.2.0
 #  timeline_list: ^0.0.3
 
 dev_dependencies:

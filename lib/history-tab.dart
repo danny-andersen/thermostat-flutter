@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:charts_flutter_new/flutter.dart' as charts;
+// import 'package:charts_flutter_new/flutter.dart' as charts;
+import 'package:fl_chart/fl_chart.dart';
 import 'dropbox-api.dart';
 import 'schedule.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
+import 'package:format/format.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key, required this.oauthToken});
@@ -26,48 +28,41 @@ class HistoryPageState extends State<HistoryPage> {
   List<DropdownMenuItem<String>>? changeEntries;
   String todayFile = "";
   bool enabled = false;
-  charts.Series<ValueByHour, int> measuredTempSeries =
-      HistoryLineChart.createMeasuredSeries(
-          List.filled(0, ValueByHour(0, 0.0)));
-  charts.Series<ValueByHour, int> extMeasuredTempSeries =
-      HistoryLineChart.createMeasuredSeries(
-          List.filled(0, ValueByHour(0, 0.0)));
-  charts.Series<ValueByHour, int> measuredHumiditySeries =
-      HistoryLineChart.createMeasuredSeries(
-          List.filled(0, ValueByHour(0, 0.0)));
-  charts.Series<ValueByHour, int> extMeasuredHumiditySeries =
-      HistoryLineChart.createMeasuredSeries(
-          List.filled(0, ValueByHour(0, 0.0)));
-  List<charts.Series<ValueByHour, int>> chartsToPlot = List.filled(
-      0,
-      HistoryLineChart.createMeasuredSeries(
-          List.filled(0, ValueByHour(0, 0.0))));
-  List<ValueByHour> temperatureList =
-      List.filled(0, ValueByHour(0, 0.0), growable: true);
-  List<ValueByHour> extTemperatureList =
-      List.filled(0, ValueByHour(0, 0.0), growable: true);
-  List<ValueByHour> humidityList =
-      List.filled(0, ValueByHour(0, 0.0), growable: true);
-  List<ValueByHour> extHumidityList =
-      List.filled(0, ValueByHour(0, 0.0), growable: true);
-  List<ValueByHour> boilerList =
-      List.filled(0, ValueByHour(0, 0.0), growable: true);
+
+  LineChartBarData measuredTempSeries = LineChartBarData();
+  LineChartBarData extMeasuredTempSeries = LineChartBarData();
+  LineChartBarData measuredHumiditySeries = LineChartBarData();
+  LineChartBarData extMeasuredHumiditySeries = LineChartBarData();
+  List<LineChartBarData> lineChartData =
+      List.filled(0, LineChartBarData(), growable: true);
+  List<FlSpot> temperatureList =
+      List.filled(0, const FlSpot(0, 0.0), growable: true);
+  List<FlSpot> extTemperatureList =
+      List.filled(0, const FlSpot(0, 0.0), growable: true);
+  List<FlSpot> humidityList =
+      List.filled(0, const FlSpot(0, 0.0), growable: true);
+  List<FlSpot> extHumidityList =
+      List.filled(0, const FlSpot(0, 0.0), growable: true);
+  List<FlSpot> boilerList =
+      List.filled(0, const FlSpot(0, 0.0), growable: true);
   int boilerOnTime = 0; //Number or mins boiler has been on that day
   // List<double> temps = List.filled(0, 0.0, growable: true);
   // List<double> humids = List.filled(0, 0.0, growable: true);
   String? selectedDate;
+  Map<String, bool> plotSelectMap = {
+    'temp': true,
+    'exttemp': true,
+    'humid': false,
+    'exthumid': false
+  };
 
   @override
   void initState() {
-    measuredTempSeries = HistoryLineChart.createMeasuredSeries(
-        [ValueByHour(0, 10.0), ValueByHour(2400, 10.0)]);
-    measuredHumiditySeries = HistoryLineChart.createMeasuredSeries(
-        [ValueByHour(0, 30.0), ValueByHour(2400, 30.0)]);
-    extMeasuredTempSeries = HistoryLineChart.createMeasuredSeries(
-        [ValueByHour(0, 10.0), ValueByHour(2400, 10.0)]);
-    extMeasuredHumiditySeries = HistoryLineChart.createMeasuredSeries(
-        [ValueByHour(0, 30.0), ValueByHour(2400, 30.0)]);
-    chartsToPlot = List.filled(1, measuredTempSeries, growable: true);
+    // temperatureList = [FlSpot(0, 10.0), FlSpot(2400, 10.0)];
+    // humidityList = [FlSpot(0, 30.0), FlSpot(2400, 30.0)];
+    // extTemperatureList = [FlSpot(0, 10.0), FlSpot(2400, 10.0)];
+    // extHumidityList = [FlSpot(0, 30.0), FlSpot(2400, 30.0)];
+
     DateTime now = DateTime.now();
     todayFile = sprintf(
         "%s%02i%02i%s", [now.year, now.month, now.day, deviceChangePattern]);
@@ -84,11 +79,11 @@ class HistoryPageState extends State<HistoryPage> {
 
   void getChangeFile(String changeFile) {
     // Reset lists
-    temperatureList = List.filled(0, ValueByHour(0, 0.0), growable: true);
-    humidityList = List.filled(0, ValueByHour(0, 0.0), growable: true);
-    extTemperatureList = List.filled(0, ValueByHour(0, 0.0), growable: true);
-    extHumidityList = List.filled(0, ValueByHour(0, 0.0), growable: true);
-    boilerList = List.filled(0, ValueByHour(0, 0.0), growable: true);
+    temperatureList = List.filled(0, const FlSpot(0, 0.0), growable: true);
+    humidityList = List.filled(0, const FlSpot(0, 0.0), growable: true);
+    extTemperatureList = List.filled(0, const FlSpot(0, 0.0), growable: true);
+    extHumidityList = List.filled(0, const FlSpot(0, 0.0), growable: true);
+    boilerList = List.filled(0, const FlSpot(0, 0.0), growable: true);
     // print("Downloading file: $changeFile");
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
@@ -118,13 +113,13 @@ class HistoryPageState extends State<HistoryPage> {
     // Process boiler on time
     DateTime lastOnTime = DateTime(0, 1, 1, 0, 0);
     boilerOnTime = 0;
-    for (ValueByHour boilerState in boilerList) {
-      int hour = boilerState.hour ~/ 100;
-      int min = (0.6 * (boilerState.hour - (100 * hour))).round();
+    for (FlSpot boilerState in boilerList) {
+      int hour = boilerState.x ~/ 100;
+      int min = (0.6 * (boilerState.x - (100 * hour))).round();
       DateTime time = DateTime(0, 1, 1, hour, min);
       // print(
       //     "Hour = ${boilerState.hour} ${hour}:${min} State = ${boilerState.value}");
-      if (boilerState.value == 1) {
+      if (boilerState.y == 1) {
         lastOnTime = time;
       } else {
         // print("${(time.difference(lastOnTime)).inMinutes}");
@@ -133,18 +128,26 @@ class HistoryPageState extends State<HistoryPage> {
     }
 
     // print("Rx $tempCount temps $humidCount humids");
-    measuredTempSeries = HistoryLineChart.createMeasuredSeries(temperatureList);
+    // measuredTempSeries = HistoryLineChart.createMeasuredSeries(temperatureList);
+    // measuredHumiditySeries =
+    //     HistoryLineChart.createMeasuredSeries(humidityList);
+    // // print("Plotting chart");
+    measuredTempSeries = LineChartBarData(
+      spots: temperatureList,
+      color: Colors.red[600],
+    );
     measuredHumiditySeries =
-        HistoryLineChart.createMeasuredSeries(humidityList);
-    // print("Plotting chart");
+        LineChartBarData(spots: humidityList, color: Colors.purple);
+
     if (mounted) {
+      LineChartBarData emptySeries = LineChartBarData();
       setState(() {
         //Convert temperatures to the series
-        chartsToPlot = [
-          measuredTempSeries,
-          measuredHumiditySeries,
-          extMeasuredTempSeries,
-          extMeasuredHumiditySeries
+        lineChartData = [
+          plotSelectMap['temp']! ? measuredTempSeries : emptySeries,
+          plotSelectMap['humid']! ? measuredHumiditySeries : emptySeries,
+          plotSelectMap['exttemp']! ? extMeasuredTempSeries : emptySeries,
+          plotSelectMap['exthumid']! ? extMeasuredHumiditySeries : emptySeries,
         ];
       });
     }
@@ -153,19 +156,25 @@ class HistoryPageState extends State<HistoryPage> {
   void processExtChangeFile(String contents) {
     processCommonContents(contents, extTemperatureList, extHumidityList);
     // print("Rx $tempCount temps $humidCount humids");
-    extMeasuredTempSeries =
-        HistoryLineChart.createMeasuredSeries(extTemperatureList);
-    extMeasuredHumiditySeries =
-        HistoryLineChart.createMeasuredSeries(extHumidityList);
+    // extMeasuredTempSeries =
+    //     HistoryLineChart.createMeasuredSeries(extTemperatureList);
+    // extMeasuredHumiditySeries =
+    //     HistoryLineChart.createMeasuredSeries(extHumidityList);
     // print("Plotting chart");
+    extMeasuredTempSeries =
+        LineChartBarData(spots: extTemperatureList, color: Colors.green[400]);
+    extMeasuredHumiditySeries =
+        LineChartBarData(spots: extHumidityList, color: Colors.amber[600]);
+
     if (mounted) {
+      LineChartBarData emptySeries = LineChartBarData();
       setState(() {
         //Convert temperatures to the series
-        chartsToPlot = [
-          measuredTempSeries,
-          measuredHumiditySeries,
-          extMeasuredTempSeries,
-          extMeasuredHumiditySeries
+        lineChartData = [
+          plotSelectMap['temp']! ? measuredTempSeries : emptySeries,
+          plotSelectMap['humid']! ? measuredHumiditySeries : emptySeries,
+          plotSelectMap['exttemp']! ? extMeasuredTempSeries : emptySeries,
+          plotSelectMap['exthumid']! ? extMeasuredHumiditySeries : emptySeries,
         ];
       });
     }
@@ -178,7 +187,7 @@ class HistoryPageState extends State<HistoryPage> {
           List<String> parts = line.split(':');
           int time = getTime(parts[0].trim());
           double temp = double.parse(parts[2].trim());
-          tempList.add(ValueByHour(time, temp));
+          tempList.add(FlSpot(time.toDouble(), temp));
         } on FormatException {
           print("Received incorrect temp format: $line");
         }
@@ -187,7 +196,7 @@ class HistoryPageState extends State<HistoryPage> {
           List<String> parts = line.split(':');
           int time = getTime(parts[0].trim());
           double humid = double.parse(parts[2].trim());
-          humidList.add(ValueByHour(time, humid));
+          humidList.add(FlSpot(time.toDouble(), humid));
         } on FormatException {
           print("Received incorrect humidity format: $line");
         }
@@ -198,9 +207,9 @@ class HistoryPageState extends State<HistoryPage> {
           // print("timeStr = ${parts[0].trim()} time int: ${time}");
           String status = parts[2].trim();
           if (status == "On") {
-            boilerList.add(ValueByHour(time, 1));
+            boilerList.add(FlSpot(time.toDouble(), 1));
           } else {
-            boilerList.add(ValueByHour(time, 0));
+            boilerList.add(FlSpot(time.toDouble(), 0));
           }
         } on FormatException {
           print("Received incorrect boiler format: $line");
@@ -215,6 +224,21 @@ class HistoryPageState extends State<HistoryPage> {
         filePattern: deviceChangePattern,
         callback: processChangeFileList,
         maxResults: 31);
+  }
+
+  void onPlotSelectChange(stateMap) {
+    if (mounted) {
+      setState(() {
+        plotSelectMap = stateMap;
+        LineChartBarData emptySeries = LineChartBarData();
+        lineChartData = [
+          plotSelectMap['temp']! ? measuredTempSeries : emptySeries,
+          plotSelectMap['humid']! ? measuredHumiditySeries : emptySeries,
+          plotSelectMap['exttemp']! ? extMeasuredTempSeries : emptySeries,
+          plotSelectMap['exthumid']! ? extMeasuredHumiditySeries : emptySeries,
+        ];
+      });
+    }
   }
 
   String formattedDateStr(String fileName) {
@@ -277,12 +301,16 @@ class HistoryPageState extends State<HistoryPage> {
           ),
         ),
       ]),
+      Container(
+        padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 8.0),
+        child: SelectPlots(onPlotSelectChange, plotSelectMap),
+      ),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Container(
-          padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 10.0),
+          padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 5.0),
           child: Text(
-            "Temperature Chart of ${(selectedDate != null ? formattedDateStr(selectedDate!) : '')}",
-            style: Theme.of(context).textTheme.headlineSmall,
+            "Temperature + Humidity Chart of ${(selectedDate != null ? formattedDateStr(selectedDate!) : '')}",
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
         )
       ]),
@@ -290,11 +318,11 @@ class HistoryPageState extends State<HistoryPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.only(left: 3.0, top: 20.0, right: 0.0),
+            padding: const EdgeInsets.only(left: 0.0, top: 8.0, right: 15.0),
             height: 400.0,
             width: MediaQuery.of(context).size.width,
             //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
-            child: HistoryLineChart(chartsToPlot, null),
+            child: HistoryLineChart(lineChartData),
           ),
         ],
       ),
@@ -302,8 +330,8 @@ class HistoryPageState extends State<HistoryPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.only(top: 15.0, right: 8.0, left: 8.0),
-            height: 40.0,
+            padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+            // height: 40.0,
             // width: 400.0,
             width: MediaQuery.of(context).size.width,
             child: ShowRange(
@@ -316,12 +344,37 @@ class HistoryPageState extends State<HistoryPage> {
         children: [
           Container(
             padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
-            height: 40.0,
+            // height: 40.0,
+            // width: 400.0,
             width: MediaQuery.of(context).size.width,
-            // width: MediaQuery.of(context).size.width,
             child: ShowRange(
-                label: "Rel Humidity Range: ", valsByHour: humidityList),
+                label: "Ext Temperature Range: ",
+                valsByHour: extTemperatureList),
           ),
+        ],
+      ),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+          padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+          // height: 40.0,
+          width: MediaQuery.of(context).size.width,
+          // width: MediaQuery.of(context).size.width,
+          child: ShowRange(
+              label: "Rel Humidity Range: ", valsByHour: humidityList),
+        ),
+      ]),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+              padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+              // height: 40.0,
+              width: MediaQuery.of(context).size.width,
+              // width: MediaQuery.of(context).size.width,
+              child: ShowRange(
+                label: "Ext Rel Humidity Range: ",
+                valsByHour: extHumidityList,
+              )),
         ],
       ),
       Row(
@@ -329,12 +382,12 @@ class HistoryPageState extends State<HistoryPage> {
         children: [
           Container(
             padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
-            height: 40.0,
+            // height: 40.0,
             width: MediaQuery.of(context).size.width,
             // width: MediaQuery.of(context).size.width,
             child: Text(
                 "Boiler on for: ${boilerOnTime ~/ 60} hours, ${boilerOnTime - 60 * (boilerOnTime ~/ 60)} mins ($boilerOnTime mins)",
-                style: Theme.of(context).textTheme.titleMedium
+                style: Theme.of(context).textTheme.bodyLarge
                 // .displaySmall!
                 // .apply(fontSizeFactor: 0.4),
 //                    style: TextStyle(
@@ -349,7 +402,7 @@ class HistoryPageState extends State<HistoryPage> {
         children: [
           Container(
             padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
-            height: 40.0,
+            // height: 40.0,
             width: MediaQuery.of(context).size.width,
             // width: MediaQuery.of(context).size.width,
             child: Text(
@@ -357,7 +410,7 @@ class HistoryPageState extends State<HistoryPage> {
                       ((evening ? 2 : 1) + (boilerOnTime * 2.5 / 100)).toInt(),
                       ((boilerOnTime * 2.5) % 100).toInt()
                     ])}",
-                style: Theme.of(context).textTheme.titleMedium
+                style: Theme.of(context).textTheme.bodyLarge
                 // .displaySmall!
                 // .apply(fontSizeFactor: 0.4),
 //                    style: TextStyle(
@@ -374,15 +427,97 @@ class HistoryPageState extends State<HistoryPage> {
   }
 }
 
+class SelectPlots extends StatelessWidget {
+  SelectPlots(this.onChange, this.stateMap);
+
+  Function onChange;
+  Map<String, bool> stateMap;
+
+  Widget build(BuildContext context) {
+    Color getColor(Set<MaterialState> states) {
+      const Set<MaterialState> interactiveStates = <MaterialState>{
+        MaterialState.pressed,
+        MaterialState.hovered,
+        MaterialState.focused,
+      };
+      if (states.any(interactiveStates.contains)) {
+        return Colors.blue;
+      }
+      return Colors.grey;
+    }
+
+    return Container(
+        child: Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+          Text("Int Temp",
+              style: TextStyle(
+                fontSize: 14.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.red[600],
+              )),
+          Checkbox(
+              checkColor: Colors.white,
+              fillColor: MaterialStateProperty.resolveWith(getColor),
+              value: stateMap['temp'] ?? false,
+              onChanged: (bool? value) {
+                stateMap['temp'] = value!;
+                onChange(stateMap);
+              }),
+          Text("Ext Temp",
+              style: TextStyle(
+                fontSize: 14.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.green[400],
+              )),
+          Checkbox(
+              checkColor: Colors.white,
+              fillColor: MaterialStateProperty.resolveWith(getColor),
+              value: stateMap['exttemp'] ?? false,
+              onChanged: (bool? value) {
+                stateMap['exttemp'] = value ?? false;
+                onChange(stateMap);
+              }),
+          Text("Int Humid",
+              style: TextStyle(
+                  fontSize: 14.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple)),
+          Checkbox(
+              checkColor: Colors.white,
+              fillColor: MaterialStateProperty.resolveWith(getColor),
+              value: stateMap['humid'] ?? false,
+              onChanged: (bool? value) {
+                stateMap['humid'] = value ?? false;
+                onChange(stateMap);
+              }),
+          Text("Ext Humid",
+              style: TextStyle(
+                  fontSize: 14.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber[600])),
+          Checkbox(
+              checkColor: Colors.white,
+              fillColor: MaterialStateProperty.resolveWith(getColor),
+              value: stateMap['exthumid'] ?? false,
+              onChanged: (bool? value) {
+                stateMap['exthumid'] = value ?? false;
+                onChange(stateMap);
+              }),
+        ]));
+  }
+}
+
 class ShowRange extends StatelessWidget {
   ShowRange({super.key, required this.label, required this.valsByHour});
 
-  List<ValueByHour> valsByHour;
+  List<FlSpot> valsByHour;
   String label;
 
   @override
   Widget build(BuildContext context) {
-    final List<double> vals = valsByHour.map((val) => val.value).toList();
+    final List<double> vals = valsByHour.map((val) => val.y).toList();
     if (vals.isEmpty) {
       vals.add(0.0);
     }
@@ -415,7 +550,7 @@ class ShowRange extends StatelessWidget {
                   // padding: const EdgeInsets.only(bottom: 8.0, right: 10.0),
                   child: Text(
                       "$label Max: ${vals.max}, Min: ${vals.min}, Avg: ${vals.average.toStringAsFixed(1)}",
-                      style: Theme.of(context).textTheme.titleMedium
+                      style: Theme.of(context).textTheme.bodyLarge
                       // .displaySmall!
                       // .apply(fontSizeFactor: 0.4),
 //                    style: TextStyle(
@@ -434,25 +569,26 @@ class ShowRange extends StatelessWidget {
 }
 
 class HistoryLineChart extends StatelessWidget {
-  final List<charts.Series<ValueByHour, int>> seriesList;
-  final void Function(charts.SelectionModel<num>)? onSelectionChanged;
+  final List<LineChartBarData> seriesList;
+  // final void Function(charts.SelectionModel<num>)? onSelectionChanged;
 
-  const HistoryLineChart(this.seriesList, this.onSelectionChanged, {super.key});
+  // const HistoryLineChart(this.seriesList, this.onSelectionChanged, {super.key});
+  const HistoryLineChart(this.seriesList, {super.key});
 
   double getMaxValue() {
-    double maxValue = -999999999.0;
-    for (charts.Series s in seriesList)
-      for (ValueByHour point in s.data) {
-        if (point.value > maxValue) maxValue = point.value;
+    double maxValue = -999999999;
+    for (LineChartBarData s in seriesList)
+      for (FlSpot point in s.spots) {
+        if (point.y > maxValue) maxValue = point.y.ceil().toDouble();
       }
     return maxValue;
   }
 
   double getMinValue() {
     double minValue = 999999999.0;
-    for (charts.Series s in seriesList)
-      for (ValueByHour point in s.data) {
-        if (point.value < minValue) minValue = point.value;
+    for (LineChartBarData s in seriesList)
+      for (FlSpot point in s.spots) {
+        if (point.y < minValue) minValue = point.y.round().toDouble() - 1;
       }
     return minValue;
   }
@@ -482,48 +618,76 @@ class HistoryLineChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double maxValue = getMaxValue();
-    return charts.LineChart(
-      seriesList,
-      animate: true,
-      primaryMeasureAxis: charts.NumericAxisSpec(
-        viewport: charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
-        tickProviderSpec: const charts.BasicNumericTickProviderSpec(
-            zeroBound: false, desiredTickCount: 14),
+    double minValue = getMinValue();
+    return LineChart(LineChartData(
+      lineBarsData: seriesList,
+      minX: 0,
+      maxX: 2400,
+      minY: minValue,
+      maxY: maxValue,
+      titlesData: FlTitlesData(
+        topTitles: AxisTitles(
+          sideTitles: const SideTitles(showTitles: false),
+        ),
+        leftTitles: const AxisTitles(
+            // axisNameWidget: Text("\u00B0C"),
+            sideTitles: const SideTitles(showTitles: true, reservedSize: 40)),
+        rightTitles:
+            AxisTitles(sideTitles: const SideTitles(showTitles: false)),
+        bottomTitles: AxisTitles(
+            // axisNameWidget: Text("Time"),
+            sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  // Get the formatted timestamp for the x-axis labels
+                  return Text('{:04d}'.format(value.toInt()),
+                      style: Theme.of(context)
+                          .textTheme
+                          .displaySmall!
+                          .apply(fontSizeFactor: 0.3));
+                })),
       ),
-      domainAxis: charts.NumericAxisSpec(
-        viewport: const charts.NumericExtents(0, 2400),
-        tickProviderSpec:
-            const charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
-        tickFormatterSpec:
-            charts.BasicNumericTickFormatterSpec.fromNumberFormat(
-                ValueByHour.hourFormat),
-      ),
-      defaultRenderer: charts.LineRendererConfig(includePoints: true),
-      selectionModels: [
-        charts.SelectionModelConfig(
-          type: charts.SelectionModelType.info,
-          changedListener: onSelectionChanged,
-        )
-      ],
+    )
+        // seriesList,
+        // animate: true,
+        // primaryMeasureAxis: charts.NumericAxisSpec(
+        //   viewport: charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
+        //   tickProviderSpec: const charts.BasicNumericTickProviderSpec(
+        //       zeroBound: false, desiredTickCount: 14),
+        // ),
+        // domainAxis: charts.NumericAxisSpec(
+        //   viewport: const charts.NumericExtents(0, 2400),
+        //   tickProviderSpec:
+        //       const charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
+        //   tickFormatterSpec:
+        //       charts.BasicNumericTickFormatterSpec.fromNumberFormat(
+        //           ValueByHour.hourFormat),
+        // ),
+        // defaultRenderer: charts.LineRendererConfig(includePoints: true),
+        // selectionModels: [
+        //   charts.SelectionModelConfig(
+        //     type: charts.SelectionModelType.info,
+        //     changedListener: onSelectionChanged,
+        //   )
+        // ],
 //      behaviors: [
 //        getRangeAnnotation(),
 //      ],
-    );
+        );
   }
 
-  static charts.Series<ValueByHour, int> createMeasuredSeries(
-      List<ValueByHour> timeTempPoints) {
-    // print("Creating new chart with $len");
-    return charts.Series<ValueByHour, int>(
-      id: 'Measured',
-      colorFn: ((ValueByHour tempByHour, __) {
-        charts.Color color;
-        color = charts.MaterialPalette.green.shadeDefault;
-        return color;
-      }),
-      domainFn: (ValueByHour tt, _) => tt.hour,
-      measureFn: (ValueByHour tt, _) => tt.value,
-      data: timeTempPoints,
-    );
-  }
+  // static List<FlSpot> createMeasuredSeries(List<ValueByHour> timeTempPoints) {
+  //   // print("Creating new chart with $len");
+  //   return F1Spot(
+  //     id: 'Measured',
+  //     colorFn: ((ValueByHour tempByHour, __) {
+  //       charts.Color color;
+  //       color = charts.MaterialPalette.green.shadeDefault;
+  //       return color;
+  //     }),
+  //     domainFn: (ValueByHour tt, _) => tt.hour,
+  //     measureFn: (ValueByHour tt, _) => tt.value,
+  //     data: timeTempPoints,
+  //   );
+  // }
 }
