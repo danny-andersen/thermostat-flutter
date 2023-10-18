@@ -380,14 +380,14 @@ class _ThermostatPageState extends State<ThermostatPage> {
                   style: TextStyle(
                     fontSize: 14.0,
                     fontWeight: FontWeight.bold,
-                    color: Colors.green,
+                    color: Colors.red,
                   )),
               TextSpan(
                   text: ' Outside (%):',
                   style: TextStyle(
                     fontSize: 14.0,
                     fontWeight: FontWeight.bold,
-                    color: Colors.red,
+                    color: Colors.green,
                   )),
             ])),
       ),
@@ -651,8 +651,8 @@ class RHGauge extends StatelessWidget {
                 startValue: 70.0, endValue: 100.0, color: Colors.red),
           ],
           markerPointers: [
-            LinearShapePointer(value: humidity, color: Colors.green),
-            LinearShapePointer(value: extHumidity, color: Colors.red)
+            LinearShapePointer(value: extHumidity, color: Colors.green),
+            LinearShapePointer(value: humidity, color: Colors.red)
           ],
           axisTrackStyle: const LinearAxisTrackStyle(
               color: Colors.cyan,
@@ -1084,27 +1084,44 @@ class TemperatureGauge extends StatelessWidget {
                 interval: 1,
                 ranges: [
                   GaugeRange(
-                      startValue: maxDarkBlue,
-                      endValue: maxBlue,
-                      color: Colors.blue),
+                    startValue: maxDarkBlue,
+                    endValue: maxBlue,
+                    gradient: const SweepGradient(
+                        colors: [Colors.blue, Colors.yellow],
+                        stops: [0.25, 0.9]),
+                  ),
                   GaugeRange(
-                      startValue: maxBlue,
-                      endValue: maxYellow,
-                      color: Colors.yellow),
+                    startValue: maxBlue,
+                    endValue: maxYellow,
+                    gradient: const SweepGradient(
+                        colors: [Colors.yellow, Colors.orange],
+                        stops: [0.25, 0.9]),
+                  ),
                   GaugeRange(
-                      startValue: maxYellow,
-                      endValue: maxOrange,
-                      color: Colors.orange),
+                    startValue: maxYellow,
+                    endValue: maxOrange,
+                    gradient: const SweepGradient(
+                        colors: [Colors.orange, Colors.deepOrange],
+                        stops: [0.25, 0.9]),
+                  ),
                   GaugeRange(
-                      startValue: maxOrange,
-                      endValue: maxRed,
-                      color: Colors.deepOrange),
+                    startValue: maxOrange,
+                    endValue: maxRed,
+                    gradient: const SweepGradient(
+                        colors: [Colors.deepOrange, Colors.red],
+                        stops: [0.25, 0.9]),
+                  ),
                   GaugeRange(
-                      startValue: maxRed, endValue: maxRed2, color: Colors.red),
+                    startValue: maxRed,
+                    endValue: maxRed2,
+                    gradient: const SweepGradient(
+                        colors: [Colors.red, Color.fromARGB(255, 77, 6, 1)],
+                        stops: [0.25, 0.9]),
+                  ),
                   GaugeRange(
                       startValue: maxRed2,
                       endValue: deepRed,
-                      color: Colors.red[900]),
+                      color: const Color.fromARGB(255, 77, 6, 1)),
                 ],
                 pointers: <GaugePointer>[
                   NeedlePointer(
