@@ -447,65 +447,71 @@ class SelectPlots extends StatelessWidget {
     }
 
     return Container(
-        child: Row(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-          Text("Int Temp",
-              style: TextStyle(
+        child:
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Text("Int Temp",
+            style: TextStyle(
+              fontSize: 14.0,
+              fontWeight: FontWeight.bold,
+              color: Colors.red[600],
+            )),
+        Checkbox(
+            checkColor: Colors.white,
+            fillColor: MaterialStateProperty.resolveWith(getColor),
+            value: stateMap['temp'] ?? false,
+            onChanged: (bool? value) {
+              stateMap['temp'] = value!;
+              onChange(stateMap);
+            })
+      ]),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Text("Ext Temp",
+            style: TextStyle(
+              fontSize: 14.0,
+              fontWeight: FontWeight.bold,
+              color: Colors.green[400],
+            )),
+        Checkbox(
+            checkColor: Colors.white,
+            fillColor: MaterialStateProperty.resolveWith(getColor),
+            value: stateMap['exttemp'] ?? false,
+            onChanged: (bool? value) {
+              stateMap['exttemp'] = value ?? false;
+              onChange(stateMap);
+            })
+      ]),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Text("Int Humid",
+            style: TextStyle(
                 fontSize: 14.0,
                 fontWeight: FontWeight.bold,
-                color: Colors.red[600],
-              )),
-          Checkbox(
-              checkColor: Colors.white,
-              fillColor: MaterialStateProperty.resolveWith(getColor),
-              value: stateMap['temp'] ?? false,
-              onChanged: (bool? value) {
-                stateMap['temp'] = value!;
-                onChange(stateMap);
-              }),
-          Text("Ext Temp",
-              style: TextStyle(
+                color: Colors.purple)),
+        Checkbox(
+            checkColor: Colors.white,
+            fillColor: MaterialStateProperty.resolveWith(getColor),
+            value: stateMap['humid'] ?? false,
+            onChanged: (bool? value) {
+              stateMap['humid'] = value ?? false;
+              onChange(stateMap);
+            })
+      ]),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Text("Ext Humid",
+            style: TextStyle(
                 fontSize: 14.0,
                 fontWeight: FontWeight.bold,
-                color: Colors.green[400],
-              )),
-          Checkbox(
-              checkColor: Colors.white,
-              fillColor: MaterialStateProperty.resolveWith(getColor),
-              value: stateMap['exttemp'] ?? false,
-              onChanged: (bool? value) {
-                stateMap['exttemp'] = value ?? false;
-                onChange(stateMap);
-              }),
-          Text("Int Humid",
-              style: TextStyle(
-                  fontSize: 14.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple)),
-          Checkbox(
-              checkColor: Colors.white,
-              fillColor: MaterialStateProperty.resolveWith(getColor),
-              value: stateMap['humid'] ?? false,
-              onChanged: (bool? value) {
-                stateMap['humid'] = value ?? false;
-                onChange(stateMap);
-              }),
-          Text("Ext Humid",
-              style: TextStyle(
-                  fontSize: 14.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.amber[600])),
-          Checkbox(
-              checkColor: Colors.white,
-              fillColor: MaterialStateProperty.resolveWith(getColor),
-              value: stateMap['exthumid'] ?? false,
-              onChanged: (bool? value) {
-                stateMap['exthumid'] = value ?? false;
-                onChange(stateMap);
-              }),
-        ]));
+                color: Colors.amber[600])),
+        Checkbox(
+            checkColor: Colors.white,
+            fillColor: MaterialStateProperty.resolveWith(getColor),
+            value: stateMap['exthumid'] ?? false,
+            onChanged: (bool? value) {
+              stateMap['exthumid'] = value ?? false;
+              onChange(stateMap);
+            })
+      ]),
+    ]));
   }
 }
 

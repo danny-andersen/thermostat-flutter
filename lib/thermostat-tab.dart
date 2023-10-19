@@ -1065,10 +1065,10 @@ class TemperatureGauge extends StatelessWidget {
     double maxRange = 25;
     if (extTemp < minRange) {
       minRange = extTemp - 1;
-      maxRange = minRange + 20;
+      // maxRange = minRange + 20;
     } else if (extTemp > maxRange) {
       maxRange = extTemp + 1;
-      minRange = maxRange - 20;
+      // minRange = maxRange - 20;
     }
     if (minRange > 10) minRange = 10;
     if (maxRange < currentTemperature + 5) maxRange = currentTemperature + 5;
