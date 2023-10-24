@@ -113,6 +113,7 @@ class HistoryPageState extends State<HistoryPage> {
     // Process boiler on time
     DateTime lastOnTime = DateTime(0, 1, 1, 0, 0);
     boilerOnTime = 0;
+    bool lastBoilerState = false;
     for (FlSpot boilerState in boilerList) {
       int hour = boilerState.x ~/ 100;
       int min = (0.6 * (boilerState.x - (100 * hour))).round();
@@ -123,8 +124,14 @@ class HistoryPageState extends State<HistoryPage> {
         lastOnTime = time;
       } else {
         // print("${(time.difference(lastOnTime)).inMinutes}");
-        boilerOnTime += (time.difference(lastOnTime)).inMinutes;
+        boilerOnTime += time.difference(lastOnTime).inMinutes;
       }
+      lastBoilerState = boilerState.y == 1 ? true : false;
+    }
+    if (lastBoilerState && lastOnTime != DateTime(0, 1, 1, 0, 0)) {
+      DateTime nowDT = DateTime.now();
+      DateTime nowTime = DateTime(0, 1, 1, nowDT.hour, nowDT.minute);
+      boilerOnTime += nowTime.difference(lastOnTime).inMinutes;
     }
 
     // print("Rx $tempCount temps $humidCount humids");
@@ -447,13 +454,12 @@ class SelectPlots extends StatelessWidget {
     }
 
     return Container(
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Text("Int Temp",
             style: TextStyle(
-              fontSize: 14.0,
-              fontWeight: FontWeight.bold,
+              fontSize: 11.0,
+              // fontWeight: FontWeight.bold,
               color: Colors.red[600],
             )),
         Checkbox(
@@ -468,8 +474,8 @@ class SelectPlots extends StatelessWidget {
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Text("Ext Temp",
             style: TextStyle(
-              fontSize: 14.0,
-              fontWeight: FontWeight.bold,
+              fontSize: 11.0,
+              // fontWeight: FontWeight.bold,
               color: Colors.green[400],
             )),
         Checkbox(
@@ -484,8 +490,8 @@ class SelectPlots extends StatelessWidget {
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Text("Int Humid",
             style: TextStyle(
-                fontSize: 14.0,
-                fontWeight: FontWeight.bold,
+                fontSize: 11.0,
+                // fontWeight: FontWeight.bold,
                 color: Colors.purple)),
         Checkbox(
             checkColor: Colors.white,
@@ -499,8 +505,8 @@ class SelectPlots extends StatelessWidget {
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Text("Ext Humid",
             style: TextStyle(
-                fontSize: 14.0,
-                fontWeight: FontWeight.bold,
+                fontSize: 11.0,
+                // fontWeight: FontWeight.bold,
                 color: Colors.amber[600])),
         Checkbox(
             checkColor: Colors.white,
