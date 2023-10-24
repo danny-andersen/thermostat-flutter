@@ -346,16 +346,16 @@ class _ThermostatPageState extends State<ThermostatPage> {
             currentTemp, setTemp, extTemp, forecastExtTemp, boilerOn),
       ),
       // const SizedBox(height: 16.0),
-      Container(
-        padding: const EdgeInsets.only(left: 8.0),
-        child: const Text(
-          'Increase / Decrease Temperature:',
-          style: TextStyle(
-            fontSize: 14.0,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      // Container(
+      //   padding: const EdgeInsets.only(left: 8.0),
+      //   child: const Text(
+      //     'Increase / Decrease Temperature:',
+      //     style: TextStyle(
+      //       fontSize: 14.0,
+      //       fontWeight: FontWeight.bold,
+      //     ),
+      //   ),
+      // ),
       // SliderWithRange(
       //     requestedTempGetter: () => requestedTemp, returnNewTemp: sendNewTemp),
       SetTempButtonBar(
@@ -1063,12 +1063,15 @@ class TemperatureGauge extends StatelessWidget {
   Widget build(BuildContext context) {
     double minRange = 5;
     double maxRange = 25;
-    if (extTemp < minRange) {
+    if (extTemp < minRange && extTemp > -5) {
       minRange = extTemp - 1;
       // maxRange = minRange + 20;
     } else if (extTemp > maxRange) {
       maxRange = extTemp + 1;
       // minRange = maxRange - 20;
+    }
+    if (minRange < -5) {
+      minRange = -5;
     }
     if (minRange > 10) minRange = 10;
     if (maxRange < currentTemperature + 5) maxRange = currentTemperature + 5;
@@ -1145,7 +1148,7 @@ class TemperatureGauge extends StatelessWidget {
                     needleColor: Colors.grey,
                   ),
                   MarkerPointer(
-                      value: extTemp,
+                      value: extTemp > -30 ? extTemp : forecastTemp,
                       color: Colors.green[600],
                       enableAnimation: true,
                       animationType: AnimationType.ease,
@@ -1175,7 +1178,7 @@ class TemperatureGauge extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Outside Temp: $extTemp°C',
+                            'Outside Temp: ${extTemp > -40 ? extTemp : "??"}°C',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 15,
