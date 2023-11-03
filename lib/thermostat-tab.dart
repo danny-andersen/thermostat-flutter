@@ -115,11 +115,13 @@ class _ThermostatPageState extends State<ThermostatPage> {
   void _decRequestedTemp() {
 //      print("Minus pressed");
     requestedTemp -= 0.50;
+    print("Minus pressed");
     sendNewTemp(requestedTemp, true);
   }
 
   void _incrementRequestedTemp() {
     requestedTemp += 0.50;
+    print("Plus pressed");
     sendNewTemp(requestedTemp, true);
   }
 
@@ -365,9 +367,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
         sendNew: sendNewTemp,
       ),
       Container(
-        padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+        padding: const EdgeInsets.only(left: 8.0, top: 2.0),
         child: RichText(
-            text: const TextSpan(
+            text: TextSpan(
                 text: 'Relative Humidity,',
                 style: TextStyle(
                   fontSize: 14.0,
@@ -376,14 +378,14 @@ class _ThermostatPageState extends State<ThermostatPage> {
                 ),
                 children: <TextSpan>[
               TextSpan(
-                  text: ' Inside + ',
+                  text: extHumidity != -100 ? ' Inside + ' : ' Inside:',
                   style: TextStyle(
                     fontSize: 14.0,
                     fontWeight: FontWeight.bold,
                     color: Colors.red,
                   )),
               TextSpan(
-                  text: ' Outside (%):',
+                  text: extHumidity != -100 ? ' Outside (%):' : '',
                   style: TextStyle(
                     fontSize: 14.0,
                     fontWeight: FontWeight.bold,
@@ -450,6 +452,7 @@ class SetTempButtonBar extends StatelessWidget {
         ElevatedButton(
             onPressed: minusPressed,
             style: const ButtonStyle(
+                maximumSize: MaterialStatePropertyAll(Size.fromHeight(40)),
                 textStyle:
                     MaterialStatePropertyAll(TextStyle(color: Colors.white)),
                 backgroundColor: MaterialStatePropertyAll(Colors.blue)),
@@ -650,10 +653,14 @@ class RHGauge extends StatelessWidget {
             LinearGaugeRange(
                 startValue: 70.0, endValue: 100.0, color: Colors.red),
           ],
-          markerPointers: [
-            LinearShapePointer(value: extHumidity, color: Colors.green),
-            LinearShapePointer(value: humidity, color: Colors.red)
-          ],
+          markerPointers: extHumidity == -100
+              ? [
+                  LinearShapePointer(value: humidity, color: Colors.red),
+                ]
+              : [
+                  LinearShapePointer(value: humidity, color: Colors.red),
+                  LinearShapePointer(value: extHumidity, color: Colors.green),
+                ],
           axisTrackStyle: const LinearAxisTrackStyle(
               color: Colors.cyan,
               edgeStyle: LinearEdgeStyle.bothFlat,
