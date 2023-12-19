@@ -160,7 +160,7 @@ class DropBoxAPIFn {
     if (cacheEntry.isNotEmpty) {
       if (contentType == ContentType.text) {
         //Expecting text result
-        callback(String.fromCharCodes(cacheEntry));
+        callback(fileToDownload, String.fromCharCodes(cacheEntry));
       } else {
         callback(fileToDownload, cacheEntry, folder, fileIndex);
       }
@@ -182,7 +182,7 @@ class DropBoxAPIFn {
           final List<int> codeUnits = contents.codeUnits;
           final Uint8List bytes = Uint8List.fromList(codeUnits);
           cache.set(fileToDownload, bytes, timeoutSecs);
-          callback(contents);
+          callback(fileToDownload, contents);
         } else {
           Uint8List contents =
               await consolidateHttpClientResponseBytes(response);

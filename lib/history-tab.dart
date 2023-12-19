@@ -106,7 +106,7 @@ class HistoryPageState extends State<HistoryPage> {
     getChangeFile(changeFile);
   }
 
-  void processChangeFile(String contents) {
+  void processChangeFile(String filename, String contents) {
 //    double lastTemp = 10.0;
     // temperatureList = List.filled(0, TempByHour(0, 0.0), growable: true);
     processCommonContents(contents, temperatureList, humidityList);
@@ -160,7 +160,7 @@ class HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  void processExtChangeFile(String contents) {
+  void processExtChangeFile(String filename, String contents) {
     processCommonContents(contents, extTemperatureList, extHumidityList);
     // print("Rx $tempCount temps $humidCount humids");
     // extMeasuredTempSeries =
@@ -316,7 +316,7 @@ class HistoryPageState extends State<HistoryPage> {
         Container(
           padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 5.0),
           child: Text(
-            "Temperature + Humidity Chart of ${(selectedDate != null ? formattedDateStr(selectedDate!) : '')}",
+            "${(selectedDate != null ? formattedDateStr(selectedDate!) : '')}",
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         )
@@ -394,7 +394,7 @@ class HistoryPageState extends State<HistoryPage> {
             // width: MediaQuery.of(context).size.width,
             child: Text(
                 "Boiler on for: ${boilerOnTime ~/ 60} hours, ${boilerOnTime - 60 * (boilerOnTime ~/ 60)} mins ($boilerOnTime mins)",
-                style: Theme.of(context).textTheme.bodyLarge
+                style: Theme.of(context).textTheme.bodyMedium
                 // .displaySmall!
                 // .apply(fontSizeFactor: 0.4),
 //                    style: TextStyle(
@@ -417,7 +417,7 @@ class HistoryPageState extends State<HistoryPage> {
                       ((evening ? 2 : 1) + (boilerOnTime * 2.5 / 100)).toInt(),
                       ((boilerOnTime * 2.5) % 100).toInt()
                     ])}",
-                style: Theme.of(context).textTheme.bodyLarge
+                style: Theme.of(context).textTheme.bodyMedium
                 // .displaySmall!
                 // .apply(fontSizeFactor: 0.4),
 //                    style: TextStyle(
@@ -435,11 +435,12 @@ class HistoryPageState extends State<HistoryPage> {
 }
 
 class SelectPlots extends StatelessWidget {
-  SelectPlots(this.onChange, this.stateMap);
+  SelectPlots(this.onChange, this.stateMap, {super.key});
 
   Function onChange;
   Map<String, bool> stateMap;
 
+  @override
   Widget build(BuildContext context) {
     Color getColor(Set<MaterialState> states) {
       const Set<MaterialState> interactiveStates = <MaterialState>{
@@ -488,7 +489,7 @@ class SelectPlots extends StatelessWidget {
             })
       ]),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Text("Int Humid",
+        const Text("Int Humid",
             style: TextStyle(
                 fontSize: 11.0,
                 // fontWeight: FontWeight.bold,
@@ -562,7 +563,7 @@ class ShowRange extends StatelessWidget {
                   // padding: const EdgeInsets.only(bottom: 8.0, right: 10.0),
                   child: Text(
                       "$label Max: ${vals.max}, Min: ${vals.min}, Avg: ${vals.average.toStringAsFixed(1)}",
-                      style: Theme.of(context).textTheme.bodyLarge
+                      style: Theme.of(context).textTheme.bodyMedium
                       // .displaySmall!
                       // .apply(fontSizeFactor: 0.4),
 //                    style: TextStyle(
@@ -638,14 +639,14 @@ class HistoryLineChart extends StatelessWidget {
       minY: minValue,
       maxY: maxValue,
       titlesData: FlTitlesData(
-        topTitles: AxisTitles(
-          sideTitles: const SideTitles(showTitles: false),
+        topTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
         ),
         leftTitles: const AxisTitles(
             // axisNameWidget: Text("\u00B0C"),
-            sideTitles: const SideTitles(showTitles: true, reservedSize: 40)),
+            sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
         rightTitles:
-            AxisTitles(sideTitles: const SideTitles(showTitles: false)),
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(
             // axisNameWidget: Text("Time"),
             sideTitles: SideTitles(

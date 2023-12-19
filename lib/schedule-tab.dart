@@ -73,7 +73,7 @@ class SchedulePageState extends State<SchedulePage> {
     );
   }
 
-  void processChangeFile(String contents) {
+  void processChangeFile(String filename, String contents) {
     List<ValueByHour> tempList =
         List.filled(0, ValueByHour(0, 0), growable: true);
     double lastTemp = 10.0;
@@ -122,9 +122,9 @@ class SchedulePageState extends State<SchedulePage> {
           //      print("Adding ${file.fileName}");
           ScheduleEntry schedule = ScheduleEntry.fromFileEntry(file);
           scheduleEntries!.add(DropdownMenuItem<ScheduleEntry>(
-                value: schedule,
-                child: Text(schedule.name),
-              ));
+            value: schedule,
+            child: Text(schedule.name),
+          ));
           if (file.fileName.compareTo(currentScheduleFile) == 0) {
             currentSchedulePath = file.fullPathName;
             selectedScheduleEntry = schedule;
@@ -154,11 +154,10 @@ class SchedulePageState extends State<SchedulePage> {
     }
   }
 
-  void processScheduleFile(String contents) {
+  void processScheduleFile(String filename, String contents) {
     if (mounted) {
       setState(() {
-        selectedSchedule =
-            Schedule.fromFile(selectedScheduleEntry!, contents);
+        selectedSchedule = Schedule.fromFile(selectedScheduleEntry!, contents);
         newSchedule = selectedSchedule!.copy();
         Set<String> dayRangeSet = {};
         for (ScheduleDay day in selectedSchedule!.days) {
@@ -167,14 +166,13 @@ class SchedulePageState extends State<SchedulePage> {
         for (String day in ScheduleDay.daysofWeek) {
           dayRangeSet.add(day);
         }
-        scheduleDays = List.filled(
-            0, const DropdownMenuItem(child: Text("")),
+        scheduleDays = List.filled(0, const DropdownMenuItem(child: Text("")),
             growable: true);
         for (String dayRange in dayRangeSet) {
           scheduleDays!.add(DropdownMenuItem<String>(
-                value: dayRange,
-                child: Text(dayRange),
-              ));
+            value: dayRange,
+            child: Text(dayRange),
+          ));
         }
       });
     }
@@ -270,8 +268,9 @@ class SchedulePageState extends State<SchedulePage> {
   }
 
   List<DropdownMenuItem<ScheduleDay>> getScheduleTimes() {
-    List<DropdownMenuItem<ScheduleDay>> retList =
-        List.filled(0, const DropdownMenuItem(child: Text(" ")), growable: true);
+    List<DropdownMenuItem<ScheduleDay>> retList = List.filled(
+        0, const DropdownMenuItem(child: Text(" ")),
+        growable: true);
     selectedSchedule!
         .filterEntriesByDayRange(selectedDayRange!)
         .forEach((day) => retList.add(DropdownMenuItem<ScheduleDay>(
@@ -341,13 +340,16 @@ class SchedulePageState extends State<SchedulePage> {
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.only(left: 3.0, top: 5.0, right: 0.0),
-            height: 300.0,
-            width: MediaQuery.of(context).size.width,
-            //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
-            child: PointsLineChart(chartsToPlot!, onChartSelectionChanged),
-          ),
+          DefaultTextStyle.merge(
+            style: const TextStyle(color: Colors.white),
+            child: Container(
+              padding: const EdgeInsets.only(left: 3.0, top: 5.0, right: 0.0),
+              height: 300.0,
+              width: MediaQuery.of(context).size.width,
+              //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
+              child: PointsLineChart(chartsToPlot!, onChartSelectionChanged),
+            ),
+          )
         ],
       ),
       Row(
@@ -470,9 +472,12 @@ class PointsLineChart extends StatelessWidget {
           if (point.value != minValue) {
             lines.add(charts.LineAnnotationSegment(
                 point.hour, charts.RangeAnnotationAxisType.domain,
-                startLabel: ValueByHour.hourFormat.format(point.hour)));
-        }
+                startLabel: ValueByHour.hourFormat.format(point.hour),
+                color: charts.MaterialPalette.white.darker,
+                labelStyleSpec: charts.TextStyleSpec(
+                    color: charts.MaterialPalette.white.darker)));
           }
+        }
       }
     }
     return charts.RangeAnnotation(lines);
@@ -485,8 +490,7 @@ class PointsLineChart extends StatelessWidget {
       seriesList,
       animate: true,
       primaryMeasureAxis: charts.NumericAxisSpec(
-        viewport:
-            charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
+        viewport: charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
         tickProviderSpec: const charts.BasicNumericTickProviderSpec(
             zeroBound: false, desiredTickCount: 14),
       ),

@@ -58,7 +58,7 @@ class _HolidayPageState extends State<HolidayPage> {
     );
   }
 
-  void processCurrentHoliday(String contents) {
+  void processCurrentHoliday(String filename, String contents) {
 //    print("Got current holiday: " + contents);
     DateTime newFromDate = DateTime(2022);
     DateTime newToDate = DateTime(2022);
@@ -328,7 +328,7 @@ class _HolidayPageState extends State<HolidayPage> {
         ),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
           ElevatedButton(
-              onPressed: holidaySet ? cancelHoliday : null,
+              onPressed: cancelHoliday,
               style: const ButtonStyle(
                   backgroundColor: MaterialStatePropertyAll(Colors.blue)),
               child: Text(

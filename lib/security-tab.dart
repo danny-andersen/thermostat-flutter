@@ -85,7 +85,7 @@ class SecurityPageState extends State<SecurityPage> {
     }
   }
 
-  void processChangeFile(String contents) {
+  void processChangeFile(String filename, String contents) {
     List<DeviceByHour> whoList =
         List.filled(0, DeviceByHour(0, "", false), growable: true);
     //Clear existing list
