@@ -203,9 +203,93 @@ class WhoPageState extends State<WhoPage> {
     return retStr;
   }
 
+  Widget createTile(int index) {
+    final DeviceByHour event = whoByHourList[index];
+    return TimelineTile(
+      alignment: TimelineAlign.center,
+      // lineXY: 0.1, // Adjust the line position as needed
+      isFirst: index == 0,
+      axis: TimelineAxis.vertical,
+      isLast: index == whoByHourList.length - 1,
+      beforeLineStyle: const LineStyle(color: Colors.blue),
+      indicatorStyle: IndicatorStyle(
+        width: 80,
+        height: 50,
+        indicator: Container(
+          decoration: const BoxDecoration(
+            color: Colors.blue,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              formatEventHour(event.hour),
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+      ),
+      startChild: event.event
+          ? Card(
+              color: Colors.grey[800],
+              child: Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      event.device,
+                      style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      event.event ? "Arrive" : "Left",
+                      style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
+      endChild: event.event
+          ? null
+          : Card(
+              color: Colors.grey[800],
+              child: Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      event.device,
+                      style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      event.event ? "Arrive" : "Left",
+                      style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    Widget returnWidget = ListView(children: [
+    List<Widget> listChildren = [
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(
             padding: const EdgeInsets.only(top: 8.0),
@@ -240,111 +324,19 @@ class WhoPageState extends State<WhoPage> {
           ),
         ),
       ]),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Expanded(
-            child: ListView.builder(
-          itemCount: whoByHourList.length,
-          physics: const AlwaysScrollableScrollPhysics(),
-          scrollDirection: Axis.vertical,
-          shrinkWrap: true,
-          itemBuilder: (context, index) {
-            final DeviceByHour event = whoByHourList[index];
-            return TimelineTile(
-              alignment: TimelineAlign.center,
-              // lineXY: 0.1, // Adjust the line position as needed
-              isFirst: index == 0,
-              axis: TimelineAxis.vertical,
-              isLast: index == whoByHourList.length - 1,
-              beforeLineStyle: const LineStyle(color: Colors.blue),
-              indicatorStyle: IndicatorStyle(
-                width: 80,
-                height: 50,
-                indicator: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      formatEventHour(event.hour),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-              endChild: event.event
-                  ? null
-                  : Card(
-                      color: Colors.grey[800],
-                      child: Padding(
-                        padding: const EdgeInsets.all(5.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              event.device,
-                              style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              event.event ? "Arrive" : "Left",
-                              style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-              startChild: event.event
-                  ? Card(
-                      color: Colors.grey[800],
-                      child: Padding(
-                        padding: const EdgeInsets.all(5.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              event.device,
-                              style: const TextStyle(
-                                  color: Colors.green,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              event.event ? "Arrive" : "Left",
-                              style: const TextStyle(
-                                  color: Colors.green,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : null,
-            );
-          },
-        ))
-        // Container(
-        //     padding: const EdgeInsets.only(top: 0.0),
-        //     child: DataTable(
-        //         horizontalMargin: 3,
-        //         columnSpacing: 10,
-        //         dataRowHeight: 25,
-        //         columns: const [
-        //           DataColumn(label: Text("Who")),
-        //           DataColumn(label: Text("Time Arrived")),
-        //           DataColumn(label: Text("Time Left"))
-        //         ],
-        //         rows: whoByHourRows)),
-      ]),
-    ]);
+    ];
+    for (int i = 0; i < whoByHourList.length; i++) {
+      listChildren.add(Row(children: [Expanded(child: createTile(i))]));
+    }
+
+    Widget returnWidget = ListView(
+      scrollDirection: Axis.vertical,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(5.0),
+      // shrinkWrap: true,
+      children: listChildren,
+    );
+
     return returnWidget;
   }
 }
