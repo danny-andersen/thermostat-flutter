@@ -116,12 +116,12 @@ class _ThermostatPageState extends State<ThermostatPage> {
   bool intPirState = false;
   String intPirLastEvent = "";
 
-  Map<int, double> extTemp = {2: 100.0};
+  Map<int, double> extTemp = {2: 100.0, 4: 100.0};
   Map<String, DateTime> lastExtReadTime = {};
-  Map<int, double> extHumidity = {2: 0.0};
-  Map<int, DateTime?> extLastHeardFrom = {3: null, 2: null};
-  Map<int, bool> extPirState = {3: false, 2: false};
-  Map<int, String> extPirLastEvent = {3: "", 2: ""};
+  Map<int, double> extHumidity = {2: 0.0, 4: 0.0};
+  Map<int, DateTime?> extLastHeardFrom = {4: null, 3: null, 2: null};
+  Map<int, bool> extPirState = {4: false, 3: false, 2: false};
+  Map<int, String> extPirLastEvent = {4: "", 3: "", 2: ""};
 
   bool requestOutstanding = false;
   bool boilerOn = true;
@@ -398,7 +398,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
       required DateTime? lastHeardTime,
       required String? lastEventStr,
       required bool? currentPirStatus}) {
-    lastEventStr ??= "Never";
+    lastEventStr ??= "";
     currentPirStatus ??= false;
     DateTime currentTime = DateTime.now();
     Color boxColor;
