@@ -20,7 +20,7 @@ class WhoPageState extends State<WhoPage> {
   final String deviceChangePattern = "*_device_change.txt";
   String todayFile = "";
   String? selectedDate;
-  List<DropdownMenuItem<String>>? changeEntries;
+  List<DropdownMenuItem<String>>? changeEntries = [];
   bool enabled = false;
   // List<DataRow> whoByHourRows = List.filled(
   //     0, DataRow(cells: List.filled(0, const DataCell(Text("")))),
@@ -44,17 +44,12 @@ class WhoPageState extends State<WhoPage> {
 
   @override
   void initState() {
+    getChangeFileList();
     DateTime now = DateTime.now();
     todayFile = sprintf(
         "%s%02i%02i%s", [now.year, now.month, now.day, "_device_change.txt"]);
-    getTodaysFile();
-    getChangeFileList();
+    newChangeFileSelected(todayFile);
     super.initState();
-  }
-
-  void getTodaysFile() {
-    selectedDate = todayFile;
-    getChangeFile(todayFile);
   }
 
   void getChangeFile(String changeFile) {
@@ -81,9 +76,22 @@ class WhoPageState extends State<WhoPage> {
   }
 
   void newChangeFileSelected(String? changeFile) {
-    changeFile ??= "Select a file"; //Set to blank if null
-    selectedDate = changeFile;
-    getChangeFile(changeFile);
+    if (changeFile != null) {
+      bool inList = false;
+      String dateStr = changeFile.split('_')[0];
+      changeEntries ??= [
+        DropdownMenuItem<String>(value: changeFile, child: Text(dateStr))
+      ];
+      changeEntries!.forEach((entry) {
+        if (entry.value == changeFile) inList = true;
+      });
+      if (!inList) {
+        changeEntries!.add(
+            DropdownMenuItem<String>(value: changeFile, child: Text(dateStr)));
+      }
+      selectedDate = changeFile;
+      getChangeFile(changeFile);
+    }
   }
 
   void processChangeFileList(FileListing files) {

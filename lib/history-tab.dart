@@ -67,14 +67,9 @@ class HistoryPageState extends State<HistoryPage> {
     todayFile = sprintf(
         "%s%02i%02i%s", [now.year, now.month, now.day, deviceChangePattern]);
     // selectedDate = sprintf("%s%02i%02i", [now.year, now.month, now.day]);
-    getTodaysFile();
     getChangeFileList();
+    newChangeFileSelected(todayFile);
     super.initState();
-  }
-
-  void getTodaysFile() {
-    selectedDate = todayFile;
-    getChangeFile(todayFile);
   }
 
   void getChangeFile(String changeFile) {
@@ -101,9 +96,22 @@ class HistoryPageState extends State<HistoryPage> {
   }
 
   void newChangeFileSelected(String? changeFile) {
-    changeFile ??= "Select a file"; //Set to blank if null
-    selectedDate = changeFile;
-    getChangeFile(changeFile);
+    if (changeFile != null) {
+      bool inList = false;
+      String dateStr = changeFile.split('_')[0];
+      changeEntries ??= [
+        DropdownMenuItem<String>(value: changeFile, child: Text(dateStr))
+      ];
+      changeEntries!.forEach((entry) {
+        if (entry.value == changeFile) inList = true;
+      });
+      if (!inList) {
+        changeEntries!.add(
+            DropdownMenuItem<String>(value: changeFile, child: Text(dateStr)));
+      }
+      selectedDate = changeFile;
+      getChangeFile(changeFile);
+    }
   }
 
   void processChangeFile(String filename, String contents) {
