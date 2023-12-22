@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 // import 'package:charts_flutter_new/flutter.dart' as charts;
@@ -507,10 +508,22 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   @override
   Widget build(BuildContext context) {
-    double? extTempVal = extTemp[STATION_WITH_EXT_TEMP];
-    extTempVal ??= -100.0;
-    double? extHumidVal = extHumidity[STATION_WITH_EXT_TEMP];
-    extHumidVal ??= 0.0;
+    double extTempVal = -100.0;
+    List<double> extList = [];
+    extTemp.forEach((stn, ext) {
+      if (stn != 1 && ext > -100) {
+        extList.add(ext);
+      }
+    });
+    if (extList.isNotEmpty) extTempVal = extList.average;
+    double extHumidVal = 0.0;
+    extList = [];
+    extHumidity.forEach((stn, ext) {
+      if (stn != 1 && ext > 0) {
+        extList.add(ext);
+      }
+    });
+    if (extList.isNotEmpty) extHumidVal = extList.average;
     List<Widget> widgets = [
       SizedBox(
         // height: 250,
@@ -1393,7 +1406,7 @@ class TemperatureGauge extends StatelessWidget {
                     needleColor: Colors.grey,
                   ),
                   MarkerPointer(
-                      value: extTemp > -30 ? extTemp : forecastTemp,
+                      value: extTemp > -50 ? extTemp : forecastTemp,
                       color: Colors.green[600],
                       enableAnimation: true,
                       animationType: AnimationType.ease,
@@ -1423,7 +1436,7 @@ class TemperatureGauge extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Outside Temp: ${extTemp > -40 ? extTemp : "??"}°C',
+                            'Outside Temp: ${extTemp > -50 ? extTemp.toStringAsFixed(1) : "??"}°C',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 15,
