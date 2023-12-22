@@ -77,8 +77,9 @@ class VideoScreenState extends State<VideoScreen> {
       final String name, final Uint8List data, String path, final int index) {
     if (mounted) {
       final mime = (name.endsWith(".mp4")) ? "video/mp4" : "video/mpeg";
-      final dataUrl = Uri.dataFromBytes(data, mimeType: mime).toString();
-      videoController = VideoPlayerController.network(dataUrl);
+      final dataUrl = Uri.dataFromBytes(data, mimeType: mime);
+      videoController = VideoPlayerController.networkUrl(dataUrl);
+      _initVideoPlayer(videoController);
       // _initVideoPlayer(videoController);
       ChewieController chewie = ChewieController(
         videoPlayerController: videoController,
@@ -104,97 +105,96 @@ class VideoScreenState extends State<VideoScreen> {
   Widget build(BuildContext context) {
     List<String> parts = videoName.split('/');
     String date = parts[2];
-    String source = "Webcam";
-    if (parts[3].contains("pi")) {
-      source = "PiCam";
-    }
+    String source = getSourceFromFilename(parts[3]);
     String time = parts[3].split('-')[0].split('T')[1];
     String title =
-        "Video ${mediaList.length - fileIndex} of ${mediaList.length} $source $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
+        "Video ${mediaList.length - fileIndex} of ${mediaList.length} Webcam: $source $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
 
     return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-            ),
+      appBar: AppBar(
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 12,
           ),
         ),
-        body: Center(
-            child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Visibility(
-                    visible: fileIndex == mediaList.length - 1,
-                    child: const Text("At First",
-                        style: TextStyle(
-                            color: Colors.blue,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold))),
-                const SizedBox(width: 20),
-                ElevatedButton(
-                  child: const Text('<<'),
-                  onPressed: () {
-                    setState(() {
-                      isLoadingImage = true;
-                    });
-                    getPrevious();
-                  },
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                    child: const Text('>>'),
-                    onPressed: () {
-                      setState(() {
-                        isLoadingImage = true;
-                      });
-                      getNext();
-                    }),
-                const SizedBox(width: 10),
-                Visibility(
-                    visible: fileIndex == 0,
-                    child: const Text("At Last",
-                        style: TextStyle(
-                            color: Colors.blue,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold))),
-                const SizedBox(width: 10),
-                Visibility(
-                    visible: isLoadingImage,
-                    child: const CircularProgressIndicator()),
-              ],
-            ),
-            const SizedBox(height: 10),
-            GestureDetector(
-              onHorizontalDragEnd: (details) {
-                // Check if swipe was left-to-right or right-to-left
-                if (details.velocity.pixelsPerSecond.dx < 0) {
-                  setState(() {
-                    isLoadingImage = true;
-                  });
-                  getNext();
-                } else {
-                  setState(() {
-                    isLoadingImage = true;
-                  });
-                  getPrevious();
-                }
-              },
-              child: isLoadingImage
-                  ? const SizedBox(
-                      height: 10,
-                      width: 10,
-                    )
-                  : Chewie(controller: chewieController),
-            ),
-            const SizedBox(height: 10),
-          ],
-        )));
+      ),
+      body: Center(
+        //   child: Column(
+        // mainAxisAlignment: MainAxisAlignment.center,
+
+        // children: [
+        //   const SizedBox(height: 10, width: 10),
+        //   Row(
+        //     mainAxisAlignment: MainAxisAlignment.center,
+        //     children: [
+        //       Visibility(
+        //           visible: fileIndex == mediaList.length - 1,
+        //           child: const Text("At First",
+        //               style: TextStyle(
+        //                   color: Colors.blue,
+        //                   fontSize: 12,
+        //                   fontWeight: FontWeight.bold))),
+        //       const SizedBox(height: 10, width: 20),
+        //       ElevatedButton(
+        //         child: const Text('<<'),
+        //         onPressed: () {
+        //           setState(() {
+        //             isLoadingImage = true;
+        //           });
+        //           getPrevious();
+        //         },
+        //       ),
+        //       const SizedBox(height: 10, width: 10),
+        //       ElevatedButton(
+        //           child: const Text('>>'),
+        //           onPressed: () {
+        //             setState(() {
+        //               isLoadingImage = true;
+        //             });
+        //             getNext();
+        //           }),
+        //       const SizedBox(height: 10, width: 10),
+        //       Visibility(
+        //           visible: fileIndex == 0,
+        //           child: const Text("At Last",
+        //               style: TextStyle(
+        //                   color: Colors.blue,
+        //                   fontSize: 12,
+        //                   fontWeight: FontWeight.bold))),
+        //       const SizedBox(height: 10, width: 10),
+        //       Visibility(
+        //           visible: isLoadingImage,
+        //           child: const CircularProgressIndicator()),
+        //     ],
+        //   ),
+        //   const SizedBox(height: 10),
+        //   GestureDetector(
+        //     onHorizontalDragEnd: (details) {
+        //       // Check if swipe was left-to-right or right-to-left
+        //       if (details.velocity.pixelsPerSecond.dx < 0) {
+        //         setState(() {
+        //           isLoadingImage = true;
+        //         });
+        //         getNext();
+        //       } else {
+        //         setState(() {
+        //           isLoadingImage = true;
+        //         });
+        //         getPrevious();
+        //       }
+        //     },
+        child: isLoadingImage
+            ? const SizedBox(
+                height: 10,
+                width: 10,
+              )
+            : Chewie(controller: chewieController),
+      ),
+      //   const SizedBox(height: 10),
+      // ],
+      // ))
+    );
   }
 
   getNext() {
@@ -232,4 +232,19 @@ class VideoScreenState extends State<VideoScreen> {
       });
     }
   }
+}
+
+String getSourceFromFilename(String filename) {
+  List<String> parts = filename.split('-');
+  String source = "Unknown Webcam";
+  if (parts[1].contains("pi")) {
+    source = "Hall";
+  } else if (parts[1].contains("cam0")) {
+    source = "House right side";
+  } else if (parts[1].contains("frontdoor")) {
+    source = "Front door";
+  } else if (parts[1].contains("house") && (parts[2] == 'lh')) {
+    source = "House left side";
+  }
+  return source;
 }

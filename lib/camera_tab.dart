@@ -130,10 +130,7 @@ class CameraPageState extends State<CameraPage> {
       String fileName = mediaFiles[index].fileName;
       List<String> parts = fileName.split('-');
       String time = parts[0].split('T')[1];
-      String source = "Webcam";
-      if (parts[1].contains("pi")) {
-        source = "PiCam";
-      }
+      String source = getSourceFromFilename(fileName);
       String media = "Video";
       if (parts[1].contains("jpeg")) {
         media = "Photo";
