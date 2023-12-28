@@ -643,8 +643,11 @@ class _ThermostatPageState extends State<ThermostatPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => WebViewPage(
-                      title: 'BBC Weather forecast',
-                      website: 'https://www.bbc.co.uk/weather/2642573'),
+                    title: 'BBC Weather forecast',
+                    website: 'https://www.bbc.co.uk/weather/2642573',
+                    username: "",
+                    password: "",
+                  ),
                 ),
               );
             },

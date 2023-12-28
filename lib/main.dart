@@ -59,7 +59,7 @@ class MyAppState extends State<MyApp> {
       setState(() {
         oauthToken = secret.apiKey;
         username = secret.username;
-        password = secret.password
+        password = secret.password;
         DropBoxAPIFn.globalOauthToken = oauthToken;
         statusPage.localUI = localUI;
         statusPage.statePage.localUI = localUI;
@@ -173,6 +173,9 @@ class Secret {
   final String password;
   Secret({this.apiKey = "", this.username = "", this.password = ""});
   factory Secret.fromJson(Map<String, dynamic> jsonMap) {
-    return Secret(apiKey: jsonMap["api_key"], username: jsonMap["username"], password: jsonMap["password"]);
+    return Secret(
+        apiKey: jsonMap["api_key"],
+        username: jsonMap["username"],
+        password: jsonMap["password"]);
   }
 }
