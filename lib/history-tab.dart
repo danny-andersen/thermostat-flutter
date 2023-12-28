@@ -22,7 +22,7 @@ class HistoryPageState extends State<HistoryPage> {
 
   final String oauthToken;
   final String deviceChangePattern = "_device_change.txt";
-  final String externalChangePattern = "_cam2_change.txt";
+  final String externalChangePattern = "_cam4_change.txt";
 
   // HttpClient httpClient = HttpClient();
   List<DropdownMenuItem<String>>? changeEntries;

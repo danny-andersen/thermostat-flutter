@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 // import 'package:charts_flutter_new/flutter.dart' as charts;
 import 'package:syncfusion_flutter_gauges/gauges.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+// import 'package:webview_flutter/webview_flutter.dart';
 // import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 import 'dropbox-api.dart';
@@ -81,12 +82,24 @@ class _ThermostatPageState extends State<ThermostatPage> {
   _ThermostatPageState({required this.oauthToken, required this.localUI});
   String oauthToken;
   bool localUI;
+  String username = "";
+  String password = "";
   final String statusFile = "/thermostat_status.txt";
   final String localStatusFile = "/home/danny/thermostat/status.txt";
   final Map<int, String> extStationNames = {
     2: "House RH side",
     3: "Front Door",
     4: "House LH side"
+  };
+  final Map<String, String> stationCamUrlByName = {
+    "House RH side": "https://house-rh-side-cam0:8402",
+    "Front Door": "https://front-door-cam:8403",
+    "House LH side": "https://house-lh-side:8404",
+  };
+  final Map<String, String> externalStationCamUrlByName = {
+    "House RH side": "https://146.198.23.112:8402",
+    "Front Door": "https://146.198.23.112:8403",
+    "House LH side": "https://146.198.23.112:8404",
   };
   final List<String> externalstatusFile = [
     "/2_status.txt",
@@ -128,11 +141,22 @@ class _ThermostatPageState extends State<ThermostatPage> {
   bool boilerOn = true;
   int minsToSetTemp = 0;
   Timer timer = Timer(const Duration(), () {});
+  bool onCameraLocalLan = false;
 
   @override
   void initState() {
     timer = Timer.periodic(const Duration(seconds: 30), refreshStatus);
     refreshStatus(timer);
+    NetworkInterface.list().then((interfaces) {
+      for (NetworkInterface interface in interfaces) {
+        for (InternetAddress addr in interface.addresses) {
+          if (addr.address == '192.168.1.61') {
+            onCameraLocalLan = true;
+          }
+        }
+      }
+    });
+
     super.initState();
   }
 
@@ -434,36 +458,54 @@ class _ThermostatPageState extends State<ThermostatPage> {
         lastEventStr = "Event: ${timeStrs[0]}:${timeStrs[1]}";
       }
     }
+    String? camUrl = onCameraLocalLan
+        ? stationCamUrlByName[stationName]
+        : externalStationCamUrlByName[stationName];
+    return GestureDetector(
+        onTap: camUrl != null
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WebViewPage(
+                      title: "$stationName Live Webcam",
+                      website: camUrl,
+                      username: username,
+                      password: password,
+                    ),
+                  ),
+                );
+              }
+            : () => {},
+        child: ColoredBox(
+          color: boxColor,
+          child: Padding(
+            padding: const EdgeInsets.all(5.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  stationName,
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Heard: $lastHeardStr',
+                  style: const TextStyle(color: Colors.white, fontSize: 10.0),
+                ),
 
-    return ColoredBox(
-      color: boxColor,
-      child: Padding(
-        padding: const EdgeInsets.all(5.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              stationName,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
+                // const SizedBox(height: 8),
+                Text(
+                  lastEventStr,
+                  style: TextStyle(
+                      color: eventStrColor,
+                      fontSize: 10.0,
+                      fontWeight: eventWeight),
+                ),
+              ],
             ),
-            Text(
-              'Heard: $lastHeardStr',
-              style: const TextStyle(color: Colors.white, fontSize: 10.0),
-            ),
-
-            // const SizedBox(height: 8),
-            Text(
-              lastEventStr,
-              style: TextStyle(
-                  color: eventStrColor,
-                  fontSize: 10.0,
-                  fontWeight: eventWeight),
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 
   // List<charts.Series<TypeTemp, String>> createChartSeries() {
@@ -600,7 +642,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => WebViewPage(),
+                  builder: (context) => WebViewPage(
+                      title: 'BBC Weather forecast',
+                      website: 'https://www.bbc.co.uk/weather/2642573'),
                 ),
               );
             },
@@ -1473,31 +1517,186 @@ class TemperatureGauge extends StatelessWidget {
 }
 
 class WebViewPage extends StatefulWidget {
+  WebViewPage(
+      {super.key,
+      required this.title,
+      required this.website,
+      required this.username,
+      required this.password});
+  final String title;
+  final String website;
+  final String username;
+  final String password;
   @override
-  _WebViewPageState createState() => _WebViewPageState();
+  _WebViewPageState createState() => _WebViewPageState(
+      title: title, website: website, username: username, password: password);
 }
 
 class _WebViewPageState extends State<WebViewPage> {
-  late final WebViewController controller;
+  _WebViewPageState(
+      {required this.title,
+      required this.website,
+      required this.username,
+      required this.password});
+  String title;
+  String website;
+  String username;
+  String password;
+  late final InAppWebViewController webViewController;
+  final GlobalKey webViewKey = GlobalKey();
+  final urlController = TextEditingController();
+  double progress = 0;
+  HttpAuthCredentialDatabase httpAuthCredentialDatabase =
+      HttpAuthCredentialDatabase.instance();
+
+  InAppWebViewGroupOptions options = InAppWebViewGroupOptions(
+      crossPlatform: InAppWebViewOptions(
+        useShouldOverrideUrlLoading: true,
+        mediaPlaybackRequiresUserGesture: false,
+      ),
+      android: AndroidInAppWebViewOptions(
+        useHybridComposition: true,
+      ),
+      ios: IOSInAppWebViewOptions(
+        allowsInlineMediaPlayback: true,
+      ));
 
   @override
   void initState() {
     super.initState();
-    controller = WebViewController()
-      ..loadRequest(
-        Uri.parse('https://www.bbc.co.uk/weather/2642573'),
-      );
+    // webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri(website)));
+    // controller = WebViewController()
+    //   ..loadRequest(
+    //     Uri.parse(website),
+    //   );
+    // set a HTTP auth credential for a particular Protection Space
+    URLCredential creds = URLCredential(username: username, password: password);
+
+    httpAuthCredentialDatabase.setHttpAuthCredential(
+        protectionSpace: URLProtectionSpace(
+            host: "house-rh-side-cam0",
+            protocol: "https",
+            realm: "Motion",
+            port: 8402),
+        credential: creds);
+    httpAuthCredentialDatabase.setHttpAuthCredential(
+        protectionSpace: URLProtectionSpace(
+            host: "146.198.23.112",
+            protocol: "https",
+            realm: "Motion",
+            port: 8402),
+        credential: creds);
+    httpAuthCredentialDatabase.setHttpAuthCredential(
+        protectionSpace: URLProtectionSpace(
+            host: "front-door-cam",
+            protocol: "https",
+            realm: "Motion",
+            port: 8403),
+        credential: creds);
+    httpAuthCredentialDatabase.setHttpAuthCredential(
+        protectionSpace: URLProtectionSpace(
+            host: "146.198.23.112",
+            protocol: "https",
+            realm: "Motion",
+            port: 8403),
+        credential: creds);
+    httpAuthCredentialDatabase.setHttpAuthCredential(
+        protectionSpace: URLProtectionSpace(
+            host: "house-lh-side",
+            protocol: "https",
+            realm: "Motion",
+            port: 8404),
+        credential: creds);
+    httpAuthCredentialDatabase.setHttpAuthCredential(
+        protectionSpace: URLProtectionSpace(
+            host: "146.198.23.112",
+            protocol: "https",
+            realm: "Motion",
+            port: 8404),
+        credential: creds);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('BBC Weather forecast'),
-      ),
-      body: WebViewWidget(
-        controller: controller,
-      ),
-    );
+        appBar: AppBar(
+          title: Text(title),
+        ),
+        body: SafeArea(
+            child: Column(children: <Widget>[
+          Expanded(
+            child: Stack(children: [
+              InAppWebView(
+                // initialheaders: {
+                //   'authorization': 'basic ' + base64encode(utf8.encode('$username:$password'))
+                // },
+
+                key: webViewKey,
+                initialUrlRequest: URLRequest(url: Uri.parse(website)),
+                initialOptions: options,
+                // pullToRefreshController: pullToRefreshController,
+                onWebViewCreated: (controller) {
+                  webViewController = controller;
+                },
+                onLoadStart: (controller, url) {
+                  setState(() {
+                    urlController.text = website;
+                  });
+                },
+                onProgressChanged: (controller, progress) {
+                  // if (progress == 100) {
+                  //   pullToRefreshController.endRefreshing();
+                  // }
+                  setState(() {
+                    this.progress = progress / 100;
+                    urlController.text = website;
+                  });
+                },
+                androidOnPermissionRequest:
+                    (controller, origin, resources) async {
+                  return PermissionRequestResponse(
+                      resources: resources,
+                      action: PermissionRequestResponseAction.GRANT);
+                },
+                // shouldOverrideUrlLoading: (controller, navigationAction) async {
+                //   var uri = navigationAction.request.url!;
+
+                //   if (![ "http", "https", "file", "chrome",
+                //     "data", "javascript", "about"].contains(uri.scheme)) {
+                //     if (await canLaunch(url)) {
+                //       // Launch the App
+                //       await launch(
+                //         url,
+                //       );
+                //       // and cancel the request
+                //       return NavigationActionPolicy.CANCEL;
+                //     }
+                //   }
+
+                //   return NavigationActionPolicy.ALLOW;
+                // },
+                onLoadStop: (controller, url) async {
+                  setState(() {
+                    // this.url = url.toString();
+                    urlController.text = website;
+                  });
+                },
+                onReceivedServerTrustAuthRequest:
+                    (controller, challenge) async {
+                  return ServerTrustAuthResponse(
+                      action: ServerTrustAuthResponseAction.PROCEED);
+                },
+                onReceivedHttpAuthRequest: (controller, challenge) async {
+                  return HttpAuthResponse(
+                      action: HttpAuthResponseAction
+                          .USE_SAVED_HTTP_AUTH_CREDENTIALS);
+                },
+              ),
+              progress < 1.0
+                  ? LinearProgressIndicator(value: progress)
+                  : Container(),
+            ]),
+          ),
+        ])));
   }
 }

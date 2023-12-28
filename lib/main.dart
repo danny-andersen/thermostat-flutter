@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'package:thermostat_flutter/dropbox-api.dart';
 import 'package:thermostat_flutter/who_tab.dart';
@@ -12,7 +14,12 @@ import 'package:thermostat_flutter/history-tab.dart';
 import 'package:thermostat_flutter/holidaytab.dart';
 import 'package:thermostat_flutter/schedule-tab.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+  //   await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
+  // }
   runApp(const MyApp());
 }
 
@@ -28,6 +35,9 @@ class MyAppState extends State<MyApp> {
       ThermostatPage(oauthToken: "BLANK", localUI: false);
   final HttpClient client = HttpClient();
   bool localUI = false;
+  String username = "";
+  String password = "";
+
   // Future<String> loadAsset() async {
   //   return await rootBundle.loadString('assets/api-key.json');
   // }
@@ -48,6 +58,8 @@ class MyAppState extends State<MyApp> {
     secret.then((Secret secret) {
       setState(() {
         oauthToken = secret.apiKey;
+        username = secret.username;
+        password = secret.password
         DropBoxAPIFn.globalOauthToken = oauthToken;
         statusPage.localUI = localUI;
         statusPage.statePage.localUI = localUI;
@@ -157,8 +169,10 @@ class SecretLoader {
 
 class Secret {
   final String apiKey;
-  Secret({this.apiKey = ""});
+  final String username;
+  final String password;
+  Secret({this.apiKey = "", this.username = "", this.password = ""});
   factory Secret.fromJson(Map<String, dynamic> jsonMap) {
-    return Secret(apiKey: jsonMap["api_key"]);
+    return Secret(apiKey: jsonMap["api_key"], username: jsonMap["username"], password: jsonMap["password"]);
   }
 }
