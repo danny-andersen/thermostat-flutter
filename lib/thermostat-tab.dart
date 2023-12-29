@@ -84,6 +84,8 @@ class _ThermostatPageState extends State<ThermostatPage> {
   bool localUI;
   String username = "";
   String password = "";
+  String extHost = "";
+  int startPort = 0;
   final String statusFile = "/thermostat_status.txt";
   final String localStatusFile = "/home/danny/thermostat/status.txt";
   final Map<int, String> extStationNames = {
@@ -92,14 +94,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
     4: "House LH side"
   };
   final Map<String, String> stationCamUrlByName = {
-    "House RH side": "https://house-rh-side-cam0:8402",
-    "Front Door": "https://front-door-cam:8403",
-    "House LH side": "https://house-lh-side:8404",
-  };
-  final Map<String, String> externalStationCamUrlByName = {
-    "House RH side": "https://146.198.23.112:8402",
-    "Front Door": "https://146.198.23.112:8403",
-    "House LH side": "https://146.198.23.112:8404",
+    "House RH side": "https://house-rh-side-cam0",
+    "Front Door": "https://front-door-cam",
+    "House LH side": "https://house-lh-side",
   };
   final List<String> externalstatusFile = [
     "/2_status.txt",
@@ -419,7 +416,8 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   Widget createStatusBox(
-      {required String stationName,
+      {int stationId = 0,
+      required String stationName,
       required DateTime? lastHeardTime,
       required String? lastEventStr,
       required bool? currentPirStatus}) {
@@ -458,11 +456,17 @@ class _ThermostatPageState extends State<ThermostatPage> {
         lastEventStr = "Event: ${timeStrs[0]}:${timeStrs[1]}";
       }
     }
-    String? camUrl = onCameraLocalLan
-        ? stationCamUrlByName[stationName]
-        : externalStationCamUrlByName[stationName];
+    String camUrl = "";
+    if (stationId != 0) {
+      int portNo = startPort + (stationId - 2);
+      if (stationId != 0 && onCameraLocalLan) {
+        camUrl = "${stationCamUrlByName[stationName]}:$portNo";
+      } else {
+        camUrl = "https://$extHost:$portNo";
+      }
+    }
     return GestureDetector(
-        onTap: camUrl != null
+        onTap: stationId != 0
             ? () {
                 Navigator.push(
                   context,
@@ -699,6 +703,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           currentPirStatus: intPirState));
     }
     extStationNames.forEach((id, name) => statusBoxes.add(createStatusBox(
+        stationId: id,
         stationName: name,
         lastHeardTime: extLastHeardFrom[id],
         lastEventStr: extPirLastEvent[id],

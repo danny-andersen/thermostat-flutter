@@ -58,9 +58,11 @@ class MyAppState extends State<MyApp> {
     secret.then((Secret secret) {
       setState(() {
         oauthToken = secret.apiKey;
-        username = secret.username;
-        password = secret.password;
         DropBoxAPIFn.globalOauthToken = oauthToken;
+        statusPage.statePage.username = secret.username;
+        statusPage.statePage.password = secret.password;
+        statusPage.statePage.extHost = secret.extHost;
+        statusPage.statePage.startPort = secret.startPort;
         statusPage.localUI = localUI;
         statusPage.statePage.localUI = localUI;
         // Cancel any current time as will want to do it more frequently if local
@@ -171,11 +173,20 @@ class Secret {
   final String apiKey;
   final String username;
   final String password;
-  Secret({this.apiKey = "", this.username = "", this.password = ""});
+  final String extHost;
+  final int startPort;
+  Secret(
+      {this.apiKey = "",
+      this.username = "",
+      this.password = "",
+      this.extHost = "",
+      this.startPort = 0});
   factory Secret.fromJson(Map<String, dynamic> jsonMap) {
     return Secret(
         apiKey: jsonMap["api_key"],
         username: jsonMap["username"],
-        password: jsonMap["password"]);
+        password: jsonMap["password"],
+        extHost: jsonMap["extHost"],
+        startPort: jsonMap["startPort"]);
   }
 }
