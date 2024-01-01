@@ -13,6 +13,8 @@ import 'package:thermostat_flutter/thermostat-tab.dart';
 import 'package:thermostat_flutter/history-tab.dart';
 import 'package:thermostat_flutter/holidaytab.dart';
 import 'package:thermostat_flutter/schedule-tab.dart';
+// import 'package:flutterpi_gstreamer_video_player/flutterpi_gstreamer_video_player.dart';
+import 'package:media_kit/media_kit.dart'; // Provides [Player], [Media], [Playlist] etc.
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +22,12 @@ void main() async {
   // if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
   //   await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
   // }
+
+  // FileStat thermStat = FileStat.statSync("/home/danny/thermostat");
+  // if (thermStat.type != FileSystemEntityType.notFound) {
+  // FlutterpiVideoPlayer.registerWith();
+  // }
+  MediaKit.ensureInitialized();
   runApp(const MyApp());
 }
 

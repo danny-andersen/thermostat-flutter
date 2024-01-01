@@ -104,9 +104,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
     "/4_status.txt"
   ];
   final List<String> localExternalstatusFile = [
-    "/home/danny/controlstation/2_status.txt",
-    "/home/danny/controlstation/3_status.txt",
-    "/home/danny/controlstation/4_status.txt",
+    "/home/danny/control_station/2_status.txt",
+    "/home/danny/control_station/3_status.txt",
+    "/home/danny/control_station/4_status.txt",
   ];
   final String setTempFile = "/setTemp.txt";
   final String localSetTempFile = "/home/danny/thermostat/setTemp.txt";
@@ -127,7 +127,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   bool intPirState = false;
   String intPirLastEvent = "";
 
-  Map<int, double> extTemp = {2: 100.0, 4: 100.0};
+  Map<int, double> extTemp = {2: -100.0, 4: -100.0};
   Map<String, DateTime> lastExtReadTime = {};
   Map<int, double> extHumidity = {2: 0.0, 4: 0.0};
   Map<int, DateTime?> extLastHeardFrom = {4: null, 3: null, 2: null};
@@ -640,29 +640,30 @@ class _ThermostatPageState extends State<ThermostatPage> {
             ),
           ),
         ),
-        Center(
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WebViewPage(
-                    title: 'BBC Weather forecast',
-                    website: 'https://www.bbc.co.uk/weather/2642573',
-                    username: "",
-                    password: "",
-                  ),
-                ),
-              );
-            },
-            child: Text('View Forecast'),
-            style: const ButtonStyle(
-                maximumSize: MaterialStatePropertyAll(Size.fromHeight(40)),
-                textStyle:
-                    MaterialStatePropertyAll(TextStyle(color: Colors.white)),
-                backgroundColor: MaterialStatePropertyAll(Colors.lightGreen)),
-          ),
-        ),
+        //TODO: Include the get weather forecast when inappwebview supports linux app
+        // Center(
+        //   child: ElevatedButton(
+        //     onPressed: () {
+        //       Navigator.push(
+        //         context,
+        //         MaterialPageRoute(
+        //           builder: (context) => WebViewPage(
+        //             title: 'BBC Weather forecast',
+        //             website: 'https://www.bbc.co.uk/weather/2642573',
+        //             username: "",
+        //             password: "",
+        //           ),
+        //         ),
+        //       );
+        //     },
+        //     child: Text('View Forecast'),
+        //     style: const ButtonStyle(
+        //         maximumSize: MaterialStatePropertyAll(Size.fromHeight(40)),
+        //         textStyle:
+        //             MaterialStatePropertyAll(TextStyle(color: Colors.white)),
+        //         backgroundColor: MaterialStatePropertyAll(Colors.lightGreen)),
+        //   ),
+        // ),
         // ShowPirStatus(
         //   pirStr: "External",
         //   pirState: extPirState,
@@ -670,30 +671,6 @@ class _ThermostatPageState extends State<ThermostatPage> {
         // ShowDateTimeStamp(device: "External", dateTimeStamp: extLastHeardFrom),
       ]);
     }
-    // } else {
-    //   widgets.addAll([
-    //     Container(
-    //       padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-    //       child: const Text(
-    //         'Status:',
-    //         style: TextStyle(
-    //           fontSize: 14.0,
-    //           fontWeight: FontWeight.bold,
-    //         ),
-    //       ),
-    //     ),
-    //     ShowPirStatus(
-    //       pirStr: "Internal",
-    //       pirState: intPirState,
-    //     ),
-    //     ShowPirStatus(
-    //       pirStr: "External",
-    //       pirState: extPirState,
-    //     ),
-    //     ShowDateTimeStamp(device: "Thermostat", dateTimeStamp: lastHeardFrom),
-    //     ShowDateTimeStamp(device: "External", dateTimeStamp: extLastHeardFrom),
-    //   ]);
-    // }
     List<Widget> statusBoxes = [];
     if (!localUI) {
       statusBoxes.add(createStatusBox(
@@ -715,9 +692,9 @@ class _ThermostatPageState extends State<ThermostatPage> {
         alignment: Alignment.center,
         child: Wrap(
           alignment: WrapAlignment.spaceEvenly,
-          children: statusBoxes,
           spacing: 3.0,
           runSpacing: 3.0,
+          children: statusBoxes,
         ),
       ),
     );
@@ -1488,7 +1465,7 @@ class TemperatureGauge extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Outside Temp: ${extTemp > -50 ? extTemp.toStringAsFixed(1) : "??"}°C',
+                            'Outside Temp: ${extTemp != -100 ? extTemp.toStringAsFixed(1) : "??"}°C',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 15,
@@ -1497,7 +1474,7 @@ class TemperatureGauge extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Forecast: $forecastTemp°C',
+                            'Forecast: ${forecastTemp != -100 ? forecastTemp.toStringAsFixed(1) : "??"}°C',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 15,
