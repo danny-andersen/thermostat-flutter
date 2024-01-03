@@ -1534,17 +1534,12 @@ class _WebViewPageState extends State<WebViewPage> {
   HttpAuthCredentialDatabase httpAuthCredentialDatabase =
       HttpAuthCredentialDatabase.instance();
 
-  InAppWebViewGroupOptions options = InAppWebViewGroupOptions(
-      crossPlatform: InAppWebViewOptions(
-        useShouldOverrideUrlLoading: true,
-        mediaPlaybackRequiresUserGesture: false,
-      ),
-      android: AndroidInAppWebViewOptions(
-        useHybridComposition: true,
-      ),
-      ios: IOSInAppWebViewOptions(
-        allowsInlineMediaPlayback: true,
-      ));
+  InAppWebViewSettings settings = InAppWebViewSettings(
+    useShouldOverrideUrlLoading: true,
+    mediaPlaybackRequiresUserGesture: false,
+    useHybridComposition: true,
+    allowsInlineMediaPlayback: true,
+  );
 
   @override
   void initState() {
@@ -1617,8 +1612,8 @@ class _WebViewPageState extends State<WebViewPage> {
                 // },
 
                 key: webViewKey,
-                initialUrlRequest: URLRequest(url: Uri.parse(website)),
-                initialOptions: options,
+                initialUrlRequest: URLRequest(url: WebUri(website)),
+                initialSettings: settings,
                 // pullToRefreshController: pullToRefreshController,
                 onWebViewCreated: (controller) {
                   webViewController = controller;
@@ -1637,11 +1632,9 @@ class _WebViewPageState extends State<WebViewPage> {
                     urlController.text = website;
                   });
                 },
-                androidOnPermissionRequest:
-                    (controller, origin, resources) async {
-                  return PermissionRequestResponse(
-                      resources: resources,
-                      action: PermissionRequestResponseAction.GRANT);
+                onPermissionRequest: (controller, origin) async {
+                  return PermissionResponse(
+                      action: PermissionResponseAction.GRANT);
                 },
                 // shouldOverrideUrlLoading: (controller, navigationAction) async {
                 //   var uri = navigationAction.request.url!;
