@@ -1,5 +1,7 @@
-import 'package:charts_flutter_new/flutter.dart' as charts;
+// import 'package:charts_flutter_new/flutter.dart' as charts;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:format/format.dart';
 import 'dropbox-api.dart';
 import 'schedule.dart';
 import 'package:sprintf/sprintf.dart';
@@ -19,44 +21,48 @@ class SchedulePageState extends State<SchedulePage> {
   final String scheduleFilesPattern = "setSchedule.txt.";
   final String currentScheduleFile = "setSchedule.txt.current";
   final String deviceChangeFile = "device_change.txt";
-  String currentSchedulePath = "./";
 
   List<Schedule>? schedules;
   ScheduleEntry? selectedScheduleEntry;
-  List<DropdownMenuItem<ScheduleEntry>>? scheduleEntries;
+  List<DropdownMenuItem<ScheduleEntry>> scheduleEntries =
+      List.filled(0, const DropdownMenuItem(child: Text("")), growable: true);
+
   Schedule? selectedSchedule; //The schedule that was selected and graphed
   Schedule? newSchedule; //A copy of the selected schedule that has been updated
-  List<DropdownMenuItem<String>>?
-      scheduleDays; //A list of schedule days from the selected schedule file
+  List<DropdownMenuItem<String>> scheduleDays = List.filled(
+      0, const DropdownMenuItem(child: Text("")),
+      growable: true); //A list of schedule days from the selected schedule file
   ScheduleDay?
       selectedScheduleTimeRange; //Time range that has been selected to update
   List<DropdownMenuItem<ScheduleDay>>?
       timeRanges; //A list of time ranges in the selected schedule
-  String? selectedDayRange; //which day ranges has been selecteed
-  charts.Series<ValueByHour, int>? hourTempSeries;
+  String? selectedDayRange = ScheduleDay.weekDaysByInt[
+      DateTime.now().weekday]; //which day ranges has been selecteed
+
   bool showNowEnabled = false;
   bool showNowSchedulePressed = false;
-  charts.Series<ValueByHour, int>? measuredTempSeries;
-  List<charts.Series<dynamic, num>>? chartsToPlot;
+  LineChartBarData hourTempSeries = LineChartBarData();
+  LineChartBarData measuredTempSeries = LineChartBarData();
+  List<LineChartBarData> chartsToPlot =
+      List.filled(0, LineChartBarData(), growable: true);
+  List<FlSpot> hourTempList =
+      List.filled(0, const FlSpot(0, 0.0), growable: true);
+  List<FlSpot> temperatureList =
+      List.filled(0, const FlSpot(0, 0.0), growable: true);
 
   TextEditingController newTempFieldController = TextEditingController();
 
   @override
   void initState() {
     showNowEnabled = false;
-    hourTempSeries = PointsLineChart.createScheduleSeries(
-        [ValueByHour(0, 10.0), ValueByHour(2400, 10.0)], null);
-    measuredTempSeries = PointsLineChart.createMeasuredSeries(
-        [ValueByHour(0, 10.0), ValueByHour(2400, 10.0)]);
-    chartsToPlot = [hourTempSeries!, measuredTempSeries!];
+    // hourTempSeries = PointsLineChart.createScheduleSeries(
+    //     [ValueByHour(0, 10.0), ValueByHour(2400, 10.0)], null);
+    // measuredTempSeries = PointsLineChart.createMeasuredSeries(
+    //     [ValueByHour(0, 10.0), ValueByHour(2400, 10.0)]);
+    chartsToPlot = [hourTempSeries, measuredTempSeries];
     getSchedules();
     getChangeFile();
-//    this.scheduleEntries = List();
-//    this.scheduleEntries.add(DropdownMenuItem<ScheduleEntry>(value: null, child: Text('     ')));
-//    this.scheduleDays = List();
-//    this.scheduleDays.add(DropdownMenuItem<String>(value: null, child: Text('     ')));
-//    this.timeRanges = List();
-//    this.timeRanges.add(DropdownMenuItem<ScheduleDay>(value: null, child: Text('     ')));
+    // getScheduleFile("./$currentScheduleFile");
     super.initState();
   }
 
@@ -69,21 +75,19 @@ class SchedulePageState extends State<SchedulePage> {
       fileToDownload: changeFile,
       callback: processChangeFile,
       contentType: ContentType.text,
-      timeoutSecs: 300,
+      timeoutSecs: 60,
     );
   }
 
   void processChangeFile(String filename, String contents) {
-    List<ValueByHour> tempList =
-        List.filled(0, ValueByHour(0, 0), growable: true);
     double lastTemp = 10.0;
     contents.split('\n').forEach((line) {
       if (line.contains(':Temp:')) {
         try {
           List<String> parts = line.split(':');
-          int hour = int.parse(parts[0].trim());
+          int hour = getTime(parts[0].trim());
           double temp = double.parse(parts[2].trim());
-          tempList.add(ValueByHour(hour, temp));
+          temperatureList.add(FlSpot(hour.toDouble(), temp));
           lastTemp = temp;
         } on FormatException {
           print("Received incorrect temp format: $line");
@@ -94,13 +98,19 @@ class SchedulePageState extends State<SchedulePage> {
     if (lastTemp != 10.0) {
       DateTime now = DateTime.now();
       int nowHour = (now.hour * 100) + now.minute;
-      tempList.add(ValueByHour(nowHour, lastTemp));
+      temperatureList.add(FlSpot(nowHour.toDouble(), lastTemp));
     }
-    measuredTempSeries = PointsLineChart.createMeasuredSeries(tempList);
+    measuredTempSeries = LineChartBarData(
+      spots: temperatureList,
+      color: Colors.red[600],
+    );
+
     if (mounted) {
       setState(() {
-        //Convert temperatures to the series
-        chartsToPlot = [hourTempSeries!, measuredTempSeries!];
+        chartsToPlot = [
+          hourTempSeries,
+          measuredTempSeries,
+        ];
       });
     }
   }
@@ -114,23 +124,25 @@ class SchedulePageState extends State<SchedulePage> {
 
   void processScheduleFiles(FileListing files) {
     //Process each file and add to dropdown
-    scheduleEntries =
-        List.filled(0, const DropdownMenuItem(child: Text("")), growable: true);
+    scheduleEntries.clear();
     if (mounted) {
       setState(() {
+        String? currentFile;
         for (FileEntry file in files.fileEntries) {
           //      print("Adding ${file.fileName}");
           ScheduleEntry schedule = ScheduleEntry.fromFileEntry(file);
-          scheduleEntries!.add(DropdownMenuItem<ScheduleEntry>(
+          scheduleEntries.add(DropdownMenuItem<ScheduleEntry>(
             value: schedule,
             child: Text(schedule.name),
           ));
           if (file.fileName.compareTo(currentScheduleFile) == 0) {
-            currentSchedulePath = file.fullPathName;
+            currentFile = file.fullPathName;
             selectedScheduleEntry = schedule;
           }
         }
-        showNowSchedule();
+        if (currentFile != null) {
+          getScheduleFile(currentFile);
+        }
         showNowEnabled = true;
       });
     }
@@ -145,41 +157,51 @@ class SchedulePageState extends State<SchedulePage> {
       contentType: ContentType.text,
       timeoutSecs: 300,
     );
+    generateHourTempSeries(selectedDayRange!);
     if (mounted) {
       setState(() {
-        scheduleDays = null;
         selectedScheduleEntry = scheduleEntry;
-        generateHourTempSeries(selectedDayRange!);
+        chartsToPlot = [
+          hourTempSeries,
+          measuredTempSeries,
+        ];
       });
     }
   }
 
   void processScheduleFile(String filename, String contents) {
+    selectedSchedule = Schedule.fromFile(selectedScheduleEntry!, contents);
+    newSchedule = selectedSchedule!.copy();
+    Set<String> dayRangeSet = {};
+    for (ScheduleDay day in selectedSchedule!.days) {
+      dayRangeSet.add(day.dayRange);
+    }
+    for (String day in ScheduleDay.daysofWeek) {
+      dayRangeSet.add(day);
+    }
+    scheduleDays.clear();
     if (mounted) {
       setState(() {
-        selectedSchedule = Schedule.fromFile(selectedScheduleEntry!, contents);
-        newSchedule = selectedSchedule!.copy();
-        Set<String> dayRangeSet = {};
-        for (ScheduleDay day in selectedSchedule!.days) {
-          dayRangeSet.add(day.dayRange);
-        }
-        for (String day in ScheduleDay.daysofWeek) {
-          dayRangeSet.add(day);
-        }
-        scheduleDays = List.filled(0, const DropdownMenuItem(child: Text("")),
-            growable: true);
         for (String dayRange in dayRangeSet) {
           scheduleDays!.add(DropdownMenuItem<String>(
             value: dayRange,
             child: Text(dayRange),
           ));
         }
+        if (selectedDayRange != null) {
+          generateHourTempSeries(selectedDayRange!);
+          selectedScheduleEntry = selectedScheduleEntry;
+          chartsToPlot = [
+            hourTempSeries,
+            measuredTempSeries,
+          ];
+        }
       });
     }
-    if (showNowSchedulePressed) {
-      daySelected(ScheduleDay.weekDaysByInt[DateTime.now().weekday]);
-      showNowSchedulePressed = false;
-    }
+    // if (showNowSchedulePressed) {
+    //   daySelected(ScheduleDay.weekDaysByInt[DateTime.now().weekday]);
+    //   showNowSchedulePressed = false;
+    // }
   }
 
   void daySelected(String? day) {
@@ -218,54 +240,59 @@ class SchedulePageState extends State<SchedulePage> {
         selectedSchedule!.filterEntriesByDayRange(day);
     List<ValueByHour> tempPoints =
         Schedule.generateTempByHourForEntries(dayEntries);
+    hourTempList.clear();
+    tempPoints.forEach((valByHour) {
+      hourTempList.add(FlSpot(valByHour.hour.toDouble(), valByHour.value));
+    });
 //    tempPoints.forEach((th) => print("Time: ${th.hour} Temp: ${th.temperature}"));
-    hourTempSeries = PointsLineChart.createScheduleSeries(
-        tempPoints, selectedScheduleTimeRange);
-    chartsToPlot = [hourTempSeries!, measuredTempSeries!];
-  }
-
-  void showNowSchedule() {
-    showNowSchedulePressed = true;
-    DropBoxAPIFn.getDropBoxFile(
-      oauthToken: oauthToken,
-      fileToDownload: currentSchedulePath,
-      callback: processScheduleFile,
-      contentType: ContentType.text,
-      timeoutSecs: 300,
+    hourTempSeries = LineChartBarData(
+      spots: hourTempList,
+      color: Colors.blue[800],
     );
   }
 
-  dynamic onChartSelectionChanged(charts.SelectionModel model) {
-    final selectedDatum = model.selectedDatum;
-    ScheduleDay? selectedDay;
-    ScheduleDay? defaultDay;
-    if (selectedDatum.isNotEmpty) {
-      String timeStr =
-          ValueByHour.hourFormat.format(selectedDatum.first.datum.hour);
-      DateTime dtime = DateTime(2000, 1, 1, int.parse(timeStr.substring(0, 2)),
-          int.parse(timeStr.substring(2, 4)));
-//      double temp = selectedDatum.first.datum.temperature;
-//      print('$timeStr : $temp');
-      selectedSchedule!
-          .filterEntriesByDayRange(selectedDayRange!)
-          .forEach((day) {
-        if (day.isInTimeRange(dtime)) {
-          selectedDay = day;
-        } else if (day.isDefaultTimeRange()) {
-          defaultDay = day;
-        }
-      });
-    }
-    selectedDay ??= defaultDay;
-    if (mounted) {
-      setState(() {
-        selectedScheduleTimeRange = selectedDay;
-        timeRanges = getScheduleTimes();
-        generateHourTempSeries(selectedDayRange!);
-        //      print (selectedDay.getStartToEndStr());
-      });
-    }
+  void getScheduleFile(scheduleFile) {
+    showNowSchedulePressed = true;
+    DropBoxAPIFn.getDropBoxFile(
+      oauthToken: oauthToken,
+      fileToDownload: scheduleFile,
+      callback: processScheduleFile,
+      contentType: ContentType.text,
+      timeoutSecs: 60,
+    );
   }
+
+//   dynamic onChartSelectionChanged(charts.SelectionModel model) {
+//     final selectedDatum = model.selectedDatum;
+//     ScheduleDay? selectedDay;
+//     ScheduleDay? defaultDay;
+//     if (selectedDatum.isNotEmpty) {
+//       String timeStr =
+//           ValueByHour.hourFormat.format(selectedDatum.first.datum.hour);
+//       DateTime dtime = DateTime(2000, 1, 1, int.parse(timeStr.substring(0, 2)),
+//           int.parse(timeStr.substring(2, 4)));
+// //      double temp = selectedDatum.first.datum.temperature;
+// //      print('$timeStr : $temp');
+//       selectedSchedule!
+//           .filterEntriesByDayRange(selectedDayRange!)
+//           .forEach((day) {
+//         if (day.isInTimeRange(dtime)) {
+//           selectedDay = day;
+//         } else if (day.isDefaultTimeRange()) {
+//           defaultDay = day;
+//         }
+//       });
+//     }
+//     selectedDay ??= defaultDay;
+//     if (mounted) {
+//       setState(() {
+//         selectedScheduleTimeRange = selectedDay;
+//         timeRanges = getScheduleTimes();
+//         generateHourTempSeries(selectedDayRange!);
+//         //      print (selectedDay.getStartToEndStr());
+//       });
+//     }
+//   }
 
   List<DropdownMenuItem<ScheduleDay>> getScheduleTimes() {
     List<DropdownMenuItem<ScheduleDay>> retList = List.filled(
@@ -292,7 +319,7 @@ class SchedulePageState extends State<SchedulePage> {
 // //              color: Colors.blue,
 //             )),
 //       ]),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(
           padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 10.0),
           child: Text(
@@ -315,10 +342,10 @@ class SchedulePageState extends State<SchedulePage> {
           ),
         ),
       ]),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(
           padding: const EdgeInsets.only(left: 8.0, top: 0.0),
-          child: Text('Select Day Range to show: ',
+          child: Text('Select Day Range to show:    ',
               style: Theme.of(context).textTheme.bodyMedium),
         ),
         Container(
@@ -343,17 +370,16 @@ class SchedulePageState extends State<SchedulePage> {
           DefaultTextStyle.merge(
             style: const TextStyle(color: Colors.white),
             child: Container(
-              padding: const EdgeInsets.only(left: 3.0, top: 5.0, right: 0.0),
-              height: 300.0,
+              padding: const EdgeInsets.only(left: 3.0, top: 5.0, right: 20.0),
+              height: 400.0,
               width: MediaQuery.of(context).size.width,
-              //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
-              child: PointsLineChart(chartsToPlot!, onChartSelectionChanged),
+              child: PointsLineChart(chartsToPlot),
             ),
           )
         ],
       ),
       Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.max,
         children: [
           Container(
@@ -423,145 +449,117 @@ class SchedulePageState extends State<SchedulePage> {
 }
 
 class PointsLineChart extends StatelessWidget {
-  final List<charts.Series<dynamic, num>> seriesList;
-  final Function(charts.SelectionModel)? onSelectionChanged;
+  final List<LineChartBarData> seriesList;
+  // final Function(charts.SelectionModel)? onSelectionChanged;
 
-  const PointsLineChart(this.seriesList, this.onSelectionChanged, {super.key});
-
-  /// Creates a [LineChart] with sample data and no transition.
-  factory PointsLineChart.withSampleData() {
-    return PointsLineChart(_createSampleData(), null
-        // Disable animations for image tests.
-        );
-  }
+  const PointsLineChart(this.seriesList, {super.key});
 
   double getMaxValue() {
-    double maxValue = -999999999.0;
-    for (charts.Series s in seriesList)
-      for (ValueByHour point in s.data) {
-        if (point.value > maxValue) maxValue = point.value;
+    double maxValue = -999999999;
+    for (LineChartBarData s in seriesList)
+      for (FlSpot point in s.spots) {
+        if (point.y > maxValue) maxValue = point.y.ceil().toDouble();
       }
     return maxValue;
   }
 
   double getMinValue() {
     double minValue = 999999999.0;
-    for (charts.Series s in seriesList)
-      for (ValueByHour point in s.data) {
-        if (point.value < minValue) minValue = point.value;
+    for (LineChartBarData s in seriesList)
+      for (FlSpot point in s.spots) {
+        if (point.y < minValue) minValue = point.y.round().toDouble() - 1;
       }
     return minValue;
   }
 
-  charts.ChartBehavior<num> getRangeAnnotation() {
-    double minValue = getMinValue();
-    List<charts.LineAnnotationSegment<Object>> lines = List.filled(0,
-        charts.LineAnnotationSegment(0, charts.RangeAnnotationAxisType.domain),
-        growable: true);
-    int nowTime = ValueByHour.from(DateTime.now(), 0.0).hour;
-    lines.add(charts.LineAnnotationSegment(
-      nowTime,
-      charts.RangeAnnotationAxisType.domain,
-      color: charts.MaterialPalette.red.shadeDefault,
-      startLabel: ValueByHour.hourFormat.format(nowTime),
-      labelAnchor: charts.AnnotationLabelAnchor.middle,
-    ));
-    for (charts.Series s in seriesList) {
-      if (s.id.contains("Scheduled")) {
-        for (ValueByHour point in s.data) {
-          if (point.value != minValue) {
-            lines.add(charts.LineAnnotationSegment(
-                point.hour, charts.RangeAnnotationAxisType.domain,
-                startLabel: ValueByHour.hourFormat.format(point.hour),
-                color: charts.MaterialPalette.white.darker,
-                labelStyleSpec: charts.TextStyleSpec(
-                    color: charts.MaterialPalette.white.darker)));
-          }
-        }
-      }
-    }
-    return charts.RangeAnnotation(lines);
-  }
+  // charts.ChartBehavior<num> getRangeAnnotation() {
+  //   double minValue = getMinValue();
+  //   List<charts.LineAnnotationSegment<Object>> lines = List.filled(0,
+  //       charts.LineAnnotationSegment(0, charts.RangeAnnotationAxisType.domain),
+  //       growable: true);
+  //   int nowTime = ValueByHour.from(DateTime.now(), 0.0).hour;
+  //   lines.add(charts.LineAnnotationSegment(
+  //     nowTime,
+  //     charts.RangeAnnotationAxisType.domain,
+  //     color: charts.MaterialPalette.red.shadeDefault,
+  //     startLabel: ValueByHour.hourFormat.format(nowTime),
+  //     labelAnchor: charts.AnnotationLabelAnchor.middle,
+  //   ));
+  //   for (charts.Series s in seriesList) {
+  //     if (s.id.contains("Scheduled")) {
+  //       for (ValueByHour point in s.data) {
+  //         if (point.value != minValue) {
+  //           lines.add(charts.LineAnnotationSegment(
+  //               point.hour, charts.RangeAnnotationAxisType.domain,
+  //               startLabel: ValueByHour.hourFormat.format(point.hour),
+  //               color: charts.MaterialPalette.white.darker,
+  //               labelStyleSpec: charts.TextStyleSpec(
+  //                   color: charts.MaterialPalette.white.darker)));
+  //         }
+  //       }
+  //     }
+  //   }
+  //   return charts.RangeAnnotation(lines);
+  // }
 
   @override
   Widget build(BuildContext context) {
     double maxValue = getMaxValue();
-    return charts.LineChart(
-      seriesList,
-      animate: true,
-      primaryMeasureAxis: charts.NumericAxisSpec(
-        viewport: charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
-        tickProviderSpec: const charts.BasicNumericTickProviderSpec(
-            zeroBound: false, desiredTickCount: 14),
+    return LineChart(LineChartData(
+      lineBarsData: seriesList,
+      minX: 0,
+      maxX: 2400,
+      minY: 8,
+      maxY: maxValue > 20.0 ? maxValue : 20.0,
+      titlesData: FlTitlesData(
+        topTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        leftTitles: const AxisTitles(
+            // axisNameWidget: Text("\u00B0C"),
+            sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
+        rightTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        bottomTitles: AxisTitles(
+            // axisNameWidget: Text("Time"),
+            sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  // Get the formatted timestamp for the x-axis labels
+                  return Text('{:04d}'.format(value.toInt()),
+                      style: Theme.of(context)
+                          .textTheme
+                          .displaySmall!
+                          .apply(fontSizeFactor: 0.3));
+                })),
       ),
-      domainAxis: charts.NumericAxisSpec(
-        viewport: const charts.NumericExtents(0, 2400),
-        tickProviderSpec:
-            const charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
-        tickFormatterSpec:
-            charts.BasicNumericTickFormatterSpec.fromNumberFormat(
-                ValueByHour.hourFormat),
-      ),
-      defaultRenderer: charts.LineRendererConfig(includePoints: true),
-      selectionModels: [
-        charts.SelectionModelConfig(
-          type: charts.SelectionModelType.info,
-          changedListener: onSelectionChanged,
-        )
-      ],
-      behaviors: [
-        getRangeAnnotation(),
-      ],
-    );
-  }
-
-  static charts.Series<ValueByHour, int> createScheduleSeries(
-      List<ValueByHour> timeTempPoints, ScheduleDay? selectedDay) {
-    return charts.Series<ValueByHour, int>(
-      id: 'Scheduled',
-      colorFn: ((ValueByHour tempByHour, __) {
-        charts.Color color;
-        DateTime hourTime = ScheduleDay.hourToDateTime(tempByHour.hour);
-        if (selectedDay != null && selectedDay.isInTimeRange(hourTime)) {
-          color = charts.MaterialPalette.red.shadeDefault;
-        } else {
-          color = charts.MaterialPalette.blue.shadeDefault;
-        }
-        return color;
-      }),
-      domainFn: (ValueByHour tt, _) => tt.hour,
-      measureFn: (ValueByHour tt, _) => tt.value,
-      data: timeTempPoints,
-    );
-  }
-
-  static charts.Series<ValueByHour, int> createMeasuredSeries(
-      List<ValueByHour> timeTempPoints) {
-    return charts.Series<ValueByHour, int>(
-      id: 'Measured',
-      colorFn: ((ValueByHour tempByHour, __) {
-        charts.Color color;
-        color = charts.MaterialPalette.green.shadeDefault;
-        return color;
-      }),
-      domainFn: (ValueByHour tt, _) => tt.hour,
-      measureFn: (ValueByHour tt, _) => tt.value,
-      data: timeTempPoints,
-    );
-  }
-
-  /// Create one series with sample hard coded data.
-  static List<charts.Series<ValueByHour, int>> _createSampleData() {
-    final data = [
-      ValueByHour(900, 17.0),
-      ValueByHour(1100, 17.0),
-      ValueByHour(1115, 10.0),
-      ValueByHour(1629, 10.0),
-      ValueByHour(1630, 18.5),
-      ValueByHour(2200, 18.5),
-      ValueByHour(2201, 10.0),
-    ];
-
-    return [createScheduleSeries(data, null)];
+    ));
+    // return charts.LineChart(
+    //   seriesList,
+    //   animate: true,
+    //   primaryMeasureAxis: charts.NumericAxisSpec(
+    //     viewport: charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
+    //     tickProviderSpec: const charts.BasicNumericTickProviderSpec(
+    //         zeroBound: false, desiredTickCount: 14),
+    //   ),
+    //   domainAxis: charts.NumericAxisSpec(
+    //     viewport: const charts.NumericExtents(0, 2400),
+    //     tickProviderSpec:
+    //         const charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
+    //     tickFormatterSpec:
+    //         charts.BasicNumericTickFormatterSpec.fromNumberFormat(
+    //             ValueByHour.hourFormat),
+    //   ),
+    //   defaultRenderer: charts.LineRendererConfig(includePoints: true),
+    //   selectionModels: [
+    //     charts.SelectionModelConfig(
+    //       type: charts.SelectionModelType.info,
+    //       changedListener: onSelectionChanged,
+    //     )
+    //   ],
+    //   behaviors: [
+    //     getRangeAnnotation(),
+    //   ],
+    // );
   }
 }

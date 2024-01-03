@@ -48,7 +48,7 @@ class WhoPageState extends State<WhoPage> {
     DateTime now = DateTime.now();
     todayFile = sprintf(
         "%s%02i%02i%s", [now.year, now.month, now.day, "_device_change.txt"]);
-    newChangeFileSelected(todayFile);
+    getChangeFile(todayFile);
     super.initState();
   }
 
@@ -77,18 +77,18 @@ class WhoPageState extends State<WhoPage> {
 
   void newChangeFileSelected(String? changeFile) {
     if (changeFile != null) {
-      bool inList = false;
-      String dateStr = changeFile.split('_')[0];
-      changeEntries ??= [
-        DropdownMenuItem<String>(value: changeFile, child: Text(dateStr))
-      ];
-      changeEntries!.forEach((entry) {
-        if (entry.value == changeFile) inList = true;
-      });
-      if (!inList) {
-        changeEntries!.add(
-            DropdownMenuItem<String>(value: changeFile, child: Text(dateStr)));
-      }
+      // bool inList = false;
+      // String dateStr = changeFile.split('_')[0];
+      // changeEntries ??= [
+      //   DropdownMenuItem<String>(value: changeFile, child: Text(dateStr))
+      // ];
+      // changeEntries!.forEach((entry) {
+      //   if (entry.value == changeFile) inList = true;
+      // });
+      // if (!inList) {
+      //   changeEntries!.add(
+      //       DropdownMenuItem<String>(value: changeFile, child: Text(dateStr)));
+      // }
       selectedDate = changeFile;
       getChangeFile(changeFile);
     }
@@ -108,7 +108,9 @@ class WhoPageState extends State<WhoPage> {
             DropdownMenuItem<String>(value: fileName, child: Text(dateStr)));
       }
     }
-
+    String dateStr = todayFile.split('_')[0];
+    entries.insert(
+        0, DropdownMenuItem<String>(value: todayFile, child: Text(dateStr)));
     if (mounted) {
       setState(() {
         changeEntries = entries;
@@ -302,7 +304,7 @@ class WhoPageState extends State<WhoPage> {
         Container(
             padding: const EdgeInsets.only(top: 8.0),
             child: Text(
-              'Who\'s home on ${(selectedDate != null ? formattedDateStr(selectedDate!) : '')}',
+              'Who\'s home on ${(selectedDate != null ? formattedDateStr(selectedDate!) : formattedDateStr(todayFile))}',
               style: const TextStyle(
                 fontSize: 20,
                 color: Colors.grey,

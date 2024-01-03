@@ -68,7 +68,7 @@ class HistoryPageState extends State<HistoryPage> {
         "%s%02i%02i%s", [now.year, now.month, now.day, deviceChangePattern]);
     // selectedDate = sprintf("%s%02i%02i", [now.year, now.month, now.day]);
     getChangeFileList();
-    newChangeFileSelected(todayFile);
+    getChangeFile(todayFile);
     super.initState();
   }
 
@@ -97,18 +97,18 @@ class HistoryPageState extends State<HistoryPage> {
 
   void newChangeFileSelected(String? changeFile) {
     if (changeFile != null) {
-      bool inList = false;
-      String dateStr = changeFile.split('_')[0];
-      changeEntries ??= [
-        DropdownMenuItem<String>(value: changeFile, child: Text(dateStr))
-      ];
-      changeEntries!.forEach((entry) {
-        if (entry.value == changeFile) inList = true;
-      });
-      if (!inList) {
-        changeEntries!.add(
-            DropdownMenuItem<String>(value: changeFile, child: Text(dateStr)));
-      }
+      // bool inList = false;
+      // String dateStr = changeFile.split('_')[0];
+      // changeEntries ??= [
+      //   DropdownMenuItem<String>(value: changeFile, child: Text(dateStr))
+      // ];
+      // changeEntries!.forEach((entry) {
+      //   if (entry.value == changeFile) inList = true;
+      // });
+      // if (!inList) {
+      //   changeEntries!.add(
+      //       DropdownMenuItem<String>(value: changeFile, child: Text(dateStr)));
+      // }
       selectedDate = changeFile;
       getChangeFile(changeFile);
     }
@@ -271,6 +271,9 @@ class HistoryPageState extends State<HistoryPage> {
       String dateStr = fileName.split('_')[0];
       return DropdownMenuItem<String>(value: fileName, child: Text(dateStr));
     });
+    String dateStr = todayFile.split('_')[0];
+    entries.insert(
+        0, DropdownMenuItem<String>(value: todayFile, child: Text(dateStr)));
     if (mounted) {
       setState(() {
         changeEntries = entries;
@@ -324,7 +327,7 @@ class HistoryPageState extends State<HistoryPage> {
         Container(
           padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 5.0),
           child: Text(
-            "${(selectedDate != null ? formattedDateStr(selectedDate!) : '')}",
+            "${(selectedDate != null ? formattedDateStr(selectedDate!) : formattedDateStr(todayFile))}",
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         )
