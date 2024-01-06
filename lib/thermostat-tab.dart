@@ -110,7 +110,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   ];
   final String setTempFile = "/setTemp.txt";
   final String localSetTempFile = "/home/danny/thermostat/setTemp.txt";
-  final String localForecastExt = "/home/danny/thermostat/extTemp.txt";
+  final String localForecastExt = "/home/danny/thermostat/setExtTemp.txt";
   final String localMotd = "/home/danny/thermostat/motd.txt";
   final int STATION_WITH_EXT_TEMP = 2;
   double currentTemp = 0.0;
@@ -142,7 +142,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   @override
   void initState() {
-    timer = Timer.periodic(const Duration(seconds: 30), refreshStatus);
+    timer = Timer.periodic(Duration(seconds: localUI ? 1 : 30), refreshStatus);
     refreshStatus(timer);
     NetworkInterface.list().then((interfaces) {
       for (NetworkInterface interface in interfaces) {
@@ -622,7 +622,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           padding: const EdgeInsets.only(left: 8.0, top: 8.0),
           alignment: Alignment.center,
           child: Text(
-            "$motdStr",
+            motdStr,
             style: TextStyle(
               fontSize: 18.0,
               fontWeight: FontWeight.bold,
