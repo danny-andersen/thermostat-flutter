@@ -183,7 +183,7 @@ class SchedulePageState extends State<SchedulePage> {
     if (mounted) {
       setState(() {
         for (String dayRange in dayRangeSet) {
-          scheduleDays!.add(DropdownMenuItem<String>(
+          scheduleDays.add(DropdownMenuItem<String>(
             value: dayRange,
             child: Text(dayRange),
           ));
@@ -241,9 +241,9 @@ class SchedulePageState extends State<SchedulePage> {
     List<ValueByHour> tempPoints =
         Schedule.generateTempByHourForEntries(dayEntries);
     hourTempList.clear();
-    tempPoints.forEach((valByHour) {
+    for (var valByHour in tempPoints) {
       hourTempList.add(FlSpot(valByHour.hour.toDouble(), valByHour.value));
-    });
+    }
 //    tempPoints.forEach((th) => print("Time: ${th.hour} Temp: ${th.temperature}"));
     hourTempSeries = LineChartBarData(
       spots: hourTempList,

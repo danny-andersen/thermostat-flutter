@@ -623,7 +623,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           alignment: Alignment.center,
           child: Text(
             motdStr,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18.0,
               fontWeight: FontWeight.bold,
             ),
@@ -634,7 +634,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           alignment: Alignment.center,
           child: Text(
             "Wind Speed: $windStr",
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18.0,
               fontWeight: FontWeight.bold,
             ),
@@ -1502,7 +1502,7 @@ class TemperatureGauge extends StatelessWidget {
 }
 
 class WebViewPage extends StatefulWidget {
-  WebViewPage(
+  const WebViewPage(
       {super.key,
       required this.title,
       required this.website,

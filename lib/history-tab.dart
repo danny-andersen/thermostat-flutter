@@ -327,7 +327,7 @@ class HistoryPageState extends State<HistoryPage> {
         Container(
           padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 5.0),
           child: Text(
-            "${(selectedDate != null ? formattedDateStr(selectedDate!) : formattedDateStr(todayFile))}",
+            (selectedDate != null ? formattedDateStr(selectedDate!) : formattedDateStr(todayFile)),
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         )
