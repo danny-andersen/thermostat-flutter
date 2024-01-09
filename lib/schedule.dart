@@ -136,6 +136,13 @@ int getTime(String timeStr) {
   return time;
 }
 
+String getTimeStr(double time) {
+  String hourStr = (time ~/ 100).toStringAsFixed(0);
+  int hours = int.parse(hourStr) * 100;
+  String minStr = (60 * (time - hours) / 100).toStringAsFixed(0);
+  return "$hourStr:$minStr";
+}
+
 //Schedule is a simple list of ScheduleDay entries
 class Schedule {
   //The dropbox file holding this schedule

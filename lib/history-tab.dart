@@ -327,7 +327,9 @@ class HistoryPageState extends State<HistoryPage> {
         Container(
           padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 5.0),
           child: Text(
-            (selectedDate != null ? formattedDateStr(selectedDate!) : formattedDateStr(todayFile)),
+            (selectedDate != null
+                ? formattedDateStr(selectedDate!)
+                : formattedDateStr(todayFile)),
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         )
@@ -649,6 +651,32 @@ class HistoryLineChart extends StatelessWidget {
       maxX: 2400,
       minY: minValue,
       maxY: maxValue,
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          maxContentWidth: 100,
+          tooltipBgColor: Colors.black,
+          getTooltipItems: (touchedSpots) {
+            return touchedSpots.map((LineBarSpot touchedSpot) {
+              final textStyle = TextStyle(
+                color: touchedSpot.bar.gradient?.colors[0] ??
+                    touchedSpot.bar.color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              );
+              return LineTooltipItem(
+                '${touchedSpot.y.toStringAsFixed(1)}${([
+                  1,
+                  3
+                ].contains(touchedSpot.barIndex)) ? '%' : '°C'}@${getTimeStr(touchedSpot.x)}',
+                textStyle,
+              );
+            }).toList();
+          },
+        ),
+        handleBuiltInTouches: true,
+        getTouchLineStart: (data, index) => 0,
+      ),
+      // showingTooltipIndicators:
       titlesData: FlTitlesData(
         topTitles: const AxisTitles(
           sideTitles: SideTitles(showTitles: false),
