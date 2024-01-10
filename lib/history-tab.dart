@@ -667,7 +667,7 @@ class HistoryLineChart extends StatelessWidget {
                 '${touchedSpot.y.toStringAsFixed(1)}${([
                   1,
                   3
-                ].contains(touchedSpot.barIndex)) ? '%' : '°C'}@${getTimeStr(touchedSpot.x)}',
+                ].contains(touchedSpot.barIndex)) ? '%' : '°C'}@${getTimeStrFromFraction(touchedSpot.x)}',
                 textStyle,
               );
             }).toList();

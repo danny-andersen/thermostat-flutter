@@ -511,6 +511,26 @@ class PointsLineChart extends StatelessWidget {
       maxX: 2400,
       minY: 8,
       maxY: maxValue > 20.0 ? maxValue : 20.0,
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          maxContentWidth: 100,
+          tooltipBgColor: Colors.black,
+          getTooltipItems: (touchedSpots) {
+            return touchedSpots.map((LineBarSpot touchedSpot) {
+              final textStyle = TextStyle(
+                color: touchedSpot.bar.gradient?.colors[0] ??
+                    touchedSpot.bar.color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              );
+              return LineTooltipItem(
+                '${touchedSpot.y.toStringAsFixed(1)}°C@${getTimeStrFromFraction(touchedSpot.x)}',
+                textStyle,
+              );
+            }).toList();
+          },
+        ),
+      ),
       titlesData: FlTitlesData(
         topTitles: const AxisTitles(
           sideTitles: SideTitles(showTitles: false),

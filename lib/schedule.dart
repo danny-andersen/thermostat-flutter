@@ -12,8 +12,9 @@ class ValueByHour {
   }
   static final NumberFormat hourFormat = NumberFormat('0000', 'en_US');
   static getHourInt(DateTime time) {
-    String tStr = sprintf("%2i%02i", [time.hour, time.minute]);
-    int hour = int.parse(tStr);
+    // String tStr = sprintf("%2i%02i", [time.hour, time.minute]);
+    // int hour = int.parse(tStr);
+    int hour = time.hour * 100 + (time.minute * 100 ~/ 60);
     return hour;
   }
 }
@@ -136,11 +137,18 @@ int getTime(String timeStr) {
   return time;
 }
 
-String getTimeStr(double time) {
-  String hourStr = (time ~/ 100).toStringAsFixed(0);
-  int hours = int.parse(hourStr) * 100;
-  String minStr = (60 * (time - hours) / 100).toStringAsFixed(0);
-  return "$hourStr:$minStr";
+String getTimeStrFromFraction(double time) {
+  //Time is a double as hours and mins as a decimal fraction
+  int hours = (time ~/ 100);
+  int mins = 60 * (time - (hours * 100)) ~/ 100;
+  return sprintf("%02i:%02i", [hours, mins]);
+}
+
+String getTimeStrFromHoursMins(double time) {
+  //time is a double with HHMM format
+  int hours = (time ~/ 100);
+  int mins = (time - (hours * 100)).toInt();
+  return sprintf("%02i:%02i", [hours, mins]);
 }
 
 //Schedule is a simple list of ScheduleDay entries
@@ -213,7 +221,7 @@ class Schedule {
     double currentTemp = getCurrentTemp(currentTime, entries);
     retEntries.add(ValueByHour.from(currentTime, currentTemp));
     do {
-      DateTime newTime = currentTime.add(const Duration(minutes: 5));
+      DateTime newTime = currentTime.add(const Duration(minutes: 1));
       double newTemp = getCurrentTemp(newTime, entries);
       if (newTemp != currentTemp) {
         //Create an entry at old temp and new temp
