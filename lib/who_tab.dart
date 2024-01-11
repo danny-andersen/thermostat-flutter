@@ -137,14 +137,16 @@ class WhoPageState extends State<WhoPage> {
           String device = (parts[3].trim());
           DeviceByHour dbh = DeviceByHour(time, device, event);
           if (lastDeviceTime.containsKey(device)) {
-            //Filter events that are spurious
+            //Filter events that are spurious, which are events that Gone then New
             DeviceByHour? lastTime = lastDeviceTime[device];
             lastTime ??= DeviceByHour(0, "", false);
-            if (time - 5 > lastTime.hour) {
-              whoList.add(dbh);
-            } else {
-              //Cancel out the previous event
+            if (time - 5 < lastTime.hour && (event && !lastTime.event)) {
+              //Last event was a "Gone" and this event was "New"
+              //Cancel out the previous event and dont add this one
               whoList.remove(lastTime);
+            } else {
+              //Event is OK
+              whoList.add(dbh);
             }
           } else {
             whoList.add(dbh);
