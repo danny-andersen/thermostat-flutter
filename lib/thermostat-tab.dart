@@ -204,8 +204,17 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   void refreshStatus(Timer timer) {
     // getSetTemp();
-    getStatus();
-    getExternalStatus();
+    bool updateState = true;
+    if (localUI) {
+      //Check that thermostat has turned backlight on
+      //if not then do nothing as display not visible
+      updateState = FileStat.statSync(localDisplayOnFile).type !=
+          FileSystemEntityType.notFound;
+    }
+    if (updateState) {
+      getStatus();
+      getExternalStatus();
+    }
     if (!timer.isActive) {
       timer = Timer.periodic(
           localUI
@@ -217,36 +226,30 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   void getStatus() {
     if (localUI) {
-      //Check that thermostat has turned backlight on
-      //if not then do nothing as display not visible
-      bool displayOn = FileStat.statSync(localDisplayOnFile).type !=
-          FileSystemEntityType.notFound;
-      if (displayOn) {
-        FileStat statusStat = FileStat.statSync(localStatusFile);
-        FileStat motdStat = FileStat.statSync(localMotd);
-        FileStat fcStat = FileStat.statSync(localForecastExt);
-        //Only update state (and so the display) if something has changed
-        if (statusStat.changed.isAfter(lastStatusReadTime) ||
-            motdStat.changed.isAfter(lastMotdReadTime) ||
-            fcStat.changed.isAfter(lastForecastReadTime)) {
-          setState(() {
-            if (statusStat.changed.isAfter(lastStatusReadTime)) {
-              String statusStr = File(localStatusFile).readAsStringSync();
-              processStatus(localStatusFile, statusStr);
-              lastStatusReadTime = statusStat.changed;
-            }
-            if (motdStat.changed.isAfter(lastMotdReadTime)) {
-              String contents = File(localMotd).readAsStringSync();
-              motdStr = contents.split('\n')[0];
-              lastMotdReadTime = motdStat.changed;
-            }
-            if (fcStat.changed.isAfter(lastForecastReadTime)) {
-              String contents = File(localForecastExt).readAsStringSync();
-              processForecast(contents);
-              lastForecastReadTime = fcStat.changed;
-            }
-          });
-        }
+      FileStat statusStat = FileStat.statSync(localStatusFile);
+      FileStat motdStat = FileStat.statSync(localMotd);
+      FileStat fcStat = FileStat.statSync(localForecastExt);
+      //Only update state (and so the display) if something has changed
+      if (statusStat.changed.isAfter(lastStatusReadTime) ||
+          motdStat.changed.isAfter(lastMotdReadTime) ||
+          fcStat.changed.isAfter(lastForecastReadTime)) {
+        setState(() {
+          if (statusStat.changed.isAfter(lastStatusReadTime)) {
+            String statusStr = File(localStatusFile).readAsStringSync();
+            processStatus(localStatusFile, statusStr);
+            lastStatusReadTime = statusStat.changed;
+          }
+          if (motdStat.changed.isAfter(lastMotdReadTime)) {
+            String contents = File(localMotd).readAsStringSync();
+            motdStr = contents.split('\n')[0];
+            lastMotdReadTime = motdStat.changed;
+          }
+          if (fcStat.changed.isAfter(lastForecastReadTime)) {
+            String contents = File(localForecastExt).readAsStringSync();
+            processForecast(contents);
+            lastForecastReadTime = fcStat.changed;
+          }
+        });
       }
     } else {
       DropBoxAPIFn.getDropBoxFile(
