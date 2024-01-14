@@ -635,7 +635,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           child: Text(
             motdStr,
             style: const TextStyle(
-              fontSize: 18.0,
+              fontSize: 24.0,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -646,7 +646,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
           child: Text(
             "Wind Speed: $windStr",
             style: const TextStyle(
-              fontSize: 18.0,
+              fontSize: 24.0,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -675,11 +675,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
         //         backgroundColor: MaterialStatePropertyAll(Colors.lightGreen)),
         //   ),
         // ),
-        // ShowPirStatus(
-        //   pirStr: "External",
-        //   pirState: extPirState,
-        // ),
-        // ShowDateTimeStamp(device: "External", dateTimeStamp: extLastHeardFrom),
+        SizedBox(height: 150),
       ]);
     }
     List<Widget> statusBoxes = [];

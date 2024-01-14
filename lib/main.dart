@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter/foundation.dart';
@@ -58,9 +59,6 @@ class MyAppState extends State<MyApp> {
     if (thermStat.type != FileSystemEntityType.notFound) {
       localUI = true;
     }
-    //This is for just debugging thermostat UI on an emulator
-    //TODO: remove
-    // localUI = true;
     Future<Secret> secret =
         SecretLoader(secretPath: "assets/api-key.json").load();
     secret.then((Secret secret) {
@@ -107,7 +105,8 @@ class MyAppState extends State<MyApp> {
           length: 6,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('Thermostat'),
+              title: localUI ? DateTimeWidget() : const Text('Thermostat'),
+              centerTitle: true,
               automaticallyImplyLeading: false,
               bottom: const TabBar(
                 isScrollable: true,
@@ -196,5 +195,44 @@ class Secret {
         password: jsonMap["password"],
         extHost: jsonMap["extHost"],
         startPort: jsonMap["startPort"]);
+  }
+}
+
+class DateTimeWidget extends StatefulWidget {
+  @override
+  _DateTimeWidgetState createState() => _DateTimeWidgetState();
+}
+
+class _DateTimeWidgetState extends State<DateTimeWidget> {
+  late String _currentDateTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateDateTime();
+    // Update the date and time every second
+    Timer.periodic(Duration(seconds: 1), (timer) {
+      _updateDateTime();
+    });
+  }
+
+  void _updateDateTime() {
+    setState(() {
+      _currentDateTime = DateFormat('dd MMMM yyyy             HH:mm:ss')
+          .format(DateTime.now());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          _currentDateTime,
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
   }
 }
