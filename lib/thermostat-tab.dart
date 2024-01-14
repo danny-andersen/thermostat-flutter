@@ -112,6 +112,7 @@ class _ThermostatPageState extends State<ThermostatPage> {
   final String localSetTempFile = "/home/danny/thermostat/setTemp.txt";
   final String localForecastExt = "/home/danny/thermostat/setExtTemp.txt";
   final String localMotd = "/home/danny/thermostat/motd.txt";
+  final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
   final int STATION_WITH_EXT_TEMP = 2;
   double currentTemp = 0.0;
   DateTime lastStatusReadTime = DateTime(2000);
@@ -216,27 +217,36 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   void getStatus() {
     if (localUI) {
-      if (mounted) {
-        setState(() {
-          FileStat stat = FileStat.statSync(localStatusFile);
-          if (stat.changed.isAfter(lastStatusReadTime)) {
-            String statusStr = File(localStatusFile).readAsStringSync();
-            processStatus(localStatusFile, statusStr);
-            lastStatusReadTime = stat.changed;
-          }
-          stat = FileStat.statSync(localMotd);
-          if (stat.changed.isAfter(lastMotdReadTime)) {
-            String contents = File(localMotd).readAsStringSync();
-            motdStr = contents.split('\n')[0];
-            lastMotdReadTime = stat.changed;
-          }
-          stat = FileStat.statSync(localForecastExt);
-          if (stat.changed.isAfter(lastForecastReadTime)) {
-            String contents = File(localForecastExt).readAsStringSync();
-            processForecast(contents);
-            lastForecastReadTime = stat.changed;
-          }
-        });
+      //Check that thermostat has turned backlight on
+      //if not then do nothing as display not visible
+      bool displayOn = FileStat.statSync(localDisplayOnFile).type !=
+          FileSystemEntityType.notFound;
+      if (displayOn) {
+        FileStat statusStat = FileStat.statSync(localStatusFile);
+        FileStat motdStat = FileStat.statSync(localMotd);
+        FileStat fcStat = FileStat.statSync(localForecastExt);
+        //Only update state (and so the display) if something has changed
+        if (statusStat.changed.isAfter(lastStatusReadTime) ||
+            motdStat.changed.isAfter(lastMotdReadTime) ||
+            fcStat.changed.isAfter(lastForecastReadTime)) {
+          setState(() {
+            if (statusStat.changed.isAfter(lastStatusReadTime)) {
+              String statusStr = File(localStatusFile).readAsStringSync();
+              processStatus(localStatusFile, statusStr);
+              lastStatusReadTime = statusStat.changed;
+            }
+            if (motdStat.changed.isAfter(lastMotdReadTime)) {
+              String contents = File(localMotd).readAsStringSync();
+              motdStr = contents.split('\n')[0];
+              lastMotdReadTime = motdStat.changed;
+            }
+            if (fcStat.changed.isAfter(lastForecastReadTime)) {
+              String contents = File(localForecastExt).readAsStringSync();
+              processForecast(contents);
+              lastForecastReadTime = fcStat.changed;
+            }
+          });
+        }
       }
     } else {
       DropBoxAPIFn.getDropBoxFile(
@@ -251,16 +261,14 @@ class _ThermostatPageState extends State<ThermostatPage> {
 
   void getExternalStatus() {
     if (localUI) {
-      if (mounted) {
-        for (final extfile in localExternalstatusFile) {
-          FileStat stat = FileStat.statSync(extfile);
-          DateTime? lastTime = lastExtReadTime[extfile];
-          lastTime ??= DateTime(2000);
-          if (stat.changed.isAfter(lastTime)) {
-            String statusStr = File(extfile).readAsStringSync();
-            processExternalStatus(extfile, statusStr);
-            lastExtReadTime[extfile] = stat.changed;
-          }
+      for (final extfile in localExternalstatusFile) {
+        FileStat stat = FileStat.statSync(extfile);
+        DateTime? lastTime = lastExtReadTime[extfile];
+        lastTime ??= DateTime(2000);
+        if (stat.changed.isAfter(lastTime)) {
+          String statusStr = File(extfile).readAsStringSync();
+          processExternalStatus(extfile, statusStr);
+          lastExtReadTime[extfile] = stat.changed;
         }
       }
     } else {
