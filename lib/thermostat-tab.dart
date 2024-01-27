@@ -87,13 +87,6 @@ class ThermostatStatus {
     intPirState = oldState.intPirState;
     intPirLastEvent = oldState.intPirLastEvent;
 
-    extTemp = oldState.extTemp;
-    lastExtReadTime = oldState.lastExtReadTime;
-    extHumidity = oldState.extHumidity;
-    extLastHeardFrom = oldState.extLastHeardFrom;
-    extPirState = oldState.extPirState;
-    extPirLastEvent = oldState.extPirLastEvent;
-
     boilerOn = oldState.boilerOn;
     minsToSetTemp = oldState.minsToSetTemp;
 
@@ -116,23 +109,39 @@ class ThermostatStatus {
   bool intPirState = false;
   String intPirLastEvent = "";
 
-  Map<int, double> extTemp = {2: -100.0, 4: -100.0};
-  Map<String, DateTime> lastExtReadTime = {};
-  Map<int, double> extHumidity = {2: 0.0, 4: 0.0};
-  Map<int, DateTime?> extLastHeardFrom = {4: null, 3: null, 2: null};
-  Map<int, bool> extPirState = {4: false, 3: false, 2: false};
-  Map<int, String> extPirLastEvent = {4: "", 3: "", 2: ""};
-
   bool boilerOn = false;
   int minsToSetTemp = 0;
 
   bool requestOutstanding = false;
 }
 
+class CameraStatus {
+  CameraStatus({required this.localUI});
+  CameraStatus.fromStatus(CameraStatus oldState) {
+    localUI = oldState.localUI;
+    oauthToken = oldState.oauthToken;
+
+    extTemp = oldState.extTemp;
+    lastExtReadTime = oldState.lastExtReadTime;
+    extHumidity = oldState.extHumidity;
+    extLastHeardFrom = oldState.extLastHeardFrom;
+    extPirState = oldState.extPirState;
+    extPirLastEvent = oldState.extPirLastEvent;
+  }
+
+  late bool localUI;
+  String oauthToken = "";
+
+  Map<int, double> extTemp = {2: -100.0, 4: -100.0};
+  Map<String, DateTime> lastExtReadTime = {};
+  Map<int, double> extHumidity = {2: 0.0, 4: 0.0};
+  Map<int, DateTime?> extLastHeardFrom = {4: null, 3: null, 2: null};
+  Map<int, bool> extPirState = {4: false, 3: false, 2: false};
+  Map<int, String> extPirLastEvent = {4: "", 3: "", 2: ""};
+}
+
 @riverpod
-class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
-  final String statusFile = "/thermostat_status.txt";
-  final String localStatusFile = "/home/danny/thermostat/status.txt";
+class CameraStatusNotifier extends _$CameraStatusNotifier {
   final List<String> externalstatusFile = [
     "/2_status.txt",
     "/3_status.txt",
@@ -143,6 +152,127 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
     "/home/danny/control_station/3_status.txt",
     "/home/danny/control_station/4_status.txt",
   ];
+  final int STATION_WITH_EXT_TEMP = 2;
+  final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
+
+  late CameraStatus newState;
+
+  @override
+  CameraStatus build() {
+    //Determine if running local to thermostat by the presence of the thermostat dir
+    bool local = false;
+    FileStat thermStat = FileStat.statSync("/home/danny/thermostat");
+    if (thermStat.type != FileSystemEntityType.notFound) {
+      local = true;
+    }
+    CameraStatus status = CameraStatus(localUI: local);
+    return status;
+  }
+
+  void refreshStatus() {
+    // getSetTemp();
+    bool updateState = true;
+    if (state.localUI) {
+      //Check that thermostat has turned backlight on
+      //if not then do nothing as display not visible
+      updateState = FileStat.statSync(localDisplayOnFile).type !=
+          FileSystemEntityType.notFound;
+    }
+    if (updateState) {
+      newState = CameraStatus.fromStatus(state);
+      getExternalStatus();
+    }
+  }
+
+  void getExternalStatus() {
+    if (state.localUI) {
+      bool changed = false;
+      for (final extfile in localExternalstatusFile) {
+        FileStat stat = FileStat.statSync(extfile);
+        DateTime? lastTime = state.lastExtReadTime[extfile];
+        lastTime ??= DateTime(2000);
+        if (stat.changed.isAfter(lastTime)) {
+          String statusStr = File(extfile).readAsStringSync();
+          processExternalStatus(extfile, statusStr);
+          newState.lastExtReadTime[extfile] = stat.changed;
+          changed = true;
+        }
+      }
+      if (changed) {
+        state = newState;
+      }
+    } else {
+      for (final extfile in externalstatusFile) {
+        DropBoxAPIFn.getDropBoxFile(
+          // oauthToken: state.oauthToken,
+          fileToDownload: extfile,
+          callback: processExternalStatus,
+          contentType: ContentType.text,
+          timeoutSecs: 5,
+        );
+      }
+    }
+  }
+
+  void processExternalStatus(String filename, String contents) {
+    int stationNo = STATION_WITH_EXT_TEMP;
+    if (filename != "") {
+      //Retrieve station number from file name
+      List<String> parts = filename.split('/');
+      stationNo = int.parse(parts[parts.length - 1].split('_')[0]);
+    }
+    bool changed = false;
+    contents.split('\n').forEach((line) {
+      double? newExtTemp = state.extTemp[stationNo];
+      if (line.startsWith('Current temp:')) {
+        try {
+          newExtTemp = double.parse(line.split(':')[1].trim());
+        } on FormatException {
+          print("Received non-double External temp format: $line");
+        }
+        if (newExtTemp != null && newExtTemp != state.extTemp[stationNo]) {
+          newState.extTemp[stationNo] = newExtTemp;
+          state.extTemp[stationNo] = newExtTemp;
+          changed = true;
+        }
+      } else if (line.startsWith('Last heard time')) {
+        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
+        DateTime newExtLastHeard = DateTime.parse(dateStr);
+        if (newExtLastHeard != state.extLastHeardFrom[stationNo]) {
+          newState.extLastHeardFrom[stationNo] = newExtLastHeard;
+          state.extLastHeardFrom[stationNo] = newExtLastHeard;
+          changed = true;
+        }
+      } else if (line.startsWith('Current humidity')) {
+        String str = line.substring(line.indexOf(':') + 2, line.length);
+        double newExtHumid = double.parse(str);
+        if (newExtHumid != state.extHumidity[stationNo]) {
+          newState.extHumidity[stationNo] = newExtHumid;
+          state.extHumidity[stationNo] = newExtHumid;
+          changed = true;
+        }
+      } else if (line.startsWith('Last PIR')) {
+        String lastEvent = line.substring(line.indexOf(':') + 1, line.length);
+        newState.extPirLastEvent[stationNo] = lastEvent;
+        state.extPirLastEvent[stationNo] = lastEvent;
+      } else if (line.startsWith('PIR:')) {
+        String str = line.substring(line.indexOf(':') + 1, line.length);
+        newState.extPirState[stationNo] = str.contains('1');
+        state.extPirState[stationNo] = str.contains('1');
+      }
+    });
+    if (changed) {
+      //Trigger rebuild
+      state = newState;
+    }
+  }
+}
+
+@riverpod
+class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
+  final String statusFile = "/thermostat_status.txt";
+  final String localStatusFile = "/home/danny/thermostat/status.txt";
+
   final String setTempFile = "/setTemp.txt";
   final String localSetTempFile = "/home/danny/thermostat/setTemp.txt";
   final String localForecastExt = "/home/danny/thermostat/setExtTemp.txt";
@@ -150,7 +280,6 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
   final String boostFile = "/boost.txt";
   final String localBoostFile = "/home/danny/thermostat/boost.txt";
-  final int STATION_WITH_EXT_TEMP = 2;
 
   late ThermostatStatus newState;
 
@@ -178,7 +307,6 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
     if (updateState) {
       newState = ThermostatStatus.fromStatus(state);
       getStatus();
-      getExternalStatus();
     }
   }
 
@@ -226,36 +354,6 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         contentType: ContentType.text,
         timeoutSecs: 5,
       );
-    }
-  }
-
-  void getExternalStatus() {
-    if (state.localUI) {
-      bool changed = false;
-      for (final extfile in localExternalstatusFile) {
-        FileStat stat = FileStat.statSync(extfile);
-        DateTime? lastTime = state.lastExtReadTime[extfile];
-        lastTime ??= DateTime(2000);
-        if (stat.changed.isAfter(lastTime)) {
-          String statusStr = File(extfile).readAsStringSync();
-          processExternalStatus(extfile, statusStr);
-          newState.lastExtReadTime[extfile] = stat.changed;
-          changed = true;
-        }
-      }
-      if (changed) {
-        state = newState;
-      }
-    } else {
-      for (final extfile in externalstatusFile) {
-        DropBoxAPIFn.getDropBoxFile(
-          // oauthToken: state.oauthToken,
-          fileToDownload: extfile,
-          callback: processExternalStatus,
-          contentType: ContentType.text,
-          timeoutSecs: 5,
-        );
-      }
     }
   }
 
@@ -375,54 +473,6 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
     }
   }
 
-  void processExternalStatus(String filename, String contents) {
-    int stationNo = STATION_WITH_EXT_TEMP;
-    if (filename != "") {
-      //Retrieve station number from file name
-      List<String> parts = filename.split('/');
-      stationNo = int.parse(parts[parts.length - 1].split('_')[0]);
-    }
-    bool changed = false;
-    contents.split('\n').forEach((line) {
-      double? newExtTemp = state.extTemp[stationNo];
-      if (line.startsWith('Current temp:')) {
-        try {
-          newExtTemp = double.parse(line.split(':')[1].trim());
-        } on FormatException {
-          print("Received non-double External temp format: $line");
-        }
-        if (newExtTemp != null && newExtTemp != state.extTemp[stationNo]) {
-          newState.extTemp[stationNo] = newExtTemp;
-          changed = true;
-        }
-      } else if (line.startsWith('Last heard time')) {
-        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
-        DateTime newExtLastHeard = DateTime.parse(dateStr);
-        if (newExtLastHeard != state.extLastHeardFrom[stationNo]) {
-          newState.extLastHeardFrom[stationNo] = newExtLastHeard;
-          changed = true;
-        }
-      } else if (line.startsWith('Current humidity')) {
-        String str = line.substring(line.indexOf(':') + 2, line.length);
-        double newExtHumid = double.parse(str);
-        if (newExtHumid != state.extHumidity[stationNo]) {
-          newState.extHumidity[stationNo] = newExtHumid;
-          changed = true;
-        }
-      } else if (line.startsWith('Last PIR')) {
-        state.extPirLastEvent[stationNo] =
-            line.substring(line.indexOf(':') + 1, line.length);
-      } else if (line.startsWith('PIR:')) {
-        String str = line.substring(line.indexOf(':') + 1, line.length);
-        newState.extPirState[stationNo] = str.contains('1');
-      }
-    });
-    if (changed) {
-      //Trigger rebuild
-      state = newState;
-    }
-  }
-
   bool processForecast(String contents) {
     bool changed = false;
     List<String> lines = contents.split('\n');
@@ -446,13 +496,29 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
 
   void decRequestedTemp() {
 //      print("Minus pressed");
-    state.requestedTemp -= 0.50;
+    newState = ThermostatStatus.fromStatus(state);
+    if (newState.requestedTemp > 10) {
+      //Only use existing requestTemp if its in a sensible range
+      newState.requestedTemp -= 0.50;
+    } else {
+      newState.requestedTemp = newState.setTemp - 0.5;
+    }
+    newState.requestOutstanding = true;
+    state = newState;
     // print("Minus pressed");
     sendNewTemp(state.requestedTemp, true);
   }
 
   void incrementRequestedTemp() {
-    state.requestedTemp += 0.50;
+    newState = ThermostatStatus.fromStatus(state);
+    if (newState.requestedTemp > 10) {
+      //Only use existing requestTemp if its in a sensible range
+      newState.requestedTemp += 0.50;
+    } else {
+      newState.requestedTemp = newState.setTemp + 0.50;
+    }
+    newState.requestOutstanding = true;
+    state = newState;
     // print("Plus pressed");
     sendNewTemp(state.requestedTemp, true);
   }
@@ -464,12 +530,11 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         File(localSetTempFile).writeAsStringSync(contents);
       } else {
         DropBoxAPIFn.sendDropBoxFile(
-            oauthToken: state.oauthToken,
+            // oauthToken: state.oauthToken,
             fileToUpload: setTempFile,
             contents: contents);
       }
     }
-    state.requestOutstanding = true;
   }
 
   void sendBoost() {
@@ -479,7 +544,7 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
       File(localBoostFile).writeAsStringSync(contents);
     } else {
       DropBoxAPIFn.sendDropBoxFile(
-          oauthToken: state.oauthToken,
+          // oauthToken: state.oauthToken,
           fileToUpload: boostFile,
           contents: contents);
     }
@@ -552,20 +617,22 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
 
   void firstRefresh() {
     ref.read(thermostatStatusNotifierProvider.notifier).refreshStatus();
+    ref.read(cameraStatusNotifierProvider.notifier).refreshStatus();
     timer = Timer.periodic(
         ref.read(thermostatStatusNotifierProvider).localUI
             ? const Duration(milliseconds: 500)
-            : const Duration(seconds: 10),
+            : const Duration(seconds: 5),
         updateStatus);
   }
 
   void updateStatus(timer) {
     ref.read(thermostatStatusNotifierProvider.notifier).refreshStatus();
+    ref.read(cameraStatusNotifierProvider.notifier).refreshStatus();
     if (!timer.isActive) {
       timer = Timer.periodic(
           ref.read(thermostatStatusNotifierProvider).localUI
               ? const Duration(milliseconds: 500)
-              : const Duration(seconds: 30),
+              : const Duration(seconds: 5),
           updateStatus);
     }
   }
@@ -677,6 +744,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
   @override
   Widget build(BuildContext context) {
     final ThermostatStatus status = ref.watch(thermostatStatusNotifierProvider);
+    final CameraStatus cameraStatus = ref.watch(cameraStatusNotifierProvider);
     List<Widget> widgets = [
       const SizedBox(height: 10),
       SizedBox(
@@ -750,9 +818,9 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     extStationNames.forEach((id, name) => statusBoxes.add(createStatusBox(
         stationId: id,
         stationName: name,
-        lastHeardTime: status.extLastHeardFrom[id],
-        lastEventStr: status.extPirLastEvent[id],
-        currentPirStatus: status.extPirState[id])));
+        lastHeardTime: cameraStatus.extLastHeardFrom[id],
+        lastEventStr: cameraStatus.extPirLastEvent[id],
+        currentPirStatus: cameraStatus.extPirState[id])));
 
     widgets.add(
       Container(
@@ -806,8 +874,9 @@ class SetTempButtonBar extends ConsumerWidget {
           SizedBox(
               width: 50,
               child: TextField(
-                controller:
-                    TextEditingController(text: "${status.requestedTemp}"),
+                controller: TextEditingController(
+                    text:
+                        "${status.requestedTemp == 0 ? status.setTemp : status.requestedTemp}"),
                 style: Theme.of(context)
                     .textTheme
                     .displaySmall!
@@ -895,8 +964,8 @@ class ActionButtons extends StatelessWidget {
 class RHGauge extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Map<int, double> extHumid = ref.watch(thermostatStatusNotifierProvider
-        .select((status) => status.extHumidity));
+    Map<int, double> extHumid = ref.watch(
+        cameraStatusNotifierProvider.select((status) => status.extHumidity));
     double intHumidity = ref.watch(
         thermostatStatusNotifierProvider.select((status) => status.humidity));
     List<double> extList = [];
@@ -1127,7 +1196,6 @@ class BoilerState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget returnWidget;
-    TextStyle dispStyle = Theme.of(context).textTheme.titleMedium!;
     if (boilerOn()) {
       returnWidget = Container(
         padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
@@ -1398,9 +1466,10 @@ class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
   @override
   Widget build(BuildContext context) {
     final ThermostatStatus status = ref.watch(thermostatStatusNotifierProvider);
+    final CameraStatus cameraStatus = ref.watch(cameraStatusNotifierProvider);
     double extTemp = -100.0;
     List<double> extList = [];
-    status.extTemp.forEach((stn, ext) {
+    cameraStatus.extTemp.forEach((stn, ext) {
       if (stn != 1 && ext > -100) {
         extList.add(ext);
       }

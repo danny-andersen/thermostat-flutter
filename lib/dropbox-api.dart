@@ -199,7 +199,7 @@ class DropBoxAPIFn {
   }
 
   static void sendDropBoxFile({
-    required String oauthToken,
+    String oauthToken = "BLANK",
     required String fileToUpload,
     required String contents,
     Function? callback,
