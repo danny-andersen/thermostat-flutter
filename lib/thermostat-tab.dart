@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 // import 'package:charts_flutter_new/flutter.dart' as charts;
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -10,6 +13,8 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 // import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 import 'dropbox-api.dart';
+
+part 'thermostat-tab.g.dart';
 
 class TypeTemp {
   final String type;
@@ -63,60 +68,43 @@ class ColorByTemp {
   }
 }
 
-class ThermostatPage extends StatefulWidget {
-  ThermostatPage({super.key, required this.oauthToken, required this.localUI});
-  String oauthToken;
-  bool localUI;
-  _ThermostatPageState statePage =
-      _ThermostatPageState(oauthToken: "BLANK", localUI: false);
-  // _ThermostatPageState state = _ThermostatPageState(oauthToken: "BLANK");
+class ThermostatStatus {
+  ThermostatStatus({required this.localUI});
+  ThermostatStatus.fromStatus(ThermostatStatus oldState) {
+    localUI = oldState.localUI;
+    oauthToken = oldState.oauthToken;
+    currentTemp = oldState.currentTemp;
+    lastStatusReadTime = oldState.lastStatusReadTime;
+    forecastExtTemp = oldState.forecastExtTemp;
+    windStr = oldState.windStr;
+    lastForecastReadTime = oldState.lastForecastReadTime;
+    motdStr = oldState.motdStr;
+    lastMotdReadTime = oldState.lastMotdReadTime;
+    setTemp = oldState.setTemp;
+    requestedTemp = oldState.requestedTemp;
+    humidity = oldState.humidity;
+    lastHeardFrom = oldState.lastHeardFrom;
+    intPirState = oldState.intPirState;
+    intPirLastEvent = oldState.intPirLastEvent;
 
-  @override
-  _ThermostatPageState createState() {
-    statePage = _ThermostatPageState(oauthToken: oauthToken, localUI: localUI);
-    return statePage;
+    extTemp = oldState.extTemp;
+    lastExtReadTime = oldState.lastExtReadTime;
+    extHumidity = oldState.extHumidity;
+    extLastHeardFrom = oldState.extLastHeardFrom;
+    extPirState = oldState.extPirState;
+    extPirLastEvent = oldState.extPirLastEvent;
+
+    boilerOn = oldState.boilerOn;
+    minsToSetTemp = oldState.minsToSetTemp;
+
+    requestOutstanding = oldState.requestOutstanding;
   }
-}
 
-class _ThermostatPageState extends State<ThermostatPage> {
-  _ThermostatPageState({required this.oauthToken, required this.localUI});
-  String oauthToken;
-  bool localUI;
-  String username = "";
-  String password = "";
-  String extHost = "";
-  int startPort = 0;
-  final String statusFile = "/thermostat_status.txt";
-  final String localStatusFile = "/home/danny/thermostat/status.txt";
-  final Map<int, String> extStationNames = {
-    2: "House RH side",
-    3: "Front Door",
-    4: "House LH side"
-  };
-  final Map<String, String> stationCamUrlByName = {
-    "House RH side": "https://house-rh-side-cam0",
-    "Front Door": "https://front-door-cam",
-    "House LH side": "https://house-lh-side",
-  };
-  final List<String> externalstatusFile = [
-    "/2_status.txt",
-    "/3_status.txt",
-    "/4_status.txt"
-  ];
-  final List<String> localExternalstatusFile = [
-    "/home/danny/control_station/2_status.txt",
-    "/home/danny/control_station/3_status.txt",
-    "/home/danny/control_station/4_status.txt",
-  ];
-  final String setTempFile = "/setTemp.txt";
-  final String localSetTempFile = "/home/danny/thermostat/setTemp.txt";
-  final String localForecastExt = "/home/danny/thermostat/setExtTemp.txt";
-  final String localMotd = "/home/danny/thermostat/motd.txt";
-  final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
-  final int STATION_WITH_EXT_TEMP = 2;
-  double currentTemp = 0.0;
+  late bool localUI;
+  String oauthToken = "";
+  double currentTemp = -100.0;
   DateTime lastStatusReadTime = DateTime(2000);
-  double forecastExtTemp = 100.0;
+  double forecastExtTemp = -100.0;
   String windStr = "";
   DateTime lastForecastReadTime = DateTime(2000);
   String motdStr = "";
@@ -135,125 +123,104 @@ class _ThermostatPageState extends State<ThermostatPage> {
   Map<int, bool> extPirState = {4: false, 3: false, 2: false};
   Map<int, String> extPirLastEvent = {4: "", 3: "", 2: ""};
 
-  bool requestOutstanding = false;
-  bool boilerOn = true;
+  bool boilerOn = false;
   int minsToSetTemp = 0;
-  Timer timer = Timer(const Duration(), () {});
-  bool onCameraLocalLan = false;
+
+  bool requestOutstanding = false;
+}
+
+@riverpod
+class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
+  final String statusFile = "/thermostat_status.txt";
+  final String localStatusFile = "/home/danny/thermostat/status.txt";
+  final List<String> externalstatusFile = [
+    "/2_status.txt",
+    "/3_status.txt",
+    "/4_status.txt"
+  ];
+  final List<String> localExternalstatusFile = [
+    "/home/danny/control_station/2_status.txt",
+    "/home/danny/control_station/3_status.txt",
+    "/home/danny/control_station/4_status.txt",
+  ];
+  final String setTempFile = "/setTemp.txt";
+  final String localSetTempFile = "/home/danny/thermostat/setTemp.txt";
+  final String localForecastExt = "/home/danny/thermostat/setExtTemp.txt";
+  final String localMotd = "/home/danny/thermostat/motd.txt";
+  final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
+  final String boostFile = "/boost.txt";
+  final String localBoostFile = "/home/danny/thermostat/boost.txt";
+  final int STATION_WITH_EXT_TEMP = 2;
+
+  late ThermostatStatus newState;
 
   @override
-  void initState() {
-    timer = Timer.periodic(Duration(seconds: localUI ? 1 : 30), refreshStatus);
-    refreshStatus(timer);
-    NetworkInterface.list().then((interfaces) {
-      for (NetworkInterface interface in interfaces) {
-        for (InternetAddress addr in interface.addresses) {
-          if (addr.address == '192.168.1.61') {
-            onCameraLocalLan = true;
-          }
-        }
-      }
-    });
-
-    super.initState();
-  }
-
-  void setSecret(final String token) {
-    oauthToken = token;
-  }
-
-  @override
-  void dispose() {
-//    print('Disposing Thermostat page');
-    timer.cancel();
-    super.dispose();
-  }
-
-  void _decRequestedTemp() {
-//      print("Minus pressed");
-    requestedTemp -= 0.50;
-    // print("Minus pressed");
-    sendNewTemp(requestedTemp, true);
-  }
-
-  void _incrementRequestedTemp() {
-    requestedTemp += 0.50;
-    // print("Plus pressed");
-    sendNewTemp(requestedTemp, true);
-  }
-
-  void sendNewTemp(double temp, bool send) {
-    if (send) {
-      String contents = requestedTemp.toStringAsFixed(1);
-      if (localUI) {
-        File(localSetTempFile).writeAsStringSync(contents);
-      } else {
-        DropBoxAPIFn.sendDropBoxFile(
-            oauthToken: oauthToken,
-            fileToUpload: setTempFile,
-            contents: contents);
-      }
+  ThermostatStatus build() {
+    //Determine if running local to thermostat by the presence of the thermostat dir
+    bool local = false;
+    FileStat thermStat = FileStat.statSync("/home/danny/thermostat");
+    if (thermStat.type != FileSystemEntityType.notFound) {
+      local = true;
     }
-    requestOutstanding = true;
-    if (mounted) {
-      setState(() {
-        requestedTemp = temp;
-      });
-    }
+    ThermostatStatus status = ThermostatStatus(localUI: local);
+    return status;
   }
 
-  void refreshStatus(Timer timer) {
+  void refreshStatus() {
     // getSetTemp();
     bool updateState = true;
-    if (localUI) {
+    if (state.localUI) {
       //Check that thermostat has turned backlight on
       //if not then do nothing as display not visible
       updateState = FileStat.statSync(localDisplayOnFile).type !=
           FileSystemEntityType.notFound;
     }
     if (updateState) {
+      newState = ThermostatStatus.fromStatus(state);
       getStatus();
       getExternalStatus();
-    }
-    if (!timer.isActive) {
-      timer = Timer.periodic(
-          localUI
-              ? const Duration(milliseconds: 500)
-              : const Duration(seconds: 30),
-          refreshStatus);
     }
   }
 
   void getStatus() {
-    if (localUI) {
+    if (state.localUI) {
+      bool changed = false;
       FileStat statusStat = FileStat.statSync(localStatusFile);
       FileStat motdStat = FileStat.statSync(localMotd);
       FileStat fcStat = FileStat.statSync(localForecastExt);
       //Only update state (and so the display) if something has changed
-      if (statusStat.changed.isAfter(lastStatusReadTime) ||
-          motdStat.changed.isAfter(lastMotdReadTime) ||
-          fcStat.changed.isAfter(lastForecastReadTime)) {
-        setState(() {
-          if (statusStat.changed.isAfter(lastStatusReadTime)) {
-            String statusStr = File(localStatusFile).readAsStringSync();
-            processStatus(localStatusFile, statusStr);
-            lastStatusReadTime = statusStat.changed;
-          }
-          if (motdStat.changed.isAfter(lastMotdReadTime)) {
-            String contents = File(localMotd).readAsStringSync();
-            motdStr = contents.split('\n')[0];
-            lastMotdReadTime = motdStat.changed;
-          }
-          if (fcStat.changed.isAfter(lastForecastReadTime)) {
-            String contents = File(localForecastExt).readAsStringSync();
-            processForecast(contents);
-            lastForecastReadTime = fcStat.changed;
-          }
-        });
+      if (statusStat.changed.isAfter(state.lastStatusReadTime) ||
+          motdStat.changed.isAfter(state.lastMotdReadTime) ||
+          fcStat.changed.isAfter(state.lastForecastReadTime)) {
+        if (statusStat.type != FileSystemEntityType.notFound &&
+            statusStat.changed.isAfter(state.lastStatusReadTime)) {
+          String statusStr = File(localStatusFile).readAsStringSync();
+          processStatus(localStatusFile, statusStr);
+          newState.lastStatusReadTime = statusStat.changed;
+          changed = true;
+        }
+        if (motdStat.type != FileSystemEntityType.notFound &&
+            motdStat.changed.isAfter(state.lastMotdReadTime)) {
+          String contents = File(localMotd).readAsStringSync();
+          String motd = contents.split('\n')[0];
+          newState.motdStr = motd.replaceAll(RegExp(r'\.'), '.\n');
+          newState.lastMotdReadTime = motdStat.changed;
+          changed = true;
+        }
+        if (fcStat.type != FileSystemEntityType.notFound &&
+            fcStat.changed.isAfter(state.lastForecastReadTime)) {
+          String contents = File(localForecastExt).readAsStringSync();
+          processForecast(contents);
+          newState.lastForecastReadTime = fcStat.changed;
+          changed = true;
+        }
+        if (changed) {
+          state = newState;
+        }
       }
     } else {
       DropBoxAPIFn.getDropBoxFile(
-        oauthToken: oauthToken,
+        // oauthToken: state.oauthToken,
         fileToDownload: statusFile,
         callback: processStatus,
         contentType: ContentType.text,
@@ -263,21 +230,26 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 
   void getExternalStatus() {
-    if (localUI) {
+    if (state.localUI) {
+      bool changed = false;
       for (final extfile in localExternalstatusFile) {
         FileStat stat = FileStat.statSync(extfile);
-        DateTime? lastTime = lastExtReadTime[extfile];
+        DateTime? lastTime = state.lastExtReadTime[extfile];
         lastTime ??= DateTime(2000);
         if (stat.changed.isAfter(lastTime)) {
           String statusStr = File(extfile).readAsStringSync();
           processExternalStatus(extfile, statusStr);
-          lastExtReadTime[extfile] = stat.changed;
+          newState.lastExtReadTime[extfile] = stat.changed;
+          changed = true;
         }
+      }
+      if (changed) {
+        state = newState;
       }
     } else {
       for (final extfile in externalstatusFile) {
         DropBoxAPIFn.getDropBoxFile(
-          oauthToken: oauthToken,
+          // oauthToken: state.oauthToken,
           fileToDownload: extfile,
           callback: processExternalStatus,
           contentType: ContentType.text,
@@ -287,143 +259,322 @@ class _ThermostatPageState extends State<ThermostatPage> {
     }
   }
 
-  // void getSetTemp() {
-  //   if (requestOutstanding) {
-  //     DropBoxAPIFn.getDropBoxFile(
-  //       oauthToken: oauthToken,
-  //       fileToDownload: setTempFile,
-  //       callback: processSetTemp,
-  //       contentType: ContentType.text,
-  //       timeoutSecs: 0,
-  //     );
-  //   }
-  // }
-
-  // void processSetTemp(String contents) {
-  //   if (contents.contains("path/not_found/")) {
-  //     requestOutstanding = false;
-  //   } else {
-  //     try {
-  //       requestedTemp = double.parse(contents.trim());
-  //       if (requestedTemp.toStringAsFixed(1) == setTemp.toStringAsFixed(1)) {
-  //         requestOutstanding = false;
-  //       }
-  //     } on FormatException {
-  //       print("Set Temp: Received non-double Current temp format: $contents");
-  //     }
-  //   }
-  // }
-
   void processStatus(String filename, String contents) {
-    if (mounted) {
-      setState(() {
-        contents.split('\n').forEach((line) {
-          if (line.startsWith('Current temp:')) {
-            try {
-              currentTemp = double.parse(line.split(':')[1].trim());
-            } on FormatException {
-              print("Received non-double Current temp format: $line");
-            }
-          } else if (line.startsWith('Current set temp:')) {
-            try {
-              setTemp = double.parse(line.split(':')[1].trim());
-//              print("Req Temp: $requestedTemp, request out? $requestOutstanding");
-              if (requestedTemp.toStringAsFixed(1) ==
-                  setTemp.toStringAsFixed(1)) {
-                requestOutstanding = false;
-              }
-              if (!requestOutstanding) {
-                requestedTemp = setTemp;
-              }
-            } on FormatException {
-              print("Received non-double setTemp format: $line");
-            }
-          } else if (line.startsWith('External temp:')) {
-            if (line.split(':')[1].trim().startsWith('Not Set')) {
-              forecastExtTemp = 100.0;
-            } else {
-              try {
-                forecastExtTemp = double.parse(line.split(':')[1].trim());
-              } on FormatException {
-                print("Received non-double forecast extTemp format: $line");
-              }
-            }
-          } else if (line.startsWith('Heat on?')) {
-            boilerOn = (line.split('?')[1].trim() == 'Yes');
-          } else if (line.startsWith('Mins to set temp')) {
-            try {
-              minsToSetTemp = int.parse(line.split(':')[1].trim());
-            } on FormatException {
-              try {
-                minsToSetTemp = double.parse(line.split(':')[1].trim()).toInt();
-              } on FormatException {
-                print("Received non-int minsToSetTemp format: $line");
-              }
-            }
-          } else if (line.startsWith('Last heard time')) {
-            String dateStr = line.substring(line.indexOf(':') + 2, line.length);
-            lastHeardFrom = DateTime.parse(dateStr);
-          } else if (line.startsWith('Current humidity')) {
-            String str = line.substring(line.indexOf(':') + 2, line.length);
-            humidity = double.parse(str);
-          } else if (line.startsWith('Last PIR')) {
-            intPirLastEvent =
-                line.substring(line.indexOf(':') + 1, line.length);
-          } else if (line.startsWith('PIR:')) {
-            String str = line.substring(line.indexOf(':') + 1, line.length);
-            intPirState = str.contains('1');
+    bool changed = false;
+    contents.split('\n').forEach((line) {
+      if (line.startsWith('Current temp:')) {
+        double newTemp = state.currentTemp;
+        if (line.split(':')[1].trim().startsWith('Not Set')) {
+          newTemp = -100.0;
+        } else {
+          try {
+            newTemp = double.parse(line.split(':')[1].trim());
+          } on FormatException {
+            print("Received non-double Current temp format: $line");
           }
-        });
-      });
+        }
+        if (newTemp != state.currentTemp) {
+          newState.currentTemp = newTemp;
+          changed = true;
+        }
+      } else if (line.startsWith('Current set temp:')) {
+        double newSetTemp = state.setTemp;
+        if (line.split(':')[1].trim().startsWith('Not Set')) {
+          newSetTemp = -100.0;
+        } else {
+          try {
+            newSetTemp = double.parse(line.split(':')[1].trim());
+//              print("Req Temp: $requestedTemp, request out? $requestOutstanding");
+            if (state.requestedTemp.toStringAsFixed(1) ==
+                    state.setTemp.toStringAsFixed(1) &&
+                state.requestOutstanding) {
+              newState.requestOutstanding = false;
+              changed = true;
+            }
+            if (!state.requestOutstanding) {
+              newState.requestedTemp = state.setTemp;
+            }
+          } on FormatException {
+            print("Received non-double setTemp format: $line");
+          }
+          if (newSetTemp != state.setTemp) {
+            newState.setTemp = newSetTemp;
+            changed = true;
+          }
+        }
+      } else if (line.startsWith('External temp:')) {
+        double newForecastExtTemp = state.forecastExtTemp;
+        if (line.split(':')[1].trim().startsWith('Not Set')) {
+          newForecastExtTemp = -100.0;
+        } else {
+          try {
+            newForecastExtTemp = double.parse(line.split(':')[1].trim());
+          } on FormatException {
+            print("Received non-double forecast extTemp format: $line");
+          }
+          if (newForecastExtTemp != state.forecastExtTemp) {
+            newState.forecastExtTemp = newForecastExtTemp;
+            changed = true;
+          }
+        }
+      } else if (line.startsWith('Heat on?')) {
+        bool newBoilerOn = (line.split('?')[1].trim() == 'Yes');
+        if (newBoilerOn != state.boilerOn) {
+          newState.boilerOn = newBoilerOn;
+          changed = true;
+        }
+      } else if (line.startsWith('Mins to set temp')) {
+        int newMinsToSetTemp = state.minsToSetTemp;
+        try {
+          newMinsToSetTemp = int.parse(line.split(':')[1].trim());
+        } on FormatException {
+          try {
+            state.minsToSetTemp =
+                double.parse(line.split(':')[1].trim()).toInt();
+          } on FormatException {
+            print("Received non-int minsToSetTemp format: $line");
+          }
+          if (newMinsToSetTemp != state.minsToSetTemp) {
+            newState.minsToSetTemp = newMinsToSetTemp;
+            changed = true;
+          }
+        }
+      } else if (line.startsWith('Last heard time')) {
+        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
+        DateTime newLastHeardFrom = DateTime.parse(dateStr);
+        if (newLastHeardFrom != state.lastHeardFrom) {
+          newState.lastHeardFrom = newLastHeardFrom;
+          changed = true;
+        }
+      } else if (line.startsWith('Current humidity')) {
+        String str = line.substring(line.indexOf(':') + 2, line.length);
+        double newhumidity = double.parse(str);
+        if (newhumidity != state.humidity) {
+          newState.humidity = newhumidity;
+          changed = true;
+        }
+      } else if (line.startsWith('Last PIR')) {
+        String newPirLastEvent =
+            line.substring(line.indexOf(':') + 1, line.length);
+        if (newPirLastEvent != state.intPirLastEvent) {
+          newState.intPirLastEvent = newPirLastEvent;
+          changed = true;
+        }
+      } else if (line.startsWith('PIR:')) {
+        String str = line.substring(line.indexOf(':') + 1, line.length);
+        bool newPirState = str.contains('1');
+        if (newPirState != state.intPirState) {
+          newState.intPirState = newPirState;
+          changed = true;
+        }
+      }
+    });
+    if (changed) {
+      //Trigger rebuild
+      state = newState;
     }
   }
 
   void processExternalStatus(String filename, String contents) {
-    if (mounted) {
-      setState(() {
-        int stationNo = STATION_WITH_EXT_TEMP;
-        if (filename != "") {
-          //Retrieve station number from file name
-          List<String> parts = filename.split('/');
-          stationNo = int.parse(parts[parts.length - 1].split('_')[0]);
+    int stationNo = STATION_WITH_EXT_TEMP;
+    if (filename != "") {
+      //Retrieve station number from file name
+      List<String> parts = filename.split('/');
+      stationNo = int.parse(parts[parts.length - 1].split('_')[0]);
+    }
+    bool changed = false;
+    contents.split('\n').forEach((line) {
+      double? newExtTemp = state.extTemp[stationNo];
+      if (line.startsWith('Current temp:')) {
+        try {
+          newExtTemp = double.parse(line.split(':')[1].trim());
+        } on FormatException {
+          print("Received non-double External temp format: $line");
         }
-        contents.split('\n').forEach((line) {
-          if (line.startsWith('Current temp:')) {
-            try {
-              extTemp[stationNo] = double.parse(line.split(':')[1].trim());
-            } on FormatException {
-              print("Received non-double External temp format: $line");
-            }
-          } else if (line.startsWith('Last heard time')) {
-            String dateStr = line.substring(line.indexOf(':') + 2, line.length);
-            extLastHeardFrom[stationNo] = DateTime.parse(dateStr);
-          } else if (line.startsWith('Current humidity')) {
-            String str = line.substring(line.indexOf(':') + 2, line.length);
-            extHumidity[stationNo] = double.parse(str);
-          } else if (line.startsWith('Last PIR')) {
-            extPirLastEvent[stationNo] =
-                line.substring(line.indexOf(':') + 1, line.length);
-          } else if (line.startsWith('PIR:')) {
-            String str = line.substring(line.indexOf(':') + 1, line.length);
-            extPirState[stationNo] = str.contains('1');
-          }
-        });
-      });
+        if (newExtTemp != null && newExtTemp != state.extTemp[stationNo]) {
+          newState.extTemp[stationNo] = newExtTemp;
+          changed = true;
+        }
+      } else if (line.startsWith('Last heard time')) {
+        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
+        DateTime newExtLastHeard = DateTime.parse(dateStr);
+        if (newExtLastHeard != state.extLastHeardFrom[stationNo]) {
+          newState.extLastHeardFrom[stationNo] = newExtLastHeard;
+          changed = true;
+        }
+      } else if (line.startsWith('Current humidity')) {
+        String str = line.substring(line.indexOf(':') + 2, line.length);
+        double newExtHumid = double.parse(str);
+        if (newExtHumid != state.extHumidity[stationNo]) {
+          newState.extHumidity[stationNo] = newExtHumid;
+          changed = true;
+        }
+      } else if (line.startsWith('Last PIR')) {
+        state.extPirLastEvent[stationNo] =
+            line.substring(line.indexOf(':') + 1, line.length);
+      } else if (line.startsWith('PIR:')) {
+        String str = line.substring(line.indexOf(':') + 1, line.length);
+        newState.extPirState[stationNo] = str.contains('1');
+      }
+    });
+    if (changed) {
+      //Trigger rebuild
+      state = newState;
     }
   }
 
-  void processForecast(String contents) {
-    if (mounted) {
-      setState(() {
-        List<String> lines = contents.split('\n');
-        try {
-          forecastExtTemp = double.parse(lines[0].trim());
-        } on FormatException {
-          print("Received non-double forecast temp format: $lines[0]");
-        }
-        windStr = lines[1].trim();
-      });
+  bool processForecast(String contents) {
+    bool changed = false;
+    List<String> lines = contents.split('\n');
+    double newForecastTemp = state.forecastExtTemp;
+    try {
+      newForecastTemp = double.parse(lines[0].trim());
+    } on FormatException {
+      print("Received non-double forecast temp format: $lines[0]");
     }
+    if (newForecastTemp != state.forecastExtTemp) {
+      newState.forecastExtTemp = newForecastTemp;
+      changed = true;
+    }
+    String newWindStr = lines[1].trim();
+    if (newWindStr != state.windStr) {
+      newState.windStr = newWindStr;
+      changed = true;
+    }
+    return changed;
+  }
+
+  void decRequestedTemp() {
+//      print("Minus pressed");
+    state.requestedTemp -= 0.50;
+    // print("Minus pressed");
+    sendNewTemp(state.requestedTemp, true);
+  }
+
+  void incrementRequestedTemp() {
+    state.requestedTemp += 0.50;
+    // print("Plus pressed");
+    sendNewTemp(state.requestedTemp, true);
+  }
+
+  void sendNewTemp(double temp, bool send) {
+    if (send) {
+      String contents = state.requestedTemp.toStringAsFixed(1);
+      if (state.localUI) {
+        File(localSetTempFile).writeAsStringSync(contents);
+      } else {
+        DropBoxAPIFn.sendDropBoxFile(
+            oauthToken: state.oauthToken,
+            fileToUpload: setTempFile,
+            contents: contents);
+      }
+    }
+    state.requestOutstanding = true;
+  }
+
+  void sendBoost() {
+    String contents = state.boilerOn ? "OFF" : "ON";
+    print("Sending boost: $contents");
+    if (state.localUI) {
+      File(localBoostFile).writeAsStringSync(contents);
+    } else {
+      DropBoxAPIFn.sendDropBoxFile(
+          oauthToken: state.oauthToken,
+          fileToUpload: boostFile,
+          contents: contents);
+    }
+  }
+}
+
+// ThermostatStatus ThermostatStatus(ThermostatStatusRef ref) {
+//     StateNotifierProvider<ThermostatStatusNotifier, ThermostatStatus>((ref) {
+//   ThermostatStatusNotifier status = ThermostatStatusNotifier();
+//   return status;
+// }
+
+class ThermostatPage extends ConsumerStatefulWidget {
+  ThermostatPage({super.key, required this.oauthToken, required this.localUI});
+  String oauthToken;
+  bool localUI;
+  late _ThermostatPageState statePage;
+  //  =
+  //     _ThermostatPageState(oauthToken: "BLANK", localUI: false);
+  // // _ThermostatPageState state = _ThermostatPageState(oauthToken: "BLANK");
+
+  @override
+  ConsumerState<ThermostatPage> createState() {
+    statePage = _ThermostatPageState(oauthToken: oauthToken, localUI: localUI);
+    return statePage;
+  }
+}
+
+class _ThermostatPageState extends ConsumerState<ThermostatPage> {
+  _ThermostatPageState({required this.oauthToken, required this.localUI});
+  String oauthToken;
+  bool localUI;
+  String username = "";
+  String password = "";
+  String extHost = "";
+  int startPort = 0;
+  bool onCameraLocalLan = false;
+  final Map<int, String> extStationNames = {
+    2: "House RH side",
+    3: "Front Door",
+    4: "House LH side"
+  };
+  final Map<String, String> stationCamUrlByName = {
+    "House RH side": "https://house-rh-side-cam0",
+    "Front Door": "https://front-door-cam",
+    "House LH side": "https://house-lh-side",
+  };
+  late Timer timer;
+
+  @override
+  void initState() {
+    //Trigger first refresh shortly after widget initialised, to allow state to be initialised
+    timer = Timer(const Duration(seconds: 1), firstRefresh);
+    NetworkInterface.list().then((interfaces) {
+      for (NetworkInterface interface in interfaces) {
+        for (InternetAddress addr in interface.addresses) {
+          if (addr.address == '192.168.1.61') {
+            onCameraLocalLan = true;
+          }
+        }
+      }
+    });
+    super.initState();
+  }
+
+  void setSecret(final String token) {
+    oauthToken = token;
+    ref.read(thermostatStatusNotifierProvider).oauthToken = token;
+  }
+
+  void firstRefresh() {
+    ref.read(thermostatStatusNotifierProvider.notifier).refreshStatus();
+    timer = Timer.periodic(
+        ref.read(thermostatStatusNotifierProvider).localUI
+            ? const Duration(milliseconds: 500)
+            : const Duration(seconds: 10),
+        updateStatus);
+  }
+
+  void updateStatus(timer) {
+    ref.read(thermostatStatusNotifierProvider.notifier).refreshStatus();
+    if (!timer.isActive) {
+      timer = Timer.periodic(
+          ref.read(thermostatStatusNotifierProvider).localUI
+              ? const Duration(milliseconds: 500)
+              : const Duration(seconds: 30),
+          updateStatus);
+    }
+  }
+
+  @override
+  void dispose() {
+//    print('Disposing Thermostat page');
+    timer.cancel();
+    super.dispose();
   }
 
   Widget createStatusBox(
@@ -523,109 +674,17 @@ class _ThermostatPageState extends State<ThermostatPage> {
         ));
   }
 
-  // List<charts.Series<TypeTemp, String>> createChartSeries() {
-  //   List<TypeTemp> data = [
-  //     TypeTemp('House', currentTemp),
-  //     TypeTemp('Thermostat', setTemp),
-  //   ];
-
-  //   if (requestedTemp != setTemp) {
-  //     data.add(
-  //       TypeTemp('Requested', requestedTemp),
-  //     );
-  //   }
-  //   if (extTemp != 100.0) {
-  //     data.add(TypeTemp('Outside', extTemp));
-  //   }
-  //   if (forecastExtTemp != 100.0) {
-  //     data.add(TypeTemp('Forecast', forecastExtTemp));
-  //   }
-  //   return [
-  //     charts.Series<TypeTemp, String>(
-  //       id: 'Temperature',
-  //       domainFn: (TypeTemp tempByType, _) => tempByType.type,
-  //       measureFn: (TypeTemp tempByType, _) => tempByType.temp,
-  //       data: data,
-  //       // Set a label accessor to control the text of the bar label.
-  //       labelAccessorFn: (TypeTemp tempByType, _) =>
-  //           '${tempByType.type}: ${tempByType.temp.toStringAsFixed(1)}\u00B0C',
-  //       fillColorFn: (TypeTemp tempByType, _) =>
-  //           ColorByTemp.findActiveChartColor(tempByType.temp),
-  //       insideLabelStyleAccessorFn: (TypeTemp tempByTemp, _) {
-  //         return const charts.TextStyleSpec(
-  //             fontSize: 18, color: charts.MaterialPalette.white);
-  //       },
-  //       outsideLabelStyleAccessorFn: (TypeTemp tempByTemp, _) {
-  //         return const charts.TextStyleSpec(
-  //             fontSize: 18, color: charts.MaterialPalette.black);
-  //       },
-  //     ),
-  //   ];
-  // }
-
   @override
   Widget build(BuildContext context) {
-    double extTempVal = -100.0;
-    List<double> extList = [];
-    extTemp.forEach((stn, ext) {
-      if (stn != 1 && ext > -100) {
-        extList.add(ext);
-      }
-    });
-    if (extList.isNotEmpty) extTempVal = extList.average;
-    double extHumidVal = 0.0;
-    extList = [];
-    extHumidity.forEach((stn, ext) {
-      if (stn != 1 && ext > 0) {
-        extList.add(ext);
-      }
-    });
-    if (extList.isNotEmpty) extHumidVal = extList.average;
+    final ThermostatStatus status = ref.watch(thermostatStatusNotifierProvider);
     List<Widget> widgets = [
+      const SizedBox(height: 10),
       SizedBox(
-        // height: 250,
-        // child: TemperatureChart(createChartSeries(), animate: false),
-        height: localUI ? 380 : 350,
-        child: TemperatureGauge(
-            currentTemp, setTemp, extTempVal, forecastExtTemp, boilerOn),
+        height: localUI ? 480 : 380,
+        child: TemperatureGauge(),
       ),
-      SetTempButtonBar(
-        minusPressed: _decRequestedTemp,
-        plusPressed: _incrementRequestedTemp,
-        requestTemp: requestedTemp,
-        sendNew: sendNewTemp,
-      ),
-      Container(
-        padding: const EdgeInsets.only(left: 8.0, top: 2.0),
-        child: RichText(
-            text: TextSpan(
-                text: 'Relative Humidity',
-                style: const TextStyle(
-                  fontSize: 14.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-                children: <TextSpan>[
-              TextSpan(
-                  text: extHumidity != -100 ? ' Inside + ' : ' Inside:',
-                  style: const TextStyle(
-                    fontSize: 14.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  )),
-              TextSpan(
-                  text: extHumidity != -100 ? ' Outside (%):' : '',
-                  style: const TextStyle(
-                    fontSize: 14.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  )),
-            ])),
-      ),
-      RHGauge(
-        humidity: humidity,
-        extHumidity: extHumidVal,
-      ),
+      SetTempButtonBar(),
+      RHGauge(),
     ];
     if (localUI) {
       widgets.addAll([
@@ -633,7 +692,8 @@ class _ThermostatPageState extends State<ThermostatPage> {
           padding: const EdgeInsets.only(left: 8.0, top: 8.0),
           alignment: Alignment.center,
           child: Text(
-            motdStr,
+            status.motdStr,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 24.0,
               fontWeight: FontWeight.bold,
@@ -641,10 +701,10 @@ class _ThermostatPageState extends State<ThermostatPage> {
           ),
         ),
         Container(
-          padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+          padding: const EdgeInsets.only(left: 8.0, top: 5.0),
           alignment: Alignment.center,
           child: Text(
-            "Wind Speed: $windStr",
+            "Wind Speed: ${status.windStr}",
             style: const TextStyle(
               fontSize: 24.0,
               fontWeight: FontWeight.bold,
@@ -674,24 +734,25 @@ class _ThermostatPageState extends State<ThermostatPage> {
         //             MaterialStatePropertyAll(TextStyle(color: Colors.white)),
         //         backgroundColor: MaterialStatePropertyAll(Colors.lightGreen)),
         //   ),
-        // ),
-        SizedBox(height: 150),
+        // ),localUI
       ]);
     }
+    widgets.add(SizedBox(height: status.localUI ? 50 : 50));
+
     List<Widget> statusBoxes = [];
     if (!localUI) {
       statusBoxes.add(createStatusBox(
           stationName: "Thermostat",
-          lastHeardTime: lastHeardFrom,
-          lastEventStr: intPirLastEvent,
-          currentPirStatus: intPirState));
+          lastHeardTime: status.lastHeardFrom,
+          lastEventStr: status.intPirLastEvent,
+          currentPirStatus: status.intPirState));
     }
     extStationNames.forEach((id, name) => statusBoxes.add(createStatusBox(
         stationId: id,
         stationName: name,
-        lastHeardTime: extLastHeardFrom[id],
-        lastEventStr: extPirLastEvent[id],
-        currentPirStatus: extPirState[id])));
+        lastHeardTime: status.extLastHeardFrom[id],
+        lastEventStr: status.extPirLastEvent[id],
+        currentPirStatus: status.extPirState[id])));
 
     widgets.add(
       Container(
@@ -711,21 +772,16 @@ class _ThermostatPageState extends State<ThermostatPage> {
   }
 }
 
-class SetTempButtonBar extends StatelessWidget {
-  const SetTempButtonBar(
-      {super.key,
-      required this.minusPressed,
-      required this.plusPressed,
-      required this.requestTemp,
-      required this.sendNew});
-
-  final Function() minusPressed;
-  final Function() plusPressed;
-  final Function(double, bool) sendNew;
-  final double requestTemp;
+class SetTempButtonBar extends ConsumerWidget {
+  // final Function() minusPressed;
+  // final Function() plusPressed;
+  // final Function(double, bool) sendNew;
+  // final double requestTemp;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThermostatStatus status = ref.watch(thermostatStatusNotifierProvider);
+
     return ButtonBar(
 //      decoration: BoxDecoration(
 //        border: Border.all(
@@ -737,18 +793,21 @@ class SetTempButtonBar extends StatelessWidget {
 
       children: [
         ElevatedButton(
-            onPressed: minusPressed,
+            onPressed: ref
+                .read(thermostatStatusNotifierProvider.notifier)
+                .decRequestedTemp,
             style: const ButtonStyle(
                 maximumSize: MaterialStatePropertyAll(Size.fromHeight(40)),
                 textStyle:
                     MaterialStatePropertyAll(TextStyle(color: Colors.white)),
                 backgroundColor: MaterialStatePropertyAll(Colors.blue)),
-            child: const Icon(Icons.arrow_downward)),
+            child: const Icon(Icons.arrow_downward_rounded)),
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           SizedBox(
               width: 50,
               child: TextField(
-                controller: TextEditingController(text: "$requestTemp"),
+                controller:
+                    TextEditingController(text: "${status.requestedTemp}"),
                 style: Theme.of(context)
                     .textTheme
                     .displaySmall!
@@ -760,7 +819,9 @@ class SetTempButtonBar extends StatelessWidget {
                   double temp = double.parse(value);
                   if (temp < 10) temp = 10;
                   if (temp > 25) temp = 25;
-                  sendNew(temp, true);
+                  ref
+                      .read(thermostatStatusNotifierProvider.notifier)
+                      .sendNewTemp(temp, true);
                 },
 
                 // inputFormatters: [
@@ -769,14 +830,15 @@ class SetTempButtonBar extends StatelessWidget {
               )),
           Text(
             "\u00B0C",
-            style: Theme.of(context)
-                .textTheme
-                .displaySmall!
-                .apply(fontSizeFactor: 0.5),
+            style: TextStyle(
+                fontSize: status.localUI ? 20 : 15,
+                fontWeight: FontWeight.bold),
           )
         ]),
         ElevatedButton(
-            onPressed: plusPressed,
+            onPressed: ref
+                .read(thermostatStatusNotifierProvider.notifier)
+                .incrementRequestedTemp,
             style: const ButtonStyle(
                 textStyle:
                     MaterialStatePropertyAll(TextStyle(color: Colors.white)),
@@ -797,12 +859,6 @@ class ActionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-//      decoration: BoxDecoration(
-//        border: Border.all(
-//          color: Colors.black,
-//          width: 1.0,
-//        ),
-//      ),
       padding: const EdgeInsets.all(10.0),
       child: Row(
           mainAxisSize: MainAxisSize.max,
@@ -836,124 +892,115 @@ class ActionButtons extends StatelessWidget {
   }
 }
 
-// class SliderWithRange extends StatelessWidget {
-//   const SliderWithRange(
-//       {super.key,
-//       required this.requestedTempGetter,
-//       required this.returnNewTemp});
-
-//   final ValueGetter<double> requestedTempGetter;
-//   final Function(double newTemp, bool endChange) returnNewTemp;
-//   final double maxBlue = 15.0;
-//   final double maxYellow = 17.0;
-//   final double maxOrange = 18.5;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Row(
-//       mainAxisSize: MainAxisSize.max,
-//       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-
-// //              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//       children: <Widget>[
-//         Container(
-// //                  width: 50.0,
-//           alignment: Alignment.center,
-//           padding: const EdgeInsets.only(left: 8.0),
-//           child: Text('10\u00B0C',
-//               style: Theme.of(context)
-//                   .textTheme
-//                   .displaySmall!
-//                   .apply(fontSizeFactor: 0.5)),
-//         ),
-//         Flexible(
-//             flex: 1,
-//             child: SliderTheme(
-//               data: SliderThemeData(
-//                 trackHeight: 4.0,
-//                 activeTrackColor: Colors.blue,
-//                 inactiveTrackColor: Colors.grey,
-//                 thumbColor: Colors.blue,
-//                 overlayColor: Colors.blue.withOpacity(0.3),
-//                 tickMarkShape: const RoundSliderTickMarkShape(
-//                   tickMarkRadius: 8.0,
-//                 ),
-//               ),
-//               child: Slider(
-//                 value: requestedTempGetter() >= 10.0
-//                     ? requestedTempGetter()
-//                     : 10.0,
-//                 min: 10.0,
-//                 max: 25.0,
-//                 divisions: 75,
-//                 activeColor: ColorByTemp.findActiveColor(requestedTempGetter()),
-//                 inactiveColor:
-//                     ColorByTemp.findInActiveColor(requestedTempGetter()),
-//                 label: requestedTempGetter().toStringAsFixed(1),
-//                 onChanged: (double newValue) {
-//                   returnNewTemp(newValue, false);
-//                 },
-//                 onChangeEnd: (endValue) {
-//                   returnNewTemp(endValue, true);
-//                 },
-//               ),
-//             )),
-//         Container(
-// //                  width: 50.0,
-//           alignment: Alignment.center,
-//           padding: const EdgeInsets.only(right: 8.0),
-//           child: Text('25\u00B0C',
-//               style: Theme.of(context)
-//                   .textTheme
-//                   .displaySmall!
-//                   .apply(fontSizeFactor: 0.5)),
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-class RHGauge extends StatelessWidget {
-  const RHGauge({super.key, required this.humidity, required this.extHumidity});
-
-  final double humidity;
-  final double extHumidity;
-
+class RHGauge extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(10),
-      child: SfLinearGauge(
-          minimum: 0.0,
-          maximum: 100.0,
-          orientation: LinearGaugeOrientation.horizontal,
-          majorTickStyle: const LinearTickStyle(length: 20),
-          axisLabelStyle: const TextStyle(fontSize: 12.0, color: Colors.grey),
-          ranges: const [
-            LinearGaugeRange(startValue: 0, endValue: 20.0, color: Colors.red),
-            LinearGaugeRange(
-                startValue: 20.0, endValue: 30.0, color: Colors.orange),
-            LinearGaugeRange(
-                startValue: 30.0, endValue: 60.0, color: Colors.green),
-            LinearGaugeRange(
-                startValue: 60.0, endValue: 70.0, color: Colors.orange),
-            LinearGaugeRange(
-                startValue: 70.0, endValue: 100.0, color: Colors.red),
-          ],
-          markerPointers: extHumidity == -100
-              ? [
-                  LinearShapePointer(value: humidity, color: Colors.red),
-                ]
-              : [
-                  LinearShapePointer(value: humidity, color: Colors.red),
-                  LinearShapePointer(value: extHumidity, color: Colors.green),
-                ],
-          axisTrackStyle: const LinearAxisTrackStyle(
-              color: Colors.cyan,
-              edgeStyle: LinearEdgeStyle.bothFlat,
-              thickness: 8.0,
-              borderColor: Colors.grey)),
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    Map<int, double> extHumid = ref.watch(thermostatStatusNotifierProvider
+        .select((status) => status.extHumidity));
+    double intHumidity = ref.watch(
+        thermostatStatusNotifierProvider.select((status) => status.humidity));
+    List<double> extList = [];
+    double extHumidity = 0.0;
+    extHumid.forEach((stn, ext) {
+      if (stn != 1 && ext > 0) {
+        extList.add(ext);
+      }
+    });
+    if (extList.isNotEmpty) extHumidity = extList.average;
+
+    return Column(
+        // mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+              padding: const EdgeInsets.only(left: 8.0, top: 5.0),
+              child: RichText(
+                  textAlign: TextAlign.left,
+                  text: TextSpan(
+                      text: 'Relative Humidity',
+                      style: const TextStyle(
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                      children: <TextSpan>[
+                        TextSpan(
+                            text:
+                                extHumidity != -100 ? ' Inside + ' : ' Inside:',
+                            style: const TextStyle(
+                              fontSize: 18.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.lightBlue,
+                            )),
+                        TextSpan(
+                            text: extHumidity != -100 ? ' Outside (%):' : '',
+                            style: const TextStyle(
+                              fontSize: 18.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.yellow,
+                            )),
+                      ]))),
+          Container(
+            padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 8.0),
+            child: SfLinearGauge(
+              minimum: 0.0,
+              maximum: 100.0,
+              orientation: LinearGaugeOrientation.horizontal,
+              majorTickStyle: const LinearTickStyle(length: 20),
+              axisLabelStyle:
+                  const TextStyle(fontSize: 12.0, color: Colors.grey),
+              ranges: const [
+                LinearGaugeRange(
+                    startValue: 0,
+                    endValue: 20.0,
+                    color: Colors.red,
+                    startWidth: 10.0,
+                    endWidth: 10.0),
+                LinearGaugeRange(
+                    startValue: 20.0,
+                    endValue: 30.0,
+                    color: Colors.orange,
+                    startWidth: 10.0,
+                    endWidth: 10.0),
+                LinearGaugeRange(
+                    startValue: 30.0,
+                    endValue: 60.0,
+                    color: Colors.green,
+                    startWidth: 10.0,
+                    endWidth: 10.0),
+                LinearGaugeRange(
+                    startValue: 60.0,
+                    endValue: 70.0,
+                    color: Colors.orange,
+                    startWidth: 10.0,
+                    endWidth: 10.0),
+                LinearGaugeRange(
+                    startValue: 70.0,
+                    endValue: 100.0,
+                    color: Colors.red,
+                    startWidth: 10.0,
+                    endWidth: 10.0),
+              ],
+              markerPointers: extHumidity == -100
+                  ? [
+                      LinearShapePointer(
+                          value: intHumidity, color: Colors.lightBlue),
+                    ]
+                  : [
+                      LinearShapePointer(
+                          value: intHumidity, color: Colors.lightBlue),
+                      LinearShapePointer(
+                          value: extHumidity, color: Colors.yellow),
+                    ],
+              // axisTrackStyle: const LinearAxisTrackStyle(
+              //     // color: Colors.cyan,
+              //     edgeStyle: LinearEdgeStyle.bothFlat,
+              //     thickness: 8.0,
+              //     borderColor: Colors.grey)
+            ),
+            // );
+          ),
+        ]);
   }
 }
 
@@ -1006,7 +1053,7 @@ class LabelWithDoubleState extends StatelessWidget {
             ),
           ),
           Text(
-            (valueGetter() == 100.0
+            (valueGetter() == -100.0
                 ? ''
                 : '${valueGetter().toStringAsFixed(1)}\u00B0C'),
             style: textStyle,
@@ -1334,17 +1381,12 @@ class ShowDateTimeStamp extends StatelessWidget {
 //   }
 // }
 
-class TemperatureGauge extends StatelessWidget {
-  TemperatureGauge(this.currentTemperature, this.setTemperature, this.extTemp,
-      this.forecastTemp, this.boilerState,
-      {super.key});
+class TemperatureGauge extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<TemperatureGauge> createState() => _TemperatureGaugeState();
+}
 
-  double currentTemperature; // Initial temperature
-  double setTemperature; // Initial set temperature
-  double extTemp;
-  double forecastTemp;
-  bool boilerState;
-
+class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
   static const double maxDarkBlue = 5.0;
   static const double maxBlue = 15.0;
   static const double maxYellow = 17.0;
@@ -1355,6 +1397,15 @@ class TemperatureGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ThermostatStatus status = ref.watch(thermostatStatusNotifierProvider);
+    double extTemp = -100.0;
+    List<double> extList = [];
+    status.extTemp.forEach((stn, ext) {
+      if (stn != 1 && ext > -100) {
+        extList.add(ext);
+      }
+    });
+    if (extList.isNotEmpty) extTemp = extList.average;
     double minRange = maxDarkBlue;
     double maxRange = maxRed2;
     if (extTemp < minRange && extTemp > -5) {
@@ -1368,141 +1419,146 @@ class TemperatureGauge extends StatelessWidget {
       minRange = 0;
     }
     if (minRange > 10) minRange = 10;
-    if (maxRange < currentTemperature + 2) maxRange = currentTemperature + 2;
+    if (maxRange < status.currentTemp + 2) maxRange = status.currentTemp + 2;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SfRadialGauge(
-            axes: <RadialAxis>[
-              RadialAxis(
-                minimum: minRange,
-                maximum: maxRange,
-                interval: 1,
-                ranges: [
-                  GaugeRange(
-                    startValue: maxDarkBlue,
-                    endValue: maxBlue,
-                    gradient: const SweepGradient(
-                        colors: [Colors.blue, Colors.yellow],
-                        stops: [0.25, 0.9]),
-                  ),
-                  GaugeRange(
-                    startValue: maxBlue,
-                    endValue: maxYellow,
-                    gradient: const SweepGradient(
-                        colors: [Colors.yellow, Colors.orange],
-                        stops: [0.25, 0.9]),
-                  ),
-                  GaugeRange(
-                    startValue: maxYellow,
-                    endValue: maxOrange,
-                    gradient: const SweepGradient(
-                        colors: [Colors.orange, Colors.deepOrange],
-                        stops: [0.25, 0.9]),
-                  ),
-                  GaugeRange(
-                    startValue: maxOrange,
-                    endValue: maxRed,
-                    gradient: const SweepGradient(
-                        colors: [Colors.deepOrange, Colors.red],
-                        stops: [0.25, 0.9]),
-                  ),
-                  GaugeRange(
-                    startValue: maxRed,
-                    endValue: maxRed2,
-                    gradient: const SweepGradient(
-                        colors: [Colors.red, Color.fromARGB(255, 77, 6, 1)],
-                        stops: [0.25, 0.9]),
-                  ),
-                  GaugeRange(
-                      startValue: maxRed2,
-                      endValue: deepRed,
-                      color: const Color.fromARGB(255, 77, 6, 1)),
-                ],
-                pointers: <GaugePointer>[
-                  NeedlePointer(
-                    value: currentTemperature,
+      child: Container(
+        child: SfRadialGauge(
+          axes: <RadialAxis>[
+            RadialAxis(
+              minimum: minRange,
+              maximum: maxRange,
+              interval: 1,
+              radiusFactor: 1,
+              ranges: [
+                GaugeRange(
+                  startValue: maxDarkBlue,
+                  endValue: maxBlue,
+                  gradient: const SweepGradient(
+                      colors: [Colors.blue, Colors.yellow], stops: [0.25, 0.9]),
+                ),
+                GaugeRange(
+                  startValue: maxBlue,
+                  endValue: maxYellow,
+                  gradient: const SweepGradient(
+                      colors: [Colors.yellow, Colors.orange],
+                      stops: [0.25, 0.9]),
+                ),
+                GaugeRange(
+                  startValue: maxYellow,
+                  endValue: maxOrange,
+                  gradient: const SweepGradient(
+                      colors: [Colors.orange, Colors.deepOrange],
+                      stops: [0.25, 0.9]),
+                ),
+                GaugeRange(
+                  startValue: maxOrange,
+                  endValue: maxRed,
+                  gradient: const SweepGradient(
+                      colors: [Colors.deepOrange, Colors.red],
+                      stops: [0.25, 0.9]),
+                ),
+                GaugeRange(
+                  startValue: maxRed,
+                  endValue: maxRed2,
+                  gradient: const SweepGradient(
+                      colors: [Colors.red, Color.fromARGB(255, 77, 6, 1)],
+                      stops: [0.25, 0.9]),
+                ),
+                GaugeRange(
+                    startValue: maxRed2,
+                    endValue: deepRed,
+                    color: const Color.fromARGB(255, 77, 6, 1)),
+              ],
+              pointers: <GaugePointer>[
+                NeedlePointer(
+                  value: status.currentTemp == -100 ? 0 : status.currentTemp,
+                  enableAnimation: true,
+                  animationType: AnimationType.ease,
+                  needleEndWidth: 5,
+                  lengthUnit: GaugeSizeUnit.factor,
+                  needleLength: 0.8,
+                  needleColor: status.currentTemp > status.setTemp
+                      ? Colors.red
+                      : Colors.blue,
+                ),
+                NeedlePointer(
+                  value: status.setTemp,
+                  enableAnimation: true,
+                  animationType: AnimationType.ease,
+                  lengthUnit: GaugeSizeUnit.factor,
+                  needleLength: 0.8,
+                  needleEndWidth: 5,
+                  needleColor: Colors.grey,
+                ),
+                MarkerPointer(
+                    value: extTemp > -50 ? extTemp : status.forecastExtTemp,
+                    color: Colors.green[600],
                     enableAnimation: true,
                     animationType: AnimationType.ease,
-                    needleEndWidth: 5,
-                    lengthUnit: GaugeSizeUnit.factor,
-                    needleLength: 0.8,
-                    needleColor: currentTemperature > setTemperature
-                        ? Colors.red
-                        : Colors.blue,
-                  ),
-                  NeedlePointer(
-                    value: setTemperature,
-                    enableAnimation: true,
-                    animationType: AnimationType.ease,
-                    lengthUnit: GaugeSizeUnit.factor,
-                    needleLength: 0.8,
-                    needleEndWidth: 5,
-                    needleColor: Colors.grey,
-                  ),
-                  MarkerPointer(
-                      value: extTemp > -50 ? extTemp : forecastTemp,
-                      color: Colors.green[600],
-                      enableAnimation: true,
-                      animationType: AnimationType.ease,
-                      markerType: MarkerType.rectangle),
-                ],
-                annotations: <GaugeAnnotation>[
-                  GaugeAnnotation(
-                    widget: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Internal Temp: $currentTemperature°C',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                            ),
+                    markerType: MarkerType.rectangle),
+              ],
+              annotations: <GaugeAnnotation>[
+                GaugeAnnotation(
+                  widget: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Internal Temp: ${status.currentTemp == -100 ? "??" : status.currentTemp}°C',
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: status.localUI ? 20 : 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
                           ),
-                          Text(
-                            'Set Temp: $setTemperature°C',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
-                            ),
+                        ),
+                        Text(
+                          'Set Temp: ${status.setTemp}°C',
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: status.localUI ? 20 : 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
                           ),
-                          Text(
-                            'Outside Temp: ${extTemp != -100 ? extTemp.toStringAsFixed(1) : "??"}°C',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
+                        ),
+                        Text(
+                          'Outside Temp: ${extTemp != -100 ? extTemp.toStringAsFixed(1) : "??"}°C',
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: status.localUI ? 20 : 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
                           ),
-                          Text(
-                            'Forecast: ${forecastTemp != -100 ? forecastTemp.toStringAsFixed(1) : "??"}°C',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blueGrey,
-                            ),
+                        ),
+                        Text(
+                          'Forecast: ${status.forecastExtTemp != -100 ? status.forecastExtTemp.toStringAsFixed(1) : "??"}°C',
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: status.localUI ? 20 : 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey,
                           ),
-                          boilerState
-                              ? const Icon(Icons.local_fire_department_rounded,
-                                  color: Colors.red, size: 50.0)
+                        ),
+                        IconButton(
+                          icon: status.boilerOn
+                              ? Icon(Icons.local_fire_department_rounded,
+                                  color: Colors.red,
+                                  size: status.localUI ? 70.0 : 50.0)
                               : Icon(Icons.local_fire_department_sharp,
-                                  color: Colors.grey[300], size: 50.0),
-                        ]),
-                    angle: 90,
-                    positionFactor: 0.5,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
+                                  color: Colors.grey[300],
+                                  size: status.localUI ? 70.0 : 50.0),
+                          // tooltip: "Boiler Boost for 15 mins",
+                          onPressed: () => ref
+                              .read(thermostatStatusNotifierProvider.notifier)
+                              .sendBoost,
+                        ),
+                      ]),
+                  angle: 90,
+                  positionFactor: 0.5,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

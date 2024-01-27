@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter/foundation.dart';
 // import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -29,7 +30,7 @@ void main() async {
   // FlutterpiVideoPlayer.registerWith();
   // }
   MediaKit.ensureInitialized();
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatefulWidget {
@@ -72,10 +73,10 @@ class MyAppState extends State<MyApp> {
         statusPage.localUI = localUI;
         statusPage.statePage.localUI = localUI;
         // Cancel any current time as will want to do it more frequently if local
-        statusPage.statePage.timer.cancel();
+        // statusPage.statePage.timer.cancel();
         statusPage.oauthToken = oauthToken;
-        statusPage.statePage.oauthToken = oauthToken;
-        statusPage.statePage.refreshStatus(statusPage.statePage.timer);
+        statusPage.statePage.setSecret(oauthToken);
+        // statusPage.statePage.refreshStatus(statusPage.statePage.timer);
       });
     });
     super.initState();
@@ -204,7 +205,7 @@ class DateTimeWidget extends StatefulWidget {
 }
 
 class _DateTimeWidgetState extends State<DateTimeWidget> {
-  late String _currentDateTime;
+  String _currentDateTime = " ";
 
   @override
   void initState() {
@@ -217,10 +218,15 @@ class _DateTimeWidgetState extends State<DateTimeWidget> {
   }
 
   void _updateDateTime() {
-    setState(() {
-      _currentDateTime = DateFormat('dd MMMM yyyy             HH:mm:ss')
-          .format(DateTime.now());
-    });
+    bool updateState =
+        FileStat.statSync("/home/danny/thermostat/displayOn.txt").type !=
+            FileSystemEntityType.notFound;
+    if (updateState) {
+      setState(() {
+        _currentDateTime = DateFormat('dd MMMM yyyy             HH:mm:ss')
+            .format(DateTime.now());
+      });
+    }
   }
 
   @override

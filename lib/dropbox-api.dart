@@ -142,7 +142,7 @@ class DropBoxAPIFn {
   static String globalOauthToken = "BLANK";
 
   static void getDropBoxFile({
-    required String oauthToken,
+    String oauthToken = "BLANK",
     required String fileToDownload,
     required Function callback,
     required int timeoutSecs,
