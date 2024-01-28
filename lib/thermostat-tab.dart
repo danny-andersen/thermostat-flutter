@@ -93,6 +93,66 @@ class ThermostatStatus {
     requestOutstanding = oldState.requestOutstanding;
   }
 
+  ThermostatStatus.fromParams(
+      this.localUI,
+      this.oauthToken,
+      this.currentTemp,
+      this.lastStatusReadTime,
+      this.forecastExtTemp,
+      this.windStr,
+      this.lastForecastReadTime,
+      this.motdStr,
+      this.lastMotdReadTime,
+      this.setTemp,
+      this.requestedTemp,
+      this.humidity,
+      this.lastHeardFrom,
+      this.intPirState,
+      this.intPirLastEvent,
+      this.boilerOn,
+      this.minsToSetTemp,
+      this.requestOutstanding);
+
+  ThermostatStatus copyWith(
+      {bool? localUI,
+      String? oauthToken,
+      double? currentTemp,
+      DateTime? lastStatusReadTime,
+      double? forecastExtTemp,
+      String? windStr,
+      DateTime? lastForecastReadTime,
+      String? motdStr,
+      DateTime? lastMotdReadTime,
+      double? setTemp,
+      double? requestedTemp,
+      double? humidity,
+      DateTime? lastHeardFrom,
+      bool? intPirState,
+      String? intPirLastEvent,
+      bool? boilerOn,
+      int? minsToSetTemp,
+      bool? requestOutstanding}) {
+    return ThermostatStatus.fromParams(
+        localUI ?? this.localUI,
+        oauthToken ?? this.oauthToken,
+        currentTemp ?? this.currentTemp,
+        lastStatusReadTime ?? this.lastStatusReadTime,
+        forecastExtTemp ?? this.forecastExtTemp,
+        windStr ?? this.windStr,
+        lastForecastReadTime ?? this.lastForecastReadTime,
+        motdStr ?? this.motdStr,
+        lastMotdReadTime ?? this.lastMotdReadTime,
+        setTemp ?? this.setTemp,
+        requestedTemp ?? this.requestedTemp,
+        humidity ?? this.humidity,
+        lastHeardFrom ?? this.lastHeardFrom,
+        intPirState ?? this.intPirState,
+        intPirLastEvent ?? this.intPirLastEvent,
+        boilerOn ?? this.boilerOn,
+        minsToSetTemp ?? this.minsToSetTemp,
+        requestOutstanding ?? this.requestOutstanding);
+  }
+
   late bool localUI;
   String oauthToken = "";
   double currentTemp = -100.0;
@@ -281,7 +341,7 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   final String boostFile = "/boost.txt";
   final String localBoostFile = "/home/danny/thermostat/boost.txt";
 
-  late ThermostatStatus newState;
+  // late ThermostatStatus newState;
 
   @override
   ThermostatStatus build() {
@@ -305,14 +365,13 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           FileSystemEntityType.notFound;
     }
     if (updateState) {
-      newState = ThermostatStatus.fromStatus(state);
+      // newState = ThermostatStatus.fromStatus(state);
       getStatus();
     }
   }
 
   void getStatus() {
     if (state.localUI) {
-      bool changed = false;
       FileStat statusStat = FileStat.statSync(localStatusFile);
       FileStat motdStat = FileStat.statSync(localMotd);
       FileStat fcStat = FileStat.statSync(localForecastExt);
@@ -324,26 +383,21 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
             statusStat.changed.isAfter(state.lastStatusReadTime)) {
           String statusStr = File(localStatusFile).readAsStringSync();
           processStatus(localStatusFile, statusStr);
-          newState.lastStatusReadTime = statusStat.changed;
-          changed = true;
+          state = state.copyWith(lastStatusReadTime: statusStat.changed);
         }
         if (motdStat.type != FileSystemEntityType.notFound &&
             motdStat.changed.isAfter(state.lastMotdReadTime)) {
           String contents = File(localMotd).readAsStringSync();
           String motd = contents.split('\n')[0];
-          newState.motdStr = motd.replaceAll(RegExp(r'\.'), '.\n');
-          newState.lastMotdReadTime = motdStat.changed;
-          changed = true;
+          state = state.copyWith(
+              motdStr: motd.replaceAll(RegExp(r'\.'), '.\n'),
+              lastMotdReadTime: motdStat.changed);
         }
         if (fcStat.type != FileSystemEntityType.notFound &&
             fcStat.changed.isAfter(state.lastForecastReadTime)) {
           String contents = File(localForecastExt).readAsStringSync();
           processForecast(contents);
-          newState.lastForecastReadTime = fcStat.changed;
-          changed = true;
-        }
-        if (changed) {
-          state = newState;
+          state = state.copyWith(lastForecastReadTime: fcStat.changed);
         }
       }
     } else {
@@ -358,7 +412,6 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   }
 
   void processStatus(String filename, String contents) {
-    bool changed = false;
     contents.split('\n').forEach((line) {
       if (line.startsWith('Current temp:')) {
         double newTemp = state.currentTemp;
@@ -372,8 +425,7 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           }
         }
         if (newTemp != state.currentTemp) {
-          newState.currentTemp = newTemp;
-          changed = true;
+          state = state.copyWith(currentTemp: newTemp);
         }
       } else if (line.startsWith('Current set temp:')) {
         double newSetTemp = state.setTemp;
@@ -386,18 +438,18 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
             if (state.requestedTemp.toStringAsFixed(1) ==
                     state.setTemp.toStringAsFixed(1) &&
                 state.requestOutstanding) {
-              newState.requestOutstanding = false;
-              changed = true;
+              state = state.copyWith(requestOutstanding: false);
             }
-            if (!state.requestOutstanding) {
-              newState.requestedTemp = state.setTemp;
+            if (!state.requestOutstanding &&
+                state.requestedTemp.toStringAsFixed(1) !=
+                    state.setTemp.toStringAsFixed(1)) {
+              state = state.copyWith(requestedTemp: state.setTemp);
+            }
+            if (newSetTemp != state.setTemp) {
+              state = state.copyWith(setTemp: newSetTemp);
             }
           } on FormatException {
             print("Received non-double setTemp format: $line");
-          }
-          if (newSetTemp != state.setTemp) {
-            newState.setTemp = newSetTemp;
-            changed = true;
           }
         }
       } else if (line.startsWith('External temp:')) {
@@ -411,15 +463,13 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
             print("Received non-double forecast extTemp format: $line");
           }
           if (newForecastExtTemp != state.forecastExtTemp) {
-            newState.forecastExtTemp = newForecastExtTemp;
-            changed = true;
+            state = state.copyWith(forecastExtTemp: newForecastExtTemp);
           }
         }
       } else if (line.startsWith('Heat on?')) {
         bool newBoilerOn = (line.split('?')[1].trim() == 'Yes');
         if (newBoilerOn != state.boilerOn) {
-          newState.boilerOn = newBoilerOn;
-          changed = true;
+          state = state.copyWith(boilerOn: newBoilerOn);
         }
       } else if (line.startsWith('Mins to set temp')) {
         int newMinsToSetTemp = state.minsToSetTemp;
@@ -427,54 +477,43 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           newMinsToSetTemp = int.parse(line.split(':')[1].trim());
         } on FormatException {
           try {
-            state.minsToSetTemp =
-                double.parse(line.split(':')[1].trim()).toInt();
+            newMinsToSetTemp = double.parse(line.split(':')[1].trim()).toInt();
           } on FormatException {
             print("Received non-int minsToSetTemp format: $line");
           }
           if (newMinsToSetTemp != state.minsToSetTemp) {
-            newState.minsToSetTemp = newMinsToSetTemp;
-            changed = true;
+            state = state.copyWith(minsToSetTemp: newMinsToSetTemp);
           }
         }
       } else if (line.startsWith('Last heard time')) {
         String dateStr = line.substring(line.indexOf(':') + 2, line.length);
         DateTime newLastHeardFrom = DateTime.parse(dateStr);
         if (newLastHeardFrom != state.lastHeardFrom) {
-          newState.lastHeardFrom = newLastHeardFrom;
-          changed = true;
+          state = state.copyWith(lastHeardFrom: newLastHeardFrom);
         }
       } else if (line.startsWith('Current humidity')) {
         String str = line.substring(line.indexOf(':') + 2, line.length);
         double newhumidity = double.parse(str);
         if (newhumidity != state.humidity) {
-          newState.humidity = newhumidity;
-          changed = true;
+          state = state.copyWith(humidity: newhumidity);
         }
       } else if (line.startsWith('Last PIR')) {
         String newPirLastEvent =
             line.substring(line.indexOf(':') + 1, line.length);
         if (newPirLastEvent != state.intPirLastEvent) {
-          newState.intPirLastEvent = newPirLastEvent;
-          changed = true;
+          state = state.copyWith(intPirLastEvent: newPirLastEvent);
         }
       } else if (line.startsWith('PIR:')) {
         String str = line.substring(line.indexOf(':') + 1, line.length);
         bool newPirState = str.contains('1');
         if (newPirState != state.intPirState) {
-          newState.intPirState = newPirState;
-          changed = true;
+          state = state.copyWith(intPirState: newPirState);
         }
       }
     });
-    if (changed) {
-      //Trigger rebuild
-      state = newState;
-    }
   }
 
-  bool processForecast(String contents) {
-    bool changed = false;
+  void processForecast(String contents) {
     List<String> lines = contents.split('\n');
     double newForecastTemp = state.forecastExtTemp;
     try {
@@ -483,43 +522,37 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
       print("Received non-double forecast temp format: $lines[0]");
     }
     if (newForecastTemp != state.forecastExtTemp) {
-      newState.forecastExtTemp = newForecastTemp;
-      changed = true;
+      state = state.copyWith(forecastExtTemp: newForecastTemp);
     }
     String newWindStr = lines[1].trim();
     if (newWindStr != state.windStr) {
-      newState.windStr = newWindStr;
-      changed = true;
+      state = state.copyWith(windStr: newWindStr);
     }
-    return changed;
   }
 
   void decRequestedTemp() {
 //      print("Minus pressed");
-    newState = ThermostatStatus.fromStatus(state);
-    if (newState.requestedTemp > 10) {
+    if (state.requestedTemp > 10) {
       //Only use existing requestTemp if its in a sensible range
-      newState.requestedTemp -= 0.50;
+      state = state.copyWith(
+          requestedTemp: state.requestedTemp - 0.5, requestOutstanding: true);
     } else {
-      newState.requestedTemp = newState.setTemp - 0.5;
+      state = state.copyWith(
+          requestedTemp: state.setTemp + 0.5, requestOutstanding: true);
     }
-    newState.requestOutstanding = true;
-    state = newState;
-    // print("Minus pressed");
     sendNewTemp(state.requestedTemp, true);
   }
 
   void incrementRequestedTemp() {
-    newState = ThermostatStatus.fromStatus(state);
-    if (newState.requestedTemp > 10) {
-      //Only use existing requestTemp if its in a sensible range
-      newState.requestedTemp += 0.50;
-    } else {
-      newState.requestedTemp = newState.setTemp + 0.50;
-    }
-    newState.requestOutstanding = true;
-    state = newState;
     // print("Plus pressed");
+    if (state.requestedTemp > 10) {
+      //Only use existing requestTemp if its in a sensible range
+      state = state.copyWith(
+          requestedTemp: state.requestedTemp + 0.5, requestOutstanding: true);
+    } else {
+      state = state.copyWith(
+          requestedTemp: state.setTemp + 0.5, requestOutstanding: true);
+    }
     sendNewTemp(state.requestedTemp, true);
   }
 
@@ -550,12 +583,6 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
     }
   }
 }
-
-// ThermostatStatus ThermostatStatus(ThermostatStatusRef ref) {
-//     StateNotifierProvider<ThermostatStatusNotifier, ThermostatStatus>((ref) {
-//   ThermostatStatusNotifier status = ThermostatStatusNotifier();
-//   return status;
-// }
 
 class ThermostatPage extends ConsumerStatefulWidget {
   ThermostatPage({super.key, required this.oauthToken, required this.localUI});
