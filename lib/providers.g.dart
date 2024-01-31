@@ -1,13 +1,13 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'thermostat-tab.dart';
+part of 'providers.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
 String _$cameraStatusNotifierHash() =>
-    r'cfc2c2fd693409d6ffb275710f4cdc8ae3d6c52c';
+    r'8d4ae7dcafeb44e113633238a8d4e2c8e745d588';
 
 /// See also [CameraStatusNotifier].
 @ProviderFor(CameraStatusNotifier)
