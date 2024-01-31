@@ -195,9 +195,9 @@ class CameraStatus {
   Map<int, double> extTemp = {2: -100.0, 4: -100.0};
   Map<String, DateTime> lastExtReadTime = {};
   Map<int, double> extHumidity = {2: 0.0, 4: 0.0};
-  Map<int, DateTime?> extLastHeardFrom = {4: null, 3: null, 2: null};
+  Map<int, DateTime?> extLastHeardFrom = {5: null, 4: null, 3: null, 2: null};
   Map<int, bool> extPirState = {4: false, 3: false, 2: false};
-  Map<int, String> extPirLastEvent = {4: "", 3: "", 2: ""};
+  Map<int, String> extPirLastEvent = {5: "", 4: "", 3: "", 2: ""};
 }
 
 @riverpod
@@ -205,12 +205,14 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
   final List<String> externalstatusFile = [
     "/2_status.txt",
     "/3_status.txt",
-    "/4_status.txt"
+    "/4_status.txt",
+    "/5_status.txt",
   ];
   final List<String> localExternalstatusFile = [
     "/home/danny/control_station/2_status.txt",
     "/home/danny/control_station/3_status.txt",
     "/home/danny/control_station/4_status.txt",
+    "/home/danny/control_station/5_status.txt",
   ];
   final int STATION_WITH_EXT_TEMP = 2;
   final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
@@ -285,10 +287,13 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
     contents.split('\n').forEach((line) {
       double? newExtTemp = state.extTemp[stationNo];
       if (line.startsWith('Current temp:')) {
-        try {
-          newExtTemp = double.parse(line.split(':')[1].trim());
-        } on FormatException {
-          print("Received non-double External temp format: $line");
+        String tempStr = line.split(':')[1].trim();
+        if (!tempStr.startsWith("Not Set")) {
+          try {
+            newExtTemp = double.parse(tempStr);
+          } on FormatException {
+            print("Received non-double External temp format: $line");
+          }
         }
         if (newExtTemp != null && newExtTemp != state.extTemp[stationNo]) {
           newState.extTemp[stationNo] = newExtTemp;
@@ -604,20 +609,21 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
   _ThermostatPageState({required this.oauthToken, required this.localUI});
   String oauthToken;
   bool localUI;
-  String username = "";
-  String password = "";
   String extHost = "";
-  int startPort = 0;
+  int intStartPort = 0;
+  int extStartPort = 0;
   bool onCameraLocalLan = false;
   final Map<int, String> extStationNames = {
     2: "House RH side",
     3: "Front Door",
-    4: "House LH side"
+    4: "House LH side",
+    5: "Hall"
   };
   final Map<String, String> stationCamUrlByName = {
     "House RH side": "https://house-rh-side-cam0",
     "Front Door": "https://front-door-cam",
     "House LH side": "https://house-lh-side",
+    "Hall": "https://masterstation",
   };
   late Timer timer;
 
@@ -714,10 +720,11 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     }
     String camUrl = "";
     if (stationId != 0) {
-      int portNo = startPort + (stationId - 2);
       if (stationId != 0 && onCameraLocalLan) {
+        int portNo = intStartPort + (stationId - 2);
         camUrl = "${stationCamUrlByName[stationName]}:$portNo";
       } else {
+        int portNo = extStartPort + (stationId - 2);
         camUrl = "https://$extHost:$portNo";
       }
     }
@@ -728,11 +735,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => WebViewPage(
-                      title: "$stationName Live Webcam",
-                      website: camUrl,
-                      username: username,
-                      password: password,
-                    ),
+                        title: "$stationName Live Webcam", website: camUrl),
                   ),
                 );
               }
@@ -1661,37 +1664,29 @@ class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
 }
 
 class WebViewPage extends StatefulWidget {
-  const WebViewPage(
-      {super.key,
-      required this.title,
-      required this.website,
-      required this.username,
-      required this.password});
+  const WebViewPage({
+    super.key,
+    required this.title,
+    required this.website,
+  });
   final String title;
   final String website;
-  final String username;
-  final String password;
   @override
-  _WebViewPageState createState() => _WebViewPageState(
-      title: title, website: website, username: username, password: password);
+  _WebViewPageState createState() =>
+      _WebViewPageState(title: title, website: website);
 }
 
 class _WebViewPageState extends State<WebViewPage> {
-  _WebViewPageState(
-      {required this.title,
-      required this.website,
-      required this.username,
-      required this.password});
+  _WebViewPageState({
+    required this.title,
+    required this.website,
+  });
   String title;
   String website;
-  String username;
-  String password;
   late final InAppWebViewController webViewController;
   final GlobalKey webViewKey = GlobalKey();
   final urlController = TextEditingController();
   double progress = 0;
-  HttpAuthCredentialDatabase httpAuthCredentialDatabase =
-      HttpAuthCredentialDatabase.instance();
 
   InAppWebViewSettings settings = InAppWebViewSettings(
     useShouldOverrideUrlLoading: true,
@@ -1699,61 +1694,6 @@ class _WebViewPageState extends State<WebViewPage> {
     useHybridComposition: true,
     allowsInlineMediaPlayback: true,
   );
-
-  @override
-  void initState() {
-    super.initState();
-    // webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri(website)));
-    // controller = WebViewController()
-    //   ..loadRequest(
-    //     Uri.parse(website),
-    //   );
-    // set a HTTP auth credential for a particular Protection Space
-    URLCredential creds = URLCredential(username: username, password: password);
-
-    httpAuthCredentialDatabase.setHttpAuthCredential(
-        protectionSpace: URLProtectionSpace(
-            host: "house-rh-side-cam0",
-            protocol: "https",
-            realm: "Motion",
-            port: 8402),
-        credential: creds);
-    httpAuthCredentialDatabase.setHttpAuthCredential(
-        protectionSpace: URLProtectionSpace(
-            host: "146.198.23.112",
-            protocol: "https",
-            realm: "Motion",
-            port: 8402),
-        credential: creds);
-    httpAuthCredentialDatabase.setHttpAuthCredential(
-        protectionSpace: URLProtectionSpace(
-            host: "front-door-cam",
-            protocol: "https",
-            realm: "Motion",
-            port: 8403),
-        credential: creds);
-    httpAuthCredentialDatabase.setHttpAuthCredential(
-        protectionSpace: URLProtectionSpace(
-            host: "146.198.23.112",
-            protocol: "https",
-            realm: "Motion",
-            port: 8403),
-        credential: creds);
-    httpAuthCredentialDatabase.setHttpAuthCredential(
-        protectionSpace: URLProtectionSpace(
-            host: "house-lh-side",
-            protocol: "https",
-            realm: "Motion",
-            port: 8404),
-        credential: creds);
-    httpAuthCredentialDatabase.setHttpAuthCredential(
-        protectionSpace: URLProtectionSpace(
-            host: "146.198.23.112",
-            protocol: "https",
-            realm: "Motion",
-            port: 8404),
-        credential: creds);
-  }
 
   @override
   Widget build(BuildContext context) {

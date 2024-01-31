@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter/foundation.dart';
-// import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:media_kit/media_kit.dart'; // Provides [Player], [Media], [Playlist] etc.
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'package:thermostat_flutter/dropbox-api.dart';
 import 'package:thermostat_flutter/who_tab.dart';
@@ -16,7 +17,9 @@ import 'package:thermostat_flutter/history-tab.dart';
 import 'package:thermostat_flutter/holidaytab.dart';
 import 'package:thermostat_flutter/schedule-tab.dart';
 // import 'package:flutterpi_gstreamer_video_player/flutterpi_gstreamer_video_player.dart';
-import 'package:media_kit/media_kit.dart'; // Provides [Player], [Media], [Playlist] etc.
+
+HttpAuthCredentialDatabase httpAuthCredentialDatabase =
+    HttpAuthCredentialDatabase.instance();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,17 +69,79 @@ class MyAppState extends State<MyApp> {
       setState(() {
         oauthToken = secret.apiKey;
         DropBoxAPIFn.globalOauthToken = oauthToken;
-        statusPage.statePage.username = secret.username;
-        statusPage.statePage.password = secret.password;
-        statusPage.statePage.extHost = secret.extHost;
-        statusPage.statePage.startPort = secret.startPort;
+        statusPage.oauthToken = oauthToken;
+        statusPage.statePage.setSecret(oauthToken);
+
         statusPage.localUI = localUI;
         statusPage.statePage.localUI = localUI;
         // Cancel any current time as will want to do it more frequently if local
         // statusPage.statePage.timer.cancel();
-        statusPage.oauthToken = oauthToken;
-        statusPage.statePage.setSecret(oauthToken);
         // statusPage.statePage.refreshStatus(statusPage.statePage.timer);
+
+        // statusPage.statePage.username = secret.username;
+        // statusPage.statePage.password = secret.password;
+        statusPage.statePage.extHost = secret.extHost;
+        statusPage.statePage.extStartPort = secret.extStartPort;
+        statusPage.statePage.intStartPort = secret.intStartPort;
+        URLCredential creds =
+            URLCredential(username: secret.username, password: secret.password);
+
+        httpAuthCredentialDatabase.setHttpAuthCredential(
+            protectionSpace: URLProtectionSpace(
+                host: "house-rh-side-cam0",
+                protocol: "https",
+                realm: "Motion",
+                port: secret.intStartPort),
+            credential: creds);
+        httpAuthCredentialDatabase.setHttpAuthCredential(
+            protectionSpace: URLProtectionSpace(
+                host: secret.extHost,
+                protocol: "https",
+                realm: "Motion",
+                port: secret.extStartPort),
+            credential: creds);
+        httpAuthCredentialDatabase.setHttpAuthCredential(
+            protectionSpace: URLProtectionSpace(
+                host: "front-door-cam",
+                protocol: "https",
+                realm: "Motion",
+                port: secret.intStartPort + 1),
+            credential: creds);
+        httpAuthCredentialDatabase.setHttpAuthCredential(
+            protectionSpace: URLProtectionSpace(
+                host: secret.extHost,
+                protocol: "https",
+                realm: "Motion",
+                port: secret.extStartPort + 1),
+            credential: creds);
+        httpAuthCredentialDatabase.setHttpAuthCredential(
+            protectionSpace: URLProtectionSpace(
+                host: "house-lh-side",
+                protocol: "https",
+                realm: "Motion",
+                port: secret.intStartPort + 2),
+            credential: creds);
+        httpAuthCredentialDatabase.setHttpAuthCredential(
+            protectionSpace: URLProtectionSpace(
+                host: secret.extHost,
+                protocol: "https",
+                realm: "Motion",
+                port: secret.extStartPort + 2),
+            credential: creds);
+        httpAuthCredentialDatabase.setHttpAuthCredential(
+            protectionSpace: URLProtectionSpace(
+                host: "masterstation",
+                protocol: "https",
+                realm: "Motion",
+                port: secret.intStartPort + 3),
+            credential: creds);
+        httpAuthCredentialDatabase.setHttpAuthCredential(
+            protectionSpace: URLProtectionSpace(
+                host: secret.extHost,
+                protocol: "https",
+                realm: "Motion",
+                port: secret.extStartPort + 3),
+            credential: creds);
       });
     });
     super.initState();
@@ -182,20 +247,23 @@ class Secret {
   final String username;
   final String password;
   final String extHost;
-  final int startPort;
+  final int extStartPort;
+  final int intStartPort;
   Secret(
       {this.apiKey = "",
       this.username = "",
       this.password = "",
       this.extHost = "",
-      this.startPort = 0});
+      this.intStartPort = 0,
+      this.extStartPort = 0});
   factory Secret.fromJson(Map<String, dynamic> jsonMap) {
     return Secret(
         apiKey: jsonMap["api_key"],
         username: jsonMap["username"],
         password: jsonMap["password"],
         extHost: jsonMap["extHost"],
-        startPort: jsonMap["startPort"]);
+        extStartPort: jsonMap["extStartPort"],
+        intStartPort: jsonMap["intStartPort"]);
   }
 }
 
