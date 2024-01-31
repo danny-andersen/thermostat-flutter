@@ -202,7 +202,7 @@ class VideoScreenState extends State<VideoScreen> {
 String getSourceFromFilename(String filename) {
   List<String> parts = filename.split('-');
   String source = "Unknown Webcam";
-  if (parts[1].contains("pi")) {
+  if (parts[1].contains("hall")) {
     source = "Hall";
   } else if (parts[1].contains("cam0")) {
     source = "House right side";
