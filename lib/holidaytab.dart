@@ -49,8 +49,8 @@ class _HolidayPageState extends State<HolidayPage> {
 
   void resetDates() {
     DateTime now = DateTime.now();
-    _fromDate = DateTime(now.year, now.month, now.day, now.hour);
-    _fromTime = TimeOfDay(hour: _fromDate.hour, minute: 0);
+    _fromDate = DateTime(now.year, now.month, now.day, now.hour, now.minute);
+    _fromTime = TimeOfDay(hour: _fromDate.hour, minute: _fromDate.minute);
     _toDate = _fromDate.add(const Duration(hours: 1));
     _toTime = TimeOfDay(
       hour: _toDate.hour,
@@ -73,7 +73,8 @@ class _HolidayPageState extends State<HolidayPage> {
                   (2000 + int.parse(fields[1])),
                   int.parse(fields[2]),
                   int.parse(fields[3]),
-                  int.parse(fields[4]));
+                  int.parse(fields[4]),
+                  fields.length > 5 ? int.parse(fields[5]) : 0);
             } on FormatException {
               print("Received incorrect holiday start line: $line");
             }
@@ -83,7 +84,8 @@ class _HolidayPageState extends State<HolidayPage> {
                   (2000 + int.parse(fields[1])),
                   int.parse(fields[2]),
                   int.parse(fields[3]),
-                  int.parse(fields[4]));
+                  int.parse(fields[4]),
+                  fields.length > 5 ? int.parse(fields[5]) : 0);
             } on FormatException {
               print("Received incorrect holiday end line: $line");
             }
@@ -110,9 +112,10 @@ class _HolidayPageState extends State<HolidayPage> {
           }
           if (holidaySet) {
             _fromDate = newFromDate;
-            _fromTime = TimeOfDay(hour: _fromDate.hour, minute: 0);
+            _fromTime =
+                TimeOfDay(hour: _fromDate.hour, minute: _fromDate.minute);
             _toDate = newToDate;
-            _toTime = TimeOfDay(hour: _toDate.hour, minute: 0);
+            _toTime = TimeOfDay(hour: _toDate.hour, minute: _toDate.minute);
           }
         }
       });
@@ -146,9 +149,9 @@ class _HolidayPageState extends State<HolidayPage> {
   void sendNewHoliday() {
     StringBuffer buff = StringBuffer();
     buff.writeln(
-        "Start,${_fromDate.year - 2000},${_fromDate.month},${_fromDate.day},${_fromTime.hour}");
+        "Start,${_fromDate.year - 2000},${_fromDate.month},${_fromDate.day},${_fromTime.hour},${_fromTime.minute}");
     buff.writeln(
-        "End,${_toDate.year - 2000},${_toDate.month},${_toDate.day},${_toTime.hour}");
+        "End,${_toDate.year - 2000},${_toDate.month},${_toDate.day},${_toTime.hour},${_toTime.minute}");
     buff.writeln("Temp,$holidayTemp");
     String contents = buff.toString();
     DropBoxAPIFn.sendDropBoxFile(
@@ -171,8 +174,8 @@ class _HolidayPageState extends State<HolidayPage> {
 
   void cancelHoliday() {
     StringBuffer buff = StringBuffer();
-    buff.writeln("Start,19,01,01,01");
-    buff.writeln("End,19,01,01,02");
+    buff.writeln("Start,19,01,01,01,00");
+    buff.writeln("End,19,01,01,02,00");
     buff.writeln("Temp,$holidayTemp");
     String contents = buff.toString();
     DropBoxAPIFn.sendDropBoxFile(
