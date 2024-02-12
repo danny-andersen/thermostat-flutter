@@ -130,7 +130,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     timer = Timer.periodic(
         ref.read(thermostatStatusNotifierProvider).localUI
             ? const Duration(milliseconds: 500)
-            : const Duration(seconds: 5),
+            : const Duration(seconds: 20),
         updateStatus);
   }
 
@@ -141,7 +141,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       timer = Timer.periodic(
           ref.read(thermostatStatusNotifierProvider).localUI
               ? const Duration(milliseconds: 500)
-              : const Duration(seconds: 5),
+              : const Duration(seconds: 20),
           updateStatus);
     }
   }

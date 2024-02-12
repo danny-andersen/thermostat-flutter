@@ -112,164 +112,6 @@ class ThermostatStatus {
   bool requestOutstanding = false;
 }
 
-class CameraStatus {
-  CameraStatus({required this.localUI});
-  CameraStatus.fromStatus(CameraStatus oldState) {
-    localUI = oldState.localUI;
-    oauthToken = oldState.oauthToken;
-
-    extTemp = oldState.extTemp;
-    lastExtReadTime = oldState.lastExtReadTime;
-    extHumidity = oldState.extHumidity;
-    extLastHeardFrom = oldState.extLastHeardFrom;
-    extPirState = oldState.extPirState;
-    extPirLastEvent = oldState.extPirLastEvent;
-  }
-
-  late bool localUI;
-  String oauthToken = "";
-
-  Map<int, double> extTemp = {2: -100.0, 4: -100.0};
-  Map<String, DateTime> lastExtReadTime = {};
-  Map<int, double> extHumidity = {2: 0.0, 4: 0.0};
-  Map<int, DateTime?> extLastHeardFrom = {5: null, 4: null, 3: null, 2: null};
-  Map<int, bool> extPirState = {4: false, 3: false, 2: false};
-  Map<int, String> extPirLastEvent = {5: "", 4: "", 3: "", 2: ""};
-}
-
-@riverpod
-class CameraStatusNotifier extends _$CameraStatusNotifier {
-  final List<String> externalstatusFile = [
-    "/2_status.txt",
-    "/3_status.txt",
-    "/4_status.txt",
-    "/5_status.txt",
-  ];
-  final List<String> localExternalstatusFile = [
-    "/home/danny/control_station/2_status.txt",
-    "/home/danny/control_station/3_status.txt",
-    "/home/danny/control_station/4_status.txt",
-    "/home/danny/control_station/5_status.txt",
-  ];
-  final int STATION_WITH_EXT_TEMP = 2;
-  final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
-
-  late CameraStatus newState;
-
-  @override
-  CameraStatus build() {
-    //Determine if running local to thermostat by the presence of the thermostat dir
-    bool local = false;
-    FileStat thermStat = FileStat.statSync("/home/danny/thermostat");
-    if (thermStat.type != FileSystemEntityType.notFound) {
-      local = true;
-    }
-    CameraStatus status = CameraStatus(localUI: local);
-    return status;
-  }
-
-  void refreshStatus() {
-    // getSetTemp();
-    bool updateState = true;
-    if (state.localUI) {
-      //Check that thermostat has turned backlight on
-      //if not then do nothing as display not visible
-      updateState = FileStat.statSync(localDisplayOnFile).type !=
-          FileSystemEntityType.notFound;
-    }
-    if (updateState) {
-      newState = CameraStatus.fromStatus(state);
-      getExternalStatus();
-    }
-  }
-
-  void getExternalStatus() {
-    if (state.localUI) {
-      bool changed = false;
-      for (final extfile in localExternalstatusFile) {
-        FileStat stat = FileStat.statSync(extfile);
-        DateTime? lastTime = state.lastExtReadTime[extfile];
-        lastTime ??= DateTime(2000);
-        if (stat.changed.isAfter(lastTime)) {
-          String statusStr = File(extfile).readAsStringSync();
-          processExternalStatus(extfile, statusStr);
-          newState.lastExtReadTime[extfile] = stat.changed;
-          changed = true;
-        }
-      }
-      if (changed) {
-        state = newState;
-      }
-    } else {
-      for (final extfile in externalstatusFile) {
-        DropBoxAPIFn.getDropBoxFile(
-          // oauthToken: state.oauthToken,
-          fileToDownload: extfile,
-          callback: processExternalStatus,
-          contentType: ContentType.text,
-          timeoutSecs: 5,
-        );
-      }
-    }
-  }
-
-  void processExternalStatus(String filename, String contents) {
-    int stationNo = STATION_WITH_EXT_TEMP;
-    if (filename != "") {
-      //Retrieve station number from file name
-      List<String> parts = filename.split('/');
-      stationNo = int.parse(parts[parts.length - 1].split('_')[0]);
-    }
-    bool changed = false;
-    contents.split('\n').forEach((line) {
-      double? newExtTemp = state.extTemp[stationNo];
-      if (line.startsWith('Current temp:')) {
-        String tempStr = line.split(':')[1].trim();
-        if (!tempStr.startsWith("Not Set")) {
-          try {
-            newExtTemp = double.parse(tempStr);
-          } on FormatException {
-            print("Received non-double External temp format: $line");
-          }
-        }
-        if (newExtTemp != null && newExtTemp != state.extTemp[stationNo]) {
-          newState.extTemp[stationNo] = newExtTemp;
-          state.extTemp[stationNo] = newExtTemp;
-          changed = true;
-        }
-      } else if (line.startsWith('Last heard time')) {
-        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
-        DateTime newExtLastHeard = DateTime.parse(dateStr);
-        if (newExtLastHeard != state.extLastHeardFrom[stationNo]) {
-          newState.extLastHeardFrom[stationNo] = newExtLastHeard;
-          state.extLastHeardFrom[stationNo] = newExtLastHeard;
-          changed = true;
-        }
-      } else if (line.startsWith('Current humidity')) {
-        String str = line.substring(line.indexOf(':') + 2, line.length);
-        double newExtHumid = double.parse(str);
-        if (newExtHumid != state.extHumidity[stationNo]) {
-          newState.extHumidity[stationNo] = newExtHumid;
-          state.extHumidity[stationNo] = newExtHumid;
-          changed = true;
-        }
-      } else if (line.startsWith('Last PIR')) {
-        String lastEvent = line.substring(line.indexOf(':') + 1, line.length);
-        newState.extPirLastEvent[stationNo] = lastEvent;
-        state.extPirLastEvent[stationNo] = lastEvent;
-      } else if (line.startsWith('PIR:')) {
-        String str = line.substring(line.indexOf(':') + 1, line.length);
-        newState.extPirState[stationNo] = str.contains('1');
-        state.extPirState[stationNo] = str.contains('1');
-      }
-    });
-    if (changed) {
-      //Trigger rebuild
-      state = newState;
-    }
-  }
-}
-
 @riverpod
 class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   final String statusFile = "/thermostat_status.txt";
@@ -307,7 +149,6 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           FileSystemEntityType.notFound;
     }
     if (updateState) {
-      // newState = ThermostatStatus.fromStatus(state);
       getStatus();
     }
   }
@@ -523,5 +364,192 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           fileToUpload: boostFile,
           contents: contents);
     }
+  }
+}
+
+class CameraStatus {
+  CameraStatus({required this.localUI});
+  CameraStatus.fromStatus(CameraStatus oldState) {
+    localUI = oldState.localUI;
+    oauthToken = oldState.oauthToken;
+
+    extTemp = oldState.extTemp;
+    lastExtReadTime = oldState.lastExtReadTime;
+    extHumidity = oldState.extHumidity;
+    extLastHeardFrom = oldState.extLastHeardFrom;
+    extPirState = oldState.extPirState;
+    extPirLastEvent = oldState.extPirLastEvent;
+  }
+
+  CameraStatus.fromParams(
+    this.localUI,
+    this.oauthToken,
+    this.extTemp,
+    this.lastExtReadTime,
+    this.extHumidity,
+    this.extLastHeardFrom,
+    this.extPirState,
+    this.extPirLastEvent,
+  );
+
+  CameraStatus copyWith({
+    bool? localUI,
+    String? oauthToken,
+    Map<int, double>? extTemp,
+    Map<String, DateTime>? lastExtReadTime,
+    Map<int, double>? extHumidity,
+    Map<int, DateTime?>? extLastHeardFrom,
+    Map<int, bool>? extPirState,
+    Map<int, String>? extPirLastEvent,
+  }) {
+    return CameraStatus.fromParams(
+      localUI ?? this.localUI,
+      oauthToken ?? this.oauthToken,
+      extTemp ?? this.extTemp,
+      lastExtReadTime ?? this.lastExtReadTime,
+      extHumidity ?? this.extHumidity,
+      extLastHeardFrom ?? this.extLastHeardFrom,
+      extPirState ?? this.extPirState,
+      extPirLastEvent ?? this.extPirLastEvent,
+    );
+  }
+
+  late bool localUI;
+  String oauthToken = "";
+
+  Map<int, double> extTemp = {2: -100.0, 4: -100.0};
+  Map<String, DateTime> lastExtReadTime = {};
+  Map<int, double> extHumidity = {2: 0.0, 4: 0.0};
+  Map<int, DateTime?> extLastHeardFrom = {5: null, 4: null, 3: null, 2: null};
+  Map<int, bool> extPirState = {4: false, 3: false, 2: false};
+  Map<int, String> extPirLastEvent = {5: "", 4: "", 3: "", 2: ""};
+}
+
+@riverpod
+class CameraStatusNotifier extends _$CameraStatusNotifier {
+  final List<String> externalstatusFile = [
+    "/2_status.txt",
+    "/3_status.txt",
+    "/4_status.txt",
+    "/5_status.txt",
+  ];
+  final List<String> localExternalstatusFile = [
+    "/home/danny/control_station/2_status.txt",
+    "/home/danny/control_station/3_status.txt",
+    "/home/danny/control_station/4_status.txt",
+    "/home/danny/control_station/5_status.txt",
+  ];
+  final int STATION_WITH_EXT_TEMP = 2;
+  final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
+
+  // late CameraStatus newState;
+
+  @override
+  CameraStatus build() {
+    //Determine if running local to thermostat by the presence of the thermostat dir
+    bool local = false;
+    FileStat thermStat = FileStat.statSync("/home/danny/thermostat");
+    if (thermStat.type != FileSystemEntityType.notFound) {
+      local = true;
+    }
+    CameraStatus status = CameraStatus(localUI: local);
+    return status;
+  }
+
+  void refreshStatus() {
+    // getSetTemp();
+    bool updateState = true;
+    if (state.localUI) {
+      //Check that thermostat has turned backlight on
+      //if not then do nothing as display not visible
+      updateState = FileStat.statSync(localDisplayOnFile).type !=
+          FileSystemEntityType.notFound;
+    }
+    if (updateState) {
+      // newState = CameraStatus.fromStatus(state);
+      getExternalStatus();
+    }
+  }
+
+  void getExternalStatus() {
+    if (state.localUI) {
+      for (final extfile in localExternalstatusFile) {
+        FileStat stat = FileStat.statSync(extfile);
+        DateTime? lastTime = state.lastExtReadTime[extfile];
+        lastTime ??= DateTime(2000);
+        if (stat.changed.isAfter(lastTime)) {
+          String statusStr = File(extfile).readAsStringSync();
+          processExternalStatus(extfile, statusStr);
+          Map<String, DateTime> newMap =
+              Map<String, DateTime>.from(state.lastExtReadTime);
+          newMap[extfile] = stat.changed;
+          state = state.copyWith(lastExtReadTime: newMap);
+        }
+      }
+    } else {
+      for (final extfile in externalstatusFile) {
+        DropBoxAPIFn.getDropBoxFile(
+          // oauthToken: state.oauthToken,
+          fileToDownload: extfile,
+          callback: processExternalStatus,
+          contentType: ContentType.text,
+          timeoutSecs: 5,
+        );
+      }
+    }
+  }
+
+  void processExternalStatus(String filename, String contents) {
+    int stationNo = STATION_WITH_EXT_TEMP;
+    if (filename != "") {
+      //Retrieve station number from file name
+      List<String> parts = filename.split('/');
+      stationNo = int.parse(parts[parts.length - 1].split('_')[0]);
+    }
+    contents.split('\n').forEach((line) {
+      double? newExtTemp = state.extTemp[stationNo];
+      if (line.startsWith('Current temp:')) {
+        String tempStr = line.split(':')[1].trim();
+        if (!tempStr.startsWith("Not Set")) {
+          try {
+            newExtTemp = double.parse(tempStr);
+          } on FormatException {
+            print("Received non-double External temp format: $line");
+          }
+        }
+        if (newExtTemp != null && newExtTemp != state.extTemp[stationNo]) {
+          Map<int, double> newMap = Map<int, double>.from(state.extTemp);
+          newMap[stationNo] = newExtTemp;
+          state = state.copyWith(extTemp: newMap);
+        }
+      } else if (line.startsWith('Last heard time')) {
+        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
+        DateTime newExtLastHeard = DateTime.parse(dateStr);
+        if (newExtLastHeard != state.extLastHeardFrom[stationNo]) {
+          Map<int, DateTime?> newMap = {...state.extLastHeardFrom};
+          // Map<int, DateTime>.from(state.extLastHeardFrom);
+          newMap[stationNo] = newExtLastHeard;
+          state = state.copyWith(extLastHeardFrom: newMap);
+        }
+      } else if (line.startsWith('Current humidity')) {
+        String str = line.substring(line.indexOf(':') + 2, line.length);
+        double newExtHumid = double.parse(str);
+        if (newExtHumid != state.extHumidity[stationNo]) {
+          Map<int, double> newMap = Map<int, double>.from(state.extHumidity);
+          newMap[stationNo] = newExtHumid;
+          state = state.copyWith(extHumidity: newMap);
+        }
+      } else if (line.startsWith('Last PIR')) {
+        String lastEvent = line.substring(line.indexOf(':') + 1, line.length);
+        Map<int, String> newMap = Map<int, String>.from(state.extPirLastEvent);
+        newMap[stationNo] = lastEvent;
+        state = state.copyWith(extPirLastEvent: newMap);
+      } else if (line.startsWith('PIR:')) {
+        String str = line.substring(line.indexOf(':') + 1, line.length);
+        Map<int, bool> newMap = Map<int, bool>.from(state.extPirState);
+        newMap[stationNo] = str.contains('1');
+        state = state.copyWith(extPirState: newMap);
+      }
+    });
   }
 }
