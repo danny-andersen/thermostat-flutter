@@ -976,20 +976,31 @@ class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
     double extTemp = -100.0;
     List<double> extList = [];
     cameraStatus.extTemp.forEach((stn, ext) {
-      if (stn != 1 && ext > -100) {
+      if (stn != 1 &&
+          ext > -100 &&
+          (status.forecastExtTemp != -100 ||
+              (status.forecastExtTemp != -100 &&
+                  (status.forecastExtTemp - ext).abs() < 10.0))) {
+        //Only add in value if within 10 degrees of the forecast
         extList.add(ext);
       }
     });
     if (extList.isNotEmpty) extTemp = extList.average;
-    double minRange = maxDarkBlue;
+    double minRange = 10;
     double maxRange = maxRed2;
-    if (extTemp < minRange && extTemp > -5) {
+    if (extTemp < minRange && extTemp > 0) {
+      //Show external on guage down to 0
       minRange = extTemp.round() - 1.0;
       // maxRange = minRange + 20;
-    } else if (extTemp > maxRange && extTemp < 40.0) {
+    } else if (extTemp > maxRange && extTemp < 30.0) {
+      //Show external temp on guage up to 30
       maxRange = extTemp.round() + 1.0;
       // minRange = maxRange - 20;
+    } else if (status.currentTemp > maxRange && status.currentTemp < 40.0) {
+      //Show internal temp on guage up to 40(!)
+      maxRange = status.currentTemp.round() + 1.0;
     }
+
     if (minRange < 0) {
       minRange = 0;
     }
