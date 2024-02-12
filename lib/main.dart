@@ -83,65 +83,70 @@ class MyAppState extends State<MyApp> {
         statusPage.statePage.extHost = secret.extHost;
         statusPage.statePage.extStartPort = secret.extStartPort;
         statusPage.statePage.intStartPort = secret.intStartPort;
-        URLCredential creds =
-            URLCredential(username: secret.username, password: secret.password);
+        if (!localUI) {
+          //TODO: When (if?) Inapp_webview supports Linux devices, then remove this condition
+          //Until then it causes a null exception as there is no native implementation
 
-        httpAuthCredentialDatabase.setHttpAuthCredential(
-            protectionSpace: URLProtectionSpace(
-                host: "house-rh-side-cam0",
-                protocol: "https",
-                realm: "Motion",
-                port: secret.intStartPort),
-            credential: creds);
-        httpAuthCredentialDatabase.setHttpAuthCredential(
-            protectionSpace: URLProtectionSpace(
-                host: secret.extHost,
-                protocol: "https",
-                realm: "Motion",
-                port: secret.extStartPort),
-            credential: creds);
-        httpAuthCredentialDatabase.setHttpAuthCredential(
-            protectionSpace: URLProtectionSpace(
-                host: "front-door-cam",
-                protocol: "https",
-                realm: "Motion",
-                port: secret.intStartPort + 1),
-            credential: creds);
-        httpAuthCredentialDatabase.setHttpAuthCredential(
-            protectionSpace: URLProtectionSpace(
-                host: secret.extHost,
-                protocol: "https",
-                realm: "Motion",
-                port: secret.extStartPort + 1),
-            credential: creds);
-        httpAuthCredentialDatabase.setHttpAuthCredential(
-            protectionSpace: URLProtectionSpace(
-                host: "house-lh-side",
-                protocol: "https",
-                realm: "Motion",
-                port: secret.intStartPort + 2),
-            credential: creds);
-        httpAuthCredentialDatabase.setHttpAuthCredential(
-            protectionSpace: URLProtectionSpace(
-                host: secret.extHost,
-                protocol: "https",
-                realm: "Motion",
-                port: secret.extStartPort + 2),
-            credential: creds);
-        httpAuthCredentialDatabase.setHttpAuthCredential(
-            protectionSpace: URLProtectionSpace(
-                host: "masterstation",
-                protocol: "https",
-                realm: "Motion",
-                port: secret.intStartPort + 3),
-            credential: creds);
-        httpAuthCredentialDatabase.setHttpAuthCredential(
-            protectionSpace: URLProtectionSpace(
-                host: secret.extHost,
-                protocol: "https",
-                realm: "Motion",
-                port: secret.extStartPort + 3),
-            credential: creds);
+          URLCredential creds = URLCredential(
+              username: secret.username, password: secret.password);
+
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: "house-rh-side-cam0",
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.intStartPort),
+              credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: secret.extHost,
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.extStartPort),
+              credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: "front-door-cam",
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.intStartPort + 1),
+              credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: secret.extHost,
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.extStartPort + 1),
+              credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: "house-lh-side",
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.intStartPort + 2),
+              credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: secret.extHost,
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.extStartPort + 2),
+              credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: "masterstation",
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.intStartPort + 3),
+              credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: secret.extHost,
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.extStartPort + 3),
+              credential: creds);
+        }
       });
     });
     super.initState();
