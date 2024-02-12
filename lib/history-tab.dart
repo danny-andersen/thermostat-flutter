@@ -1,12 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 // import 'package:charts_flutter_new/flutter.dart' as charts;
 import 'package:fl_chart/fl_chart.dart';
-import 'dropbox-api.dart';
-import 'schedule.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
 import 'package:format/format.dart';
+
+import 'dropbox-api.dart';
+import 'schedule.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key, required this.oauthToken});
@@ -28,6 +30,7 @@ class HistoryPageState extends State<HistoryPage> {
   List<DropdownMenuItem<String>>? changeEntries;
   String todayFile = "";
   bool enabled = false;
+  bool localUI = false;
 
   LineChartBarData measuredTempSeries = LineChartBarData();
   LineChartBarData extMeasuredTempSeries = LineChartBarData();
@@ -63,6 +66,10 @@ class HistoryPageState extends State<HistoryPage> {
     // extTemperatureList = [FlSpot(0, 10.0), FlSpot(2400, 10.0)];
     // extHumidityList = [FlSpot(0, 30.0), FlSpot(2400, 30.0)];
 
+    FileStat thermStat = FileStat.statSync("/home/danny/thermostat");
+    if (thermStat.type != FileSystemEntityType.notFound) {
+      localUI = true;
+    }
     DateTime now = DateTime.now();
     todayFile = sprintf(
         "%s%02i%02i%s", [now.year, now.month, now.day, deviceChangePattern]);
@@ -327,19 +334,20 @@ class HistoryPageState extends State<HistoryPage> {
         Container(
           padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 5.0),
           child: Text(
-            (selectedDate != null
-                ? formattedDateStr(selectedDate!)
-                : formattedDateStr(todayFile)),
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
+              (selectedDate != null
+                  ? formattedDateStr(selectedDate!)
+                  : formattedDateStr(todayFile)),
+              style: localUI
+                  ? Theme.of(context).textTheme.headlineMedium
+                  : Theme.of(context).textTheme.bodyLarge),
         )
       ]),
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.only(left: 0.0, top: 8.0, right: 15.0),
-            height: 400.0,
+            padding: const EdgeInsets.only(left: 0.0, top: 20.0, right: 15.0),
+            height: 500.0,
             width: MediaQuery.of(context).size.width,
             //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
             child: HistoryLineChart(lineChartData),
@@ -350,12 +358,14 @@ class HistoryPageState extends State<HistoryPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+            padding: const EdgeInsets.only(top: 20.0, right: 8.0, left: 8.0),
             // height: 40.0,
             // width: 400.0,
             width: MediaQuery.of(context).size.width,
             child: ShowRange(
-                label: "Temperature Range: ", valsByHour: temperatureList),
+                localUI: localUI,
+                label: "Temperature Range: ",
+                valsByHour: temperatureList),
           ),
         ],
       ),
@@ -368,6 +378,7 @@ class HistoryPageState extends State<HistoryPage> {
             // width: 400.0,
             width: MediaQuery.of(context).size.width,
             child: ShowRange(
+                localUI: localUI,
                 label: "Ext Temperature Range: ",
                 valsByHour: extTemperatureList),
           ),
@@ -380,7 +391,9 @@ class HistoryPageState extends State<HistoryPage> {
           width: MediaQuery.of(context).size.width,
           // width: MediaQuery.of(context).size.width,
           child: ShowRange(
-              label: "Rel Humidity Range: ", valsByHour: humidityList),
+              localUI: localUI,
+              label: "Rel Humidity Range: ",
+              valsByHour: humidityList),
         ),
       ]),
       Row(
@@ -392,6 +405,7 @@ class HistoryPageState extends State<HistoryPage> {
               width: MediaQuery.of(context).size.width,
               // width: MediaQuery.of(context).size.width,
               child: ShowRange(
+                localUI: localUI,
                 label: "Ext Rel Humidity Range: ",
                 valsByHour: extHumidityList,
               )),
@@ -407,7 +421,9 @@ class HistoryPageState extends State<HistoryPage> {
             // width: MediaQuery.of(context).size.width,
             child: Text(
                 "Boiler on for: ${boilerOnTime ~/ 60} hours, ${boilerOnTime - 60 * (boilerOnTime ~/ 60)} mins ($boilerOnTime mins)",
-                style: Theme.of(context).textTheme.bodyMedium
+                style: localUI
+                    ? Theme.of(context).textTheme.headlineSmall
+                    : Theme.of(context).textTheme.bodyMedium
                 // .displaySmall!
                 // .apply(fontSizeFactor: 0.4),
 //                    style: TextStyle(
@@ -430,7 +446,9 @@ class HistoryPageState extends State<HistoryPage> {
                       ((evening ? 2 : 1) + (boilerOnTime * 2.5 / 100)).toInt(),
                       ((boilerOnTime * 2.5) % 100).toInt()
                     ])}",
-                style: Theme.of(context).textTheme.bodyMedium
+                style: localUI
+                    ? Theme.of(context).textTheme.headlineSmall
+                    : Theme.of(context).textTheme.bodyMedium
                 // .displaySmall!
                 // .apply(fontSizeFactor: 0.4),
 //                    style: TextStyle(
@@ -536,10 +554,15 @@ class SelectPlots extends StatelessWidget {
 }
 
 class ShowRange extends StatelessWidget {
-  ShowRange({super.key, required this.label, required this.valsByHour});
+  ShowRange(
+      {super.key,
+      required this.localUI,
+      required this.label,
+      required this.valsByHour});
 
   List<FlSpot> valsByHour;
   String label;
+  bool localUI;
 
   @override
   Widget build(BuildContext context) {
@@ -576,7 +599,9 @@ class ShowRange extends StatelessWidget {
                   // padding: const EdgeInsets.only(bottom: 8.0, right: 10.0),
                   child: Text(
                       "$label Max: ${vals.max}, Min: ${vals.min}, Avg: ${vals.average.toStringAsFixed(1)}",
-                      style: Theme.of(context).textTheme.bodyMedium
+                      style: localUI
+                          ? Theme.of(context).textTheme.headlineSmall
+                          : Theme.of(context).textTheme.bodyMedium
                       // .displaySmall!
                       // .apply(fontSizeFactor: 0.4),
 //                    style: TextStyle(
