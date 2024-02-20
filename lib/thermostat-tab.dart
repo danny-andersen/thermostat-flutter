@@ -89,17 +89,20 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
   int intStartPort = 0;
   int extStartPort = 0;
   bool onCameraLocalLan = false;
+  List stationsWithSwitch = [6];
   final Map<int, String> extStationNames = {
     2: "House RH side",
     3: "Front Door",
     4: "House LH side",
-    5: "Hall"
+    5: "Hall",
+    6: "Conservatory"
   };
   final Map<String, String> stationCamUrlByName = {
     "House RH side": "https://house-rh-side-cam0",
     "Front Door": "https://front-door-cam",
     "House LH side": "https://house-lh-side",
     "Hall": "https://masterstation",
+    "Conservatory": "https://conservatory-cam",
   };
   late Timer timer;
 
@@ -153,12 +156,59 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     super.dispose();
   }
 
+  Future<void> _statusButtonActionChooser(int stationId, String stationName,
+      double lightStatus, String camUrl, BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$stationName actions:'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                toggleLights(stationId, lightStatus);
+                Navigator.of(context).pop();
+              },
+              child: Text('Toggle lights ${lightStatus > 0 ? "off" : "on"}'),
+            ),
+            TextButton(
+              onPressed: !localUI
+                  ? () {
+                      _navigateToWebView(stationName, camUrl, context);
+                    }
+                  : () => {},
+              child: Text('Show Live webcam'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool?> _navigateToWebView(
+      String stationName, String camUrl, BuildContext context) {
+    return Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            WebViewPage(title: "$stationName Live Webcam", website: camUrl),
+      ),
+    );
+  }
+
   Widget createStatusBox(
       {int stationId = 0,
       required String stationName,
       required DateTime? lastHeardTime,
       required String? lastEventStr,
-      required bool? currentPirStatus}) {
+      required bool? currentPirStatus,
+      required double? lightStatus}) {
     lastEventStr ??= "";
     currentPirStatus ??= false;
     DateTime currentTime = DateTime.now();
@@ -194,6 +244,28 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
         lastEventStr = "Event: ${timeStrs[0]}:${timeStrs[1]}";
       }
     }
+    Widget nameText = Text(
+      stationName,
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    );
+    Widget nameWidget = nameText;
+    if (lightStatus != null && stationsWithSwitch.contains(stationId)) {
+      //This station has a light switch - show whether on or off
+      nameWidget = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          nameText,
+          SizedBox(
+            width: 5,
+          ),
+          Icon(
+            // <-- Icon
+            lightStatus > 0 ? Icons.lightbulb : Icons.lightbulb_outline,
+            size: 20.0,
+          ),
+        ],
+      );
+    }
     String camUrl = "";
     if (stationId != 0) {
       if (stationId != 0 && onCameraLocalLan) {
@@ -206,15 +278,14 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     }
     return GestureDetector(
         onTap: stationId != 0
-            ? () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => WebViewPage(
-                        title: "$stationName Live Webcam", website: camUrl),
-                  ),
-                );
-              }
+            ? stationsWithSwitch.contains(stationId) && lightStatus != null
+                ? () {
+                    _statusButtonActionChooser(
+                        stationId, stationName, lightStatus, camUrl, context);
+                  }
+                : () {
+                    _navigateToWebView(stationName, camUrl, context);
+                  }
             : () => {},
         child: ColoredBox(
           color: boxColor,
@@ -223,11 +294,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  stationName,
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                ),
+                nameWidget,
                 Text(
                   'Heard: $lastHeardStr',
                   style: const TextStyle(color: Colors.white, fontSize: 10.0),
@@ -319,14 +386,16 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
           stationName: "Thermostat",
           lastHeardTime: status.lastHeardFrom,
           lastEventStr: status.intPirLastEvent,
-          currentPirStatus: status.intPirState));
+          currentPirStatus: status.intPirState,
+          lightStatus: null));
     }
     extStationNames.forEach((id, name) => statusBoxes.add(createStatusBox(
         stationId: id,
         stationName: name,
         lastHeardTime: cameraStatus.extLastHeardFrom[id],
         lastEventStr: cameraStatus.extPirLastEvent[id],
-        currentPirStatus: cameraStatus.extPirState[id])));
+        currentPirStatus: cameraStatus.extPirState[id],
+        lightStatus: cameraStatus.lightStatus[id])));
 
     widgets.add(
       Container(
@@ -988,24 +1057,15 @@ class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
     if (extList.isNotEmpty) extTemp = extList.average;
     double minRange = 10;
     double maxRange = maxRed2;
-    if (extTemp < minRange && extTemp > 0) {
-      //Show external on guage down to 0
-      minRange = extTemp.round() - 1.0;
-      // maxRange = minRange + 20;
-    } else if (extTemp > maxRange && extTemp < 30.0) {
+    if (status.currentTemp > maxRange && status.currentTemp < 30.0) {
       //Show external temp on guage up to 30
-      maxRange = extTemp.round() + 1.0;
+      maxRange = status.currentTemp.round() + 1.0;
       // minRange = maxRange - 20;
     } else if (status.currentTemp > maxRange && status.currentTemp < 40.0) {
       //Show internal temp on guage up to 40(!)
       maxRange = status.currentTemp.round() + 1.0;
     }
 
-    if (minRange < 0) {
-      minRange = 0;
-    }
-    if (minRange > 10) minRange = 10;
-    if (maxRange < status.currentTemp + 2) maxRange = status.currentTemp + 2;
     return Center(
       child: Container(
         child: SfRadialGauge(
@@ -1133,9 +1193,11 @@ class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
                                   color: Colors.grey[300],
                                   size: status.localUI ? 70.0 : 50.0),
                           // tooltip: "Boiler Boost for 15 mins",
-                          onPressed: () => ref
-                              .read(thermostatStatusNotifierProvider.notifier)
-                              .sendBoost,
+                          onPressed: () {
+                            ref
+                                .read(thermostatStatusNotifierProvider.notifier)
+                                .sendBoost;
+                          },
                         ),
                       ]),
                   angle: 90,

@@ -24,7 +24,7 @@ final thermostatStatusNotifierProvider = AutoDisposeNotifierProvider<
 
 typedef _$ThermostatStatusNotifier = AutoDisposeNotifier<ThermostatStatus>;
 String _$cameraStatusNotifierHash() =>
-    r'1c2f3864e7e4ce07dea04fd7b7fd82bfddc2597e';
+    r'2dea9722f224250e035a5c2198cd8e668e60a278';
 
 /// See also [CameraStatusNotifier].
 @ProviderFor(CameraStatusNotifier)

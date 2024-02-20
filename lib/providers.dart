@@ -5,6 +5,14 @@ import 'dropbox-api.dart';
 
 part 'providers.g.dart';
 
+void toggleLights(stationId, lightStatus) {
+  String contents = "$stationId: Lights ${lightStatus > 0 ? 'OFF' : 'ON'}";
+  DropBoxAPIFn.sendDropBoxFile(
+      // oauthToken: state.oauthToken,
+      fileToUpload: "/command.txt",
+      contents: contents);
+}
+
 class ThermostatStatus {
   ThermostatStatus({required this.localUI});
   ThermostatStatus.fromStatus(ThermostatStatus oldState) {
@@ -379,18 +387,19 @@ class CameraStatus {
     extLastHeardFrom = oldState.extLastHeardFrom;
     extPirState = oldState.extPirState;
     extPirLastEvent = oldState.extPirLastEvent;
+    lightStatus = oldState.lightStatus;
   }
 
   CameraStatus.fromParams(
-    this.localUI,
-    this.oauthToken,
-    this.extTemp,
-    this.lastExtReadTime,
-    this.extHumidity,
-    this.extLastHeardFrom,
-    this.extPirState,
-    this.extPirLastEvent,
-  );
+      this.localUI,
+      this.oauthToken,
+      this.extTemp,
+      this.lastExtReadTime,
+      this.extHumidity,
+      this.extLastHeardFrom,
+      this.extPirState,
+      this.extPirLastEvent,
+      this.lightStatus);
 
   CameraStatus copyWith({
     bool? localUI,
@@ -401,6 +410,7 @@ class CameraStatus {
     Map<int, DateTime?>? extLastHeardFrom,
     Map<int, bool>? extPirState,
     Map<int, String>? extPirLastEvent,
+    Map<int, double>? lightStatus,
   }) {
     return CameraStatus.fromParams(
       localUI ?? this.localUI,
@@ -411,6 +421,7 @@ class CameraStatus {
       extLastHeardFrom ?? this.extLastHeardFrom,
       extPirState ?? this.extPirState,
       extPirLastEvent ?? this.extPirLastEvent,
+      lightStatus ?? this.lightStatus,
     );
   }
 
@@ -423,6 +434,7 @@ class CameraStatus {
   Map<int, DateTime?> extLastHeardFrom = {5: null, 4: null, 3: null, 2: null};
   Map<int, bool> extPirState = {4: false, 3: false, 2: false};
   Map<int, String> extPirLastEvent = {5: "", 4: "", 3: "", 2: ""};
+  Map<int, double> lightStatus = {6: 0};
 }
 
 @riverpod
@@ -432,12 +444,14 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
     "/3_status.txt",
     "/4_status.txt",
     "/5_status.txt",
+    "/6_status.txt",
   ];
   final List<String> localExternalstatusFile = [
     "/home/danny/control_station/2_status.txt",
     "/home/danny/control_station/3_status.txt",
     "/home/danny/control_station/4_status.txt",
     "/home/danny/control_station/5_status.txt",
+    "/home/danny/control_station/6_status.txt",
   ];
   final int STATION_WITH_EXT_TEMP = 2;
   final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
@@ -538,6 +552,18 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
           Map<int, double> newMap = Map<int, double>.from(state.extHumidity);
           newMap[stationNo] = newExtHumid;
           state = state.copyWith(extHumidity: newMap);
+        }
+      } else if (line.startsWith('Mins to set temp')) {
+        double? light = state.lightStatus[stationNo];
+        try {
+          light = double.parse(line.split(':')[1].trim());
+        } on FormatException {
+          print("Received non-double minsToSetTemp format: $line");
+        }
+        if (light != null && light != state.lightStatus[stationNo]) {
+          Map<int, double> newMap = Map<int, double>.from(state.lightStatus);
+          newMap[stationNo] = light;
+          state = state.copyWith(lightStatus: newMap);
         }
       } else if (line.startsWith('Last PIR')) {
         String lastEvent = line.substring(line.indexOf(':') + 1, line.length);
