@@ -5,11 +5,14 @@ import 'dropbox-api.dart';
 
 part 'providers.g.dart';
 
+const String commandFile = "/command.txt";
+const String localCommandFile = "/home/danny/thermostat/command.txt";
+
 void toggleLights(stationId, lightStatus) {
   String contents = "$stationId: Lights ${lightStatus > 0 ? 'OFF' : 'ON'}";
   DropBoxAPIFn.sendDropBoxFile(
       // oauthToken: state.oauthToken,
-      fileToUpload: "/command.txt",
+      fileToUpload: commandFile,
       contents: contents);
 }
 
@@ -130,8 +133,6 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   final String localForecastExt = "/home/danny/thermostat/setExtTemp.txt";
   final String localMotd = "/home/danny/thermostat/motd.txt";
   final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
-  final String boostFile = "/boost.txt";
-  final String localBoostFile = "/home/danny/thermostat/boost.txt";
 
   // late ThermostatStatus newState;
 
@@ -362,14 +363,14 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   }
 
   void sendBoost() {
-    String contents = state.boilerOn ? "OFF" : "ON";
+    String contents = "1: Boost ${state.boilerOn ? 'OFF' : 'ON'}";
     print("Sending boost: $contents");
     if (state.localUI) {
-      File(localBoostFile).writeAsStringSync(contents);
+      File(localCommandFile).writeAsStringSync(contents);
     } else {
       DropBoxAPIFn.sendDropBoxFile(
           // oauthToken: state.oauthToken,
-          fileToUpload: boostFile,
+          fileToUpload: commandFile,
           contents: contents);
     }
   }

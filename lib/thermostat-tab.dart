@@ -177,13 +177,13 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
                       _navigateToWebView(stationName, camUrl, context);
                     }
                   : () => {},
-              child: Text('Show Live webcam'),
+              child: const Text('Show Live webcam'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
           ],
         );
@@ -255,7 +255,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           nameText,
-          SizedBox(
+          const SizedBox(
             width: 5,
           ),
           Icon(
@@ -322,10 +322,10 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       const SizedBox(height: 10),
       SizedBox(
         height: localUI ? 480 : 380,
-        child: TemperatureGauge(),
+        child: const TemperatureGauge(),
       ),
-      SetTempButtonBar(),
-      RHGauge(),
+      const SetTempButtonBar(),
+      const RHGauge(),
     ];
     if (localUI) {
       widgets.addAll([
@@ -416,6 +416,8 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
 }
 
 class SetTempButtonBar extends ConsumerWidget {
+  const SetTempButtonBar({super.key});
+
   // final Function() minusPressed;
   // final Function() plusPressed;
   // final Function(double, bool) sendNew;
@@ -537,6 +539,8 @@ class ActionButtons extends StatelessWidget {
 }
 
 class RHGauge extends ConsumerWidget {
+  const RHGauge({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Map<int, double> extHumid = ref.watch(
@@ -1025,6 +1029,8 @@ class ShowDateTimeStamp extends StatelessWidget {
 // }
 
 class TemperatureGauge extends ConsumerStatefulWidget {
+  const TemperatureGauge({super.key});
+
   @override
   ConsumerState<TemperatureGauge> createState() => _TemperatureGaugeState();
 }
@@ -1037,6 +1043,33 @@ class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
   static const double maxRed = 21.0;
   static const double maxRed2 = 25.0;
   static const double deepRed = 35.0;
+
+  Future<void> _boostActionChooser(
+      bool boilerState, BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Boost Mode', textAlign: TextAlign.center),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                ref.read(thermostatStatusNotifierProvider.notifier).sendBoost();
+                Navigator.of(context).pop();
+              },
+              child: Text('Turn Boost ${boilerState ? "Off" : "On"}'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1067,147 +1100,146 @@ class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
     }
 
     return Center(
-      child: Container(
-        child: SfRadialGauge(
-          axes: <RadialAxis>[
-            RadialAxis(
-              minimum: minRange,
-              maximum: maxRange,
-              interval: 1,
-              radiusFactor: 1,
-              ranges: [
-                GaugeRange(
-                  startValue: maxDarkBlue,
-                  endValue: maxBlue,
-                  gradient: const SweepGradient(
-                      colors: [Colors.blue, Colors.yellow], stops: [0.25, 0.9]),
-                ),
-                GaugeRange(
-                  startValue: maxBlue,
-                  endValue: maxYellow,
-                  gradient: const SweepGradient(
-                      colors: [Colors.yellow, Colors.orange],
-                      stops: [0.25, 0.9]),
-                ),
-                GaugeRange(
-                  startValue: maxYellow,
-                  endValue: maxOrange,
-                  gradient: const SweepGradient(
-                      colors: [Colors.orange, Colors.deepOrange],
-                      stops: [0.25, 0.9]),
-                ),
-                GaugeRange(
-                  startValue: maxOrange,
-                  endValue: maxRed,
-                  gradient: const SweepGradient(
-                      colors: [Colors.deepOrange, Colors.red],
-                      stops: [0.25, 0.9]),
-                ),
-                GaugeRange(
-                  startValue: maxRed,
-                  endValue: maxRed2,
-                  gradient: const SweepGradient(
-                      colors: [Colors.red, Color.fromARGB(255, 77, 6, 1)],
-                      stops: [0.25, 0.9]),
-                ),
-                GaugeRange(
-                    startValue: maxRed2,
-                    endValue: deepRed,
-                    color: const Color.fromARGB(255, 77, 6, 1)),
-              ],
-              pointers: <GaugePointer>[
-                NeedlePointer(
-                  value: status.currentTemp == -100 ? 0 : status.currentTemp,
-                  enableAnimation: true,
-                  animationType: AnimationType.ease,
-                  needleEndWidth: 5,
-                  lengthUnit: GaugeSizeUnit.factor,
-                  needleLength: 0.8,
-                  needleColor: status.currentTemp > status.setTemp
-                      ? Colors.red
-                      : Colors.blue,
-                ),
-                NeedlePointer(
-                  value: status.setTemp,
-                  enableAnimation: true,
-                  animationType: AnimationType.ease,
-                  lengthUnit: GaugeSizeUnit.factor,
-                  needleLength: 0.8,
-                  needleEndWidth: 5,
-                  needleColor: Colors.grey,
-                ),
-                MarkerPointer(
-                    value: extTemp > -50 ? extTemp : status.forecastExtTemp,
-                    color: Colors.green[600],
-                    enableAnimation: true,
-                    animationType: AnimationType.ease,
-                    markerType: MarkerType.rectangle),
-              ],
-              annotations: <GaugeAnnotation>[
-                GaugeAnnotation(
-                  widget: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Internal Temp: ${status.currentTemp == -100 ? "??" : status.currentTemp}°C',
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                            fontSize: status.localUI ? 20 : 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
-                          ),
-                        ),
-                        Text(
-                          'Set Temp: ${status.setTemp}°C',
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                            fontSize: status.localUI ? 20 : 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        Text(
-                          'Outside Temp: ${extTemp != -100 ? extTemp.toStringAsFixed(1) : "??"}°C',
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                            fontSize: status.localUI ? 20 : 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                        Text(
-                          'Forecast: ${status.forecastExtTemp != -100 ? status.forecastExtTemp.toStringAsFixed(1) : "??"}°C',
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                            fontSize: status.localUI ? 20 : 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blueGrey,
-                          ),
-                        ),
-                        IconButton(
-                          icon: status.boilerOn
-                              ? Icon(Icons.local_fire_department_rounded,
-                                  color: Colors.red,
-                                  size: status.localUI ? 70.0 : 50.0)
-                              : Icon(Icons.local_fire_department_sharp,
-                                  color: Colors.grey[300],
-                                  size: status.localUI ? 70.0 : 50.0),
-                          // tooltip: "Boiler Boost for 15 mins",
-                          onPressed: () {
-                            ref
-                                .read(thermostatStatusNotifierProvider.notifier)
-                                .sendBoost;
-                          },
-                        ),
-                      ]),
-                  angle: 90,
-                  positionFactor: 0.5,
+      child: GestureDetector(
+          onTap: () {
+            // print("Boost");
+            _boostActionChooser(status.boilerOn, context);
+          },
+          child: Container(
+            child: SfRadialGauge(
+              axes: <RadialAxis>[
+                RadialAxis(
+                  minimum: minRange,
+                  maximum: maxRange,
+                  interval: 1,
+                  radiusFactor: 1,
+                  ranges: [
+                    GaugeRange(
+                      startValue: maxDarkBlue,
+                      endValue: maxBlue,
+                      gradient: const SweepGradient(
+                          colors: [Colors.blue, Colors.yellow],
+                          stops: [0.25, 0.9]),
+                    ),
+                    GaugeRange(
+                      startValue: maxBlue,
+                      endValue: maxYellow,
+                      gradient: const SweepGradient(
+                          colors: [Colors.yellow, Colors.orange],
+                          stops: [0.25, 0.9]),
+                    ),
+                    GaugeRange(
+                      startValue: maxYellow,
+                      endValue: maxOrange,
+                      gradient: const SweepGradient(
+                          colors: [Colors.orange, Colors.deepOrange],
+                          stops: [0.25, 0.9]),
+                    ),
+                    GaugeRange(
+                      startValue: maxOrange,
+                      endValue: maxRed,
+                      gradient: const SweepGradient(
+                          colors: [Colors.deepOrange, Colors.red],
+                          stops: [0.25, 0.9]),
+                    ),
+                    GaugeRange(
+                      startValue: maxRed,
+                      endValue: maxRed2,
+                      gradient: const SweepGradient(
+                          colors: [Colors.red, Color.fromARGB(255, 77, 6, 1)],
+                          stops: [0.25, 0.9]),
+                    ),
+                    GaugeRange(
+                        startValue: maxRed2,
+                        endValue: deepRed,
+                        color: const Color.fromARGB(255, 77, 6, 1)),
+                  ],
+                  pointers: <GaugePointer>[
+                    NeedlePointer(
+                      value:
+                          status.currentTemp == -100 ? 0 : status.currentTemp,
+                      enableAnimation: true,
+                      animationType: AnimationType.ease,
+                      needleEndWidth: 5,
+                      lengthUnit: GaugeSizeUnit.factor,
+                      needleLength: 0.8,
+                      needleColor: status.currentTemp > status.setTemp
+                          ? Colors.red
+                          : Colors.blue,
+                    ),
+                    NeedlePointer(
+                      value: status.setTemp,
+                      enableAnimation: true,
+                      animationType: AnimationType.ease,
+                      lengthUnit: GaugeSizeUnit.factor,
+                      needleLength: 0.8,
+                      needleEndWidth: 5,
+                      needleColor: Colors.grey,
+                    ),
+                    MarkerPointer(
+                        value: extTemp > -50 ? extTemp : status.forecastExtTemp,
+                        color: Colors.green[600],
+                        enableAnimation: true,
+                        animationType: AnimationType.ease,
+                        markerType: MarkerType.rectangle),
+                  ],
+                  annotations: <GaugeAnnotation>[
+                    GaugeAnnotation(
+                      widget: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Internal Temp: ${status.currentTemp == -100 ? "??" : status.currentTemp}°C',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                fontSize: status.localUI ? 20 : 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
+                            ),
+                            Text(
+                              'Set Temp: ${status.setTemp}°C',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                fontSize: status.localUI ? 20 : 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              'Outside Temp: ${extTemp != -100 ? extTemp.toStringAsFixed(1) : "??"}°C',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                fontSize: status.localUI ? 20 : 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
+                            Text(
+                              'Forecast: ${status.forecastExtTemp != -100 ? status.forecastExtTemp.toStringAsFixed(1) : "??"}°C',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                fontSize: status.localUI ? 20 : 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey,
+                              ),
+                            ),
+                            status.boilerOn
+                                ? Icon(Icons.local_fire_department_rounded,
+                                    color: Colors.red,
+                                    size: status.localUI ? 70.0 : 50.0)
+                                : Icon(Icons.local_fire_department_sharp,
+                                    color: Colors.grey[300],
+                                    size: status.localUI ? 70.0 : 50.0),
+                          ]),
+                      angle: 90,
+                      positionFactor: 0.5,
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          )),
     );
   }
 }

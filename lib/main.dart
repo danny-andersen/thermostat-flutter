@@ -176,7 +176,7 @@ class MyAppState extends State<MyApp> {
           length: 6,
           child: Scaffold(
             appBar: AppBar(
-              title: localUI ? DateTimeWidget() : const Text('Thermostat'),
+              title: localUI ? const DateTimeWidget() : const Text('Thermostat'),
               centerTitle: true,
               automaticallyImplyLeading: false,
               bottom: const TabBar(
@@ -273,6 +273,8 @@ class Secret {
 }
 
 class DateTimeWidget extends StatefulWidget {
+  const DateTimeWidget({super.key});
+
   @override
   _DateTimeWidgetState createState() => _DateTimeWidgetState();
 }
@@ -285,7 +287,7 @@ class _DateTimeWidgetState extends State<DateTimeWidget> {
     super.initState();
     _updateDateTime();
     // Update the date and time every second
-    Timer.periodic(Duration(seconds: 1), (timer) {
+    Timer.periodic(const Duration(seconds: 1), (timer) {
       _updateDateTime();
     });
   }
@@ -309,7 +311,7 @@ class _DateTimeWidgetState extends State<DateTimeWidget> {
       children: [
         Text(
           _currentDateTime,
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
         ),
       ],
     );

@@ -7,7 +7,7 @@ part of 'providers.dart';
 // **************************************************************************
 
 String _$thermostatStatusNotifierHash() =>
-    r'd64c31346b5afc8ebb7ce61482b9e110266d4521';
+    r'3c176ee3ed4ddd5db2e6e3bb7d9d7851c5fc708f';
 
 /// See also [ThermostatStatusNotifier].
 @ProviderFor(ThermostatStatusNotifier)
