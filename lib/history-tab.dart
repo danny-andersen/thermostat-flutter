@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
 import 'package:format/format.dart';
 
+import 'package:syncfusion_flutter_sliders/sliders.dart';
+
 import 'dropbox-api.dart';
 import 'schedule.dart';
 
@@ -294,25 +296,16 @@ class HistoryPageState extends State<HistoryPage> {
     bool evening =
         (selectedDate == todayFile && DateTime.now().hour < 17) ? false : true;
     Widget returnWidget = ListView(children: [
-//       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-//         Container(
-//             padding: const EdgeInsets.only(top: 8.0),
-//             child: ElevatedButton(
-//               child: Text('Show today'),
-//               onPressed: enabled ? getTodaysFile : null,
-// //              color: Colors.blue,
-//             )),
-//       ]),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Container(
-          padding: const EdgeInsets.only(left: 8.0, top: 15.0, right: 10.0),
+          padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 10.0),
           child: Text(
             'Choose date:',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
         Container(
-          padding: const EdgeInsets.only(top: 15.0, right: 8.0),
+          padding: const EdgeInsets.only(top: 5.0, right: 8.0),
           width: 100.0,
           height: 50.0,
           child: DropdownButton<String>(
@@ -332,7 +325,7 @@ class HistoryPageState extends State<HistoryPage> {
       ),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Container(
-          padding: const EdgeInsets.only(left: 8.0, top: 5.0, right: 5.0),
+          padding: const EdgeInsets.only(left: 8.0, top: 0.0, right: 5.0),
           child: Text(
               (selectedDate != null
                   ? formattedDateStr(selectedDate!)
@@ -346,8 +339,8 @@ class HistoryPageState extends State<HistoryPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.only(left: 0.0, top: 20.0, right: 15.0),
-            height: 500.0,
+            padding: const EdgeInsets.only(left: 0.0, top: 8.0, right: 15.0),
+            height: 400.0,
             width: MediaQuery.of(context).size.width,
             //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
             child: HistoryLineChart(lineChartData),
@@ -355,16 +348,34 @@ class HistoryPageState extends State<HistoryPage> {
         ],
       ),
       Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Text(
+              "Boiler on for: ${boilerOnTime ~/ 60} hours, ${boilerOnTime - 60 * (boilerOnTime ~/ 60)} mins ($boilerOnTime mins)",
+              style: localUI
+                  ? Theme.of(context).textTheme.bodyLarge
+                  : Theme.of(context).textTheme.bodyMedium),
+          Text(
+              "Gas Cost: £${sprintf("%2i.%02i", [
+                    ((evening ? 2 : 1) + (boilerOnTime * 2.5 / 100)).toInt(),
+                    ((boilerOnTime * 2.5) % 100).toInt()
+                  ])}",
+              style: localUI
+                  ? Theme.of(context).textTheme.bodyLarge
+                  : Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+      Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.only(top: 20.0, right: 8.0, left: 8.0),
+            padding: const EdgeInsets.only(top: 0.0, right: 0.0, left: 8.0),
             // height: 40.0,
             // width: 400.0,
             width: MediaQuery.of(context).size.width,
             child: ShowRange(
                 localUI: localUI,
-                label: "Temperature Range: ",
+                label: "Temp Range:     ",
                 valsByHour: temperatureList),
           ),
         ],
@@ -373,26 +384,26 @@ class HistoryPageState extends State<HistoryPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+            padding: const EdgeInsets.only(top: 0.0, right: 0.0, left: 8.0),
             // height: 40.0,
             // width: 400.0,
             width: MediaQuery.of(context).size.width,
             child: ShowRange(
                 localUI: localUI,
-                label: "Ext Temperature Range: ",
+                label: "Ext Temp Range:",
                 valsByHour: extTemperatureList),
           ),
         ],
       ),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(
-          padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+          padding: const EdgeInsets.only(top: 0.0, right: 0.0, left: 8.0),
           // height: 40.0,
           width: MediaQuery.of(context).size.width,
           // width: MediaQuery.of(context).size.width,
           child: ShowRange(
               localUI: localUI,
-              label: "Rel Humidity Range: ",
+              label: "Humidity Range %:  ",
               valsByHour: humidityList),
         ),
       ]),
@@ -400,67 +411,19 @@ class HistoryPageState extends State<HistoryPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-              padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
+              padding: const EdgeInsets.only(
+                  top: 0.0, right: 0.0, left: 8.0, bottom: 5.0),
               // height: 40.0,
               width: MediaQuery.of(context).size.width,
               // width: MediaQuery.of(context).size.width,
               child: ShowRange(
                 localUI: localUI,
-                label: "Ext Rel Humidity Range: ",
+                label: "Ext Humid Range %:",
                 valsByHour: extHumidityList,
               )),
         ],
       ),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
-            // height: 40.0,
-            width: MediaQuery.of(context).size.width,
-            // width: MediaQuery.of(context).size.width,
-            child: Text(
-                "Boiler on for: ${boilerOnTime ~/ 60} hours, ${boilerOnTime - 60 * (boilerOnTime ~/ 60)} mins ($boilerOnTime mins)",
-                style: localUI
-                    ? Theme.of(context).textTheme.headlineSmall
-                    : Theme.of(context).textTheme.bodyMedium
-                // .displaySmall!
-                // .apply(fontSizeFactor: 0.4),
-//                    style: TextStyle(
-//                      fontSize: 18.0,
-//                      fontWeight: FontWeight.bold,
-                ),
-          ),
-        ],
-      ),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.only(top: 5.0, right: 8.0, left: 8.0),
-            // height: 40.0,
-            width: MediaQuery.of(context).size.width,
-            // width: MediaQuery.of(context).size.width,
-            child: Text(
-                "Gas Cost:        £${sprintf("%2i.%02i", [
-                      ((evening ? 2 : 1) + (boilerOnTime * 2.5 / 100)).toInt(),
-                      ((boilerOnTime * 2.5) % 100).toInt()
-                    ])}",
-                style: localUI
-                    ? Theme.of(context).textTheme.headlineSmall
-                    : Theme.of(context).textTheme.bodyMedium
-                // .displaySmall!
-                // .apply(fontSizeFactor: 0.4),
-//                    style: TextStyle(
-//                      fontSize: 18.0,
-//                      fontWeight: FontWeight.bold,
-                ),
-          ),
-        ],
-      ),
     ]);
-//      ],
-//    );
     return returnWidget;
   }
 }
@@ -570,52 +533,76 @@ class ShowRange extends StatelessWidget {
     if (vals.isEmpty) {
       vals.add(0.0);
     }
-    return Container(
-//      decoration: BoxDecoration(
-//        border: Border.all(
-//          color: Colors.black,
-//          width: 1.0,
-//        ),
-//      ),
-      // padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
-      child: Row(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
+    return Center(
+        child: Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+          Text("$label", style: Theme.of(context).textTheme.bodyMedium),
+          // .displaySmall!
+          // .apply(fontSizeFactor: 0.4),
+
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Container(
-                //   // padding: const EdgeInsets.only(left: 8.0, top: 15.0),
-                //   // height: 40.0,
-                //   // width: 150.0,
-                //   child: Text(
-                //     label,
-                //     style: Theme.of(context).textTheme.titleMedium,
-                //   ),
-                // ),
-                Container(
-                  // padding: const EdgeInsets.only(bottom: 8.0, right: 10.0),
-                  child: Text(
-                      "$label Max: ${vals.max}, Min: ${vals.min}, Avg: ${vals.average.toStringAsFixed(1)}",
-                      style: localUI
-                          ? Theme.of(context).textTheme.headlineSmall
-                          : Theme.of(context).textTheme.bodyMedium
-                      // .displaySmall!
-                      // .apply(fontSizeFactor: 0.4),
-//                    style: TextStyle(
-//                      fontSize: 18.0,
-//                      fontWeight: FontWeight.bold,
-//                    ),
-                      ),
-                )
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+              child: SfRangeSlider(
+            min: vals.min < 10 ? vals.min.round() - 1.0 : 10.0,
+            max: vals.max < 40 ? vals.max.round() + 5 : 100,
+            values: SfRangeValues(vals.min, vals.max),
+            interval: vals.max < 40 ? 2 : 10,
+            // enableTooltip: true,
+            showTicks: true,
+            showLabels: true,
+            inactiveColor: Colors.yellow,
+            activeColor: Colors.blue,
+            minorTicksPerInterval: 1,
+            onChanged: (SfRangeValues newValues) {},
+          ))
+        ]));
+//     return Container(
+// //      decoration: BoxDecoration(
+// //        border: Border.all(
+// //          color: Colors.black,
+// //          width: 1.0,
+// //        ),
+// //      ),
+//       // padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+//       child: Row(
+//         mainAxisSize: MainAxisSize.max,
+//         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+//         children: [
+//           Expanded(
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 // Container(
+//                 //   // padding: const EdgeInsets.only(left: 8.0, top: 15.0),
+//                 //   // height: 40.0,
+//                 //   // width: 150.0,
+//                 //   child: Text(
+//                 //     label,
+//                 //     style: Theme.of(context).textTheme.titleMedium,
+//                 //   ),
+//                 // ),
+//                 Container(
+//                   // padding: const EdgeInsets.only(bottom: 8.0, right: 10.0),
+//                   child: Text(
+//                       "$label Max: ${vals.max}, Min: ${vals.min}, Avg: ${vals.average.toStringAsFixed(1)}",
+//                       style: localUI
+//                           ? Theme.of(context).textTheme.headlineSmall
+//                           : Theme.of(context).textTheme.bodyMedium
+//                       // .displaySmall!
+//                       // .apply(fontSizeFactor: 0.4),
+// //                    style: TextStyle(
+// //                      fontSize: 18.0,
+// //                      fontWeight: FontWeight.bold,
+// //                    ),
+//                       ),
+//                 )
+//               ],
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
   }
 }
 
