@@ -146,6 +146,20 @@ class MyAppState extends State<MyApp> {
                   realm: "Motion",
                   port: secret.extStartPort + 3),
               credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: "conservatory-cam",
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.intStartPort + 4),
+              credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: secret.extHost,
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.extStartPort + 4),
+              credential: creds);
         }
       });
     });
