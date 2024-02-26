@@ -132,7 +132,12 @@ class WhoPageState extends State<WhoPage> {
       if (line.contains(':Device:')) {
         try {
           List<String> parts = line.split(':');
-          int time = int.parse(parts[0].trim());
+          String timeStr = parts[0].trim();
+          int hours = int.parse(timeStr.substring(0, 2));
+          int mins = int.parse(timeStr.substring(2, 4));
+          int timeMins = hours * 60 + mins;
+
+          int time = int.parse(timeStr);
           bool event = (parts[2].trim()) == 'New';
           String device = (parts[3].trim());
           DeviceByHour dbh = DeviceByHour(time, device, event);
@@ -140,7 +145,11 @@ class WhoPageState extends State<WhoPage> {
             //Filter events that are spurious, which are events that Gone then New
             DeviceByHour? lastTime = lastDeviceTime[device];
             lastTime ??= DeviceByHour(0, "", false);
-            if (time - 5 < lastTime.hour && (event && !lastTime.event)) {
+            String lastTimeStr = formatEventHour(lastTime.hour);
+            hours = int.parse("${lastTimeStr}".substring(0, 2));
+            mins = int.parse("${lastTimeStr}".substring(3, 5));
+            int lastTimeMins = hours * 60 + mins;
+            if (timeMins - 11 < lastTimeMins && (event && !lastTime.event)) {
               //Last event was a "Gone" and this event was "New"
               //Cancel out the previous event and dont add this one
               whoList.remove(lastTime);
