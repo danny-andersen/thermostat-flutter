@@ -375,7 +375,7 @@ class HistoryPageState extends State<HistoryPage> {
             width: MediaQuery.of(context).size.width,
             child: ShowRange(
                 localUI: localUI,
-                label: "Temp Range:     ",
+                label: "Int Temp:",
                 valsByHour: temperatureList),
           ),
         ],
@@ -390,7 +390,7 @@ class HistoryPageState extends State<HistoryPage> {
             width: MediaQuery.of(context).size.width,
             child: ShowRange(
                 localUI: localUI,
-                label: "Ext Temp Range:",
+                label: "Ext Temp:",
                 valsByHour: extTemperatureList),
           ),
         ],
@@ -403,7 +403,7 @@ class HistoryPageState extends State<HistoryPage> {
           // width: MediaQuery.of(context).size.width,
           child: ShowRange(
               localUI: localUI,
-              label: "Humidity Range %:  ",
+              label: "Int Humidity %:  ",
               valsByHour: humidityList),
         ),
       ]),
@@ -418,7 +418,7 @@ class HistoryPageState extends State<HistoryPage> {
               // width: MediaQuery.of(context).size.width,
               child: ShowRange(
                 localUI: localUI,
-                label: "Ext Humid Range %:",
+                label: "Ext Humidity %:",
                 valsByHour: extHumidityList,
               )),
         ],
