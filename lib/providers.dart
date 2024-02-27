@@ -29,6 +29,7 @@ class ThermostatStatus {
     motdStr = oldState.motdStr;
     lastMotdReadTime = oldState.lastMotdReadTime;
     setTemp = oldState.setTemp;
+    nextSetTempStr = oldState.nextSetTempStr;
     requestedTemp = oldState.requestedTemp;
     humidity = oldState.humidity;
     lastHeardFrom = oldState.lastHeardFrom;
@@ -52,6 +53,7 @@ class ThermostatStatus {
       this.motdStr,
       this.lastMotdReadTime,
       this.setTemp,
+      this.nextSetTempStr,
       this.requestedTemp,
       this.humidity,
       this.lastHeardFrom,
@@ -72,6 +74,7 @@ class ThermostatStatus {
       String? motdStr,
       DateTime? lastMotdReadTime,
       double? setTemp,
+      String? nextSetTempStr,
       double? requestedTemp,
       double? humidity,
       DateTime? lastHeardFrom,
@@ -91,6 +94,7 @@ class ThermostatStatus {
         motdStr ?? this.motdStr,
         lastMotdReadTime ?? this.lastMotdReadTime,
         setTemp ?? this.setTemp,
+        nextSetTempStr ?? this.nextSetTempStr,
         requestedTemp ?? this.requestedTemp,
         humidity ?? this.humidity,
         lastHeardFrom ?? this.lastHeardFrom,
@@ -111,6 +115,7 @@ class ThermostatStatus {
   String motdStr = "";
   DateTime lastMotdReadTime = DateTime(2000);
   double setTemp = 0.0;
+  String nextSetTempStr = "";
   double requestedTemp = 0.0;
   double humidity = 0.0;
   DateTime? lastHeardFrom;
@@ -243,6 +248,13 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           } on FormatException {
             print("Received non-double setTemp format: $line");
           }
+        }
+      } else if (line.startsWith('Next set temp:')) {
+        String newNextSetTempStr = state.nextSetTempStr;
+        List<String> fields = line.split(':');
+        newNextSetTempStr = "${fields[1].trim()}:${fields[2].trim()}";
+        if (newNextSetTempStr != state.nextSetTempStr) {
+          state = state.copyWith(nextSetTempStr: newNextSetTempStr);
         }
       } else if (line.startsWith('External temp:')) {
         double newForecastExtTemp = state.forecastExtTemp;

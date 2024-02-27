@@ -1207,6 +1207,15 @@ class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
                               ),
                             ),
                             Text(
+                              'Next: ${status.nextSetTempStr}',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                fontSize: status.localUI ? 20 : 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
                               'Outside Temp: ${extTemp != -100 ? extTemp.toStringAsFixed(1) : "??"}°C',
                               textAlign: TextAlign.left,
                               style: TextStyle(
