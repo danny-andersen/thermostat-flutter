@@ -210,6 +210,8 @@ String getSourceFromFilename(String filename) {
     source = "Front door";
   } else if (parts[1].contains("house") && (parts[2] == 'lh')) {
     source = "House left side";
+  } else if (parts[1].contains("conservatory")) {
+    source = "Conservatory";
   }
   return source;
 }
