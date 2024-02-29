@@ -234,12 +234,12 @@ class DropBoxAPIFn {
     }
   }
 
-  static void searchDropBoxFileNames({
-    required String oauthToken,
-    required String filePattern,
-    required Function callback,
-    int maxResults = 31,
-  }) {
+  static void searchDropBoxFileNames(
+      {required String oauthToken,
+      required String filePattern,
+      required Function callback,
+      int maxResults = 31,
+      String filePath = ""}) {
     if (oauthToken == "BLANK") {
       oauthToken = DropBoxAPIFn.globalOauthToken;
       if (oauthToken == "BLANK") {
@@ -259,7 +259,7 @@ class DropBoxAPIFn {
         request.headers.add("Authorization", "Bearer $oauthToken");
         request.headers.add(HttpHeaders.contentTypeHeader, "application/json");
         request.write(
-            "{\"match_field_options\":{\"path\": \"\", \"max_results\": $maxResults, \"filename_only\": true}, \"query\": \"$filePattern\"}");
+            "{\"match_field_options\":{\"path\": \"$filePath\", \"max_results\": $maxResults, \"filename_only\": true}, \"query\": \"$filePattern\"}");
         return request.close();
       }).then((HttpClientResponse response) async {
         String contents = await response.transform(utf8.decoder).join();

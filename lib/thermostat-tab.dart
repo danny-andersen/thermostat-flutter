@@ -11,7 +11,9 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 // import 'package:webview_flutter/webview_flutter.dart';
 // import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
+import 'video_screen.dart';
 import 'providers.dart';
+import 'dropbox-api.dart';
 
 class TypeTemp {
   final String type;
@@ -156,39 +158,106 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     super.dispose();
   }
 
-  Future<void> _statusButtonActionChooser(int stationId, String stationName,
-      double lightStatus, String camUrl, BuildContext context) async {
+  Future<void> _statusButtonActionChooser(
+      int stationId,
+      String stationName,
+      double? lightStatus,
+      String camUrl,
+      String? lastEvent,
+      BuildContext context) async {
+    String lastEventSearchStr = '';
+    String filePath = '';
+
+    if (lastEvent != null &&
+        !lastEvent.contains('LIVE') &&
+        !lastEvent.contains('Never')) {
+      //lastEvent format: <yyyymmdd> <hh:mm>
+      //video file format: /motion_images/yyyy-mm-dd/<yyymmdd>T<hhmmss>-<host>.mp4
+      String date = lastEvent.split(':')[1].trim();
+      String year = date.substring(0, 4);
+      String month = date.substring(4, 6);
+      String day = date.substring(6, 8);
+      filePath = "/motion_images/$year-$month-$day/";
+      String camName = getFilenamefromSource(stationName);
+      lastEventSearchStr = "-$camName";
+      // print("Looking for motion images $lastEventSearchStr in path $filePath");
+    }
+    List<Widget> actions = [
+      TextButton(
+        onPressed: () {
+          Navigator.of(context).pop();
+        },
+        child: const Text('Cancel'),
+      ),
+    ];
+    if (lightStatus != null && stationsWithSwitch.contains(stationId)) {
+      actions.insert(
+          0,
+          TextButton(
+            onPressed: () {
+              toggleLights(stationId, lightStatus);
+              Navigator.of(context).pop();
+            },
+            child: Text('Toggle lights ${lightStatus > 0 ? "off" : "on"}'),
+          ));
+    }
+    if (!localUI) {
+      actions.insert(
+          0,
+          TextButton(
+            onPressed: !localUI
+                ? () {
+                    _navigateToWebView(stationName, camUrl, context);
+                  }
+                : () => {},
+            child: const Text('Show Live webcam'),
+          ));
+      if (lastEventSearchStr != '') {
+        actions.insert(
+            0,
+            TextButton(
+              onPressed: !localUI
+                  ? () {
+                      DropBoxAPIFn.searchDropBoxFileNames(
+                          oauthToken: oauthToken,
+                          filePattern: lastEventSearchStr,
+                          callback: _processVideoList,
+                          maxResults: 10,
+                          filePath: filePath);
+                    }
+                  : () => {},
+              child: const Text('Show Last Event Video'),
+            ));
+      }
+    }
+
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('$stationName actions:'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                toggleLights(stationId, lightStatus);
-                Navigator.of(context).pop();
-              },
-              child: Text('Toggle lights ${lightStatus > 0 ? "off" : "on"}'),
-            ),
-            TextButton(
-              onPressed: !localUI
-                  ? () {
-                      _navigateToWebView(stationName, camUrl, context);
-                    }
-                  : () => {},
-              child: const Text('Show Live webcam'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-          ],
+          actions: actions,
         );
       },
     );
+  }
+
+  void _processVideoList(FileListing files) {
+    List<FileEntry> fileEntries = files.fileEntries;
+    //File entries are listed with the most recent first
+    if (fileEntries.isNotEmpty) {
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VideoScreen(
+              oauthToken: oauthToken,
+              videoName: "${fileEntries[0].fullPathName}",
+              mediaList: [],
+              folderPath: "",
+              fileIndex: -1,
+            ),
+          ));
+    }
   }
 
   Future<bool?> _navigateToWebView(
@@ -278,14 +347,10 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     }
     return GestureDetector(
         onTap: stationId != 0
-            ? stationsWithSwitch.contains(stationId) && lightStatus != null
-                ? () {
-                    _statusButtonActionChooser(
-                        stationId, stationName, lightStatus, camUrl, context);
-                  }
-                : () {
-                    _navigateToWebView(stationName, camUrl, context);
-                  }
+            ? () {
+                _statusButtonActionChooser(stationId, stationName, lightStatus,
+                    camUrl, lastEventStr, context);
+              }
             : () => {},
         child: ColoredBox(
           color: boxColor,

@@ -95,6 +95,7 @@ class VideoScreenState extends State<VideoScreen> {
       //Save bytes to temporary file
       Directory tempDir = await getTemporaryDirectory();
       String filePath = '${tempDir.path}/video_tmp.mp4';
+      // print("Saving video of length ${data.length} to $filePath");
       File(filePath).writeAsBytes(data);
       player.open(Media(filePath));
 
@@ -114,23 +115,31 @@ class VideoScreenState extends State<VideoScreen> {
       //   // looping: true,
       //   // autoInitialize: true,
       // );
-      setState(() {
-        // chewieController = chewie;
-        videoName = name;
-        fileIndex = index;
-        isLoadingImage = false;
-      });
+
+      // setState(() {
+      //   // chewieController = chewie;
+      //   videoName = name;
+      //   fileIndex = index;
+      //   isLoadingImage = false;
+      // });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    List<String> parts = videoName.split('/');
-    String date = parts[2];
-    String source = getSourceFromFilename(parts[3]);
-    String time = parts[3].split('-')[0].split('T')[1];
+    String filename = '';
+    if (videoName.contains("/")) {
+      List<String> parts = videoName.split('/');
+      filename = parts[3];
+    } else {
+      filename = videoName;
+    }
+    String source = getSourceFromFilename(filename);
+    String datetime = filename.split('-')[0];
+    String date = datetime.split('T')[0];
+    String time = datetime.split('T')[1];
     String title =
-        "Video ${mediaList.length - fileIndex} of ${mediaList.length} Webcam: $source $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
+        "${fileIndex > -1 ? 'Video ${mediaList.length - fileIndex} of ${mediaList.length}' : ' '}Webcam: $source $date ${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}";
 
     return Scaffold(
       appBar: AppBar(
@@ -214,4 +223,20 @@ String getSourceFromFilename(String filename) {
     source = "Conservatory";
   }
   return source;
+}
+
+String getFilenamefromSource(String source) {
+  String filename = "unknown";
+  if (source.contains("Hall")) {
+    filename = "hall";
+  } else if (source.contains("RH")) {
+    filename = "cam0output";
+  } else if (source.contains("Front")) {
+    filename = "frontdoor";
+  } else if (source.contains("LH")) {
+    filename = "house-lh-side";
+  } else if (source.contains("Conservatory")) {
+    filename = "conservatory";
+  }
+  return filename;
 }
