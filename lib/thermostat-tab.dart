@@ -168,7 +168,8 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     String lastEventSearchStr = '';
     String filePath = '';
 
-    if (lastEvent != null &&
+    if (!localUI &&
+        lastEvent != null &&
         !lastEvent.contains('LIVE') &&
         !lastEvent.contains('Never')) {
       //lastEvent format: <yyyymmdd> <hh:mm>
@@ -205,27 +206,23 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       actions.insert(
           0,
           TextButton(
-            onPressed: !localUI
-                ? () {
-                    _navigateToWebView(stationName, camUrl, context);
-                  }
-                : () => {},
+            onPressed: () {
+              _navigateToWebView(stationName, camUrl, context);
+            },
             child: const Text('Show Live webcam'),
           ));
       if (lastEventSearchStr != '') {
         actions.insert(
             0,
             TextButton(
-              onPressed: !localUI
-                  ? () {
-                      DropBoxAPIFn.searchDropBoxFileNames(
-                          oauthToken: oauthToken,
-                          filePattern: lastEventSearchStr,
-                          callback: _processVideoList,
-                          maxResults: 10,
-                          filePath: filePath);
-                    }
-                  : () => {},
+              onPressed: () {
+                DropBoxAPIFn.searchDropBoxFileNames(
+                    oauthToken: oauthToken,
+                    filePattern: lastEventSearchStr,
+                    callback: _processVideoList,
+                    maxResults: 10,
+                    filePath: filePath);
+              },
               child: const Text('Show Last Event Video'),
             ));
       }
@@ -336,8 +333,8 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       );
     }
     String camUrl = "";
-    if (stationId != 0) {
-      if (stationId != 0 && onCameraLocalLan) {
+    if (!localUI && stationId != 0) {
+      if (onCameraLocalLan) {
         int portNo = intStartPort + (stationId - 2);
         camUrl = "${stationCamUrlByName[stationName]}:$portNo";
       } else {
