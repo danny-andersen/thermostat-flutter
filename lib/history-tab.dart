@@ -26,7 +26,8 @@ class HistoryPageState extends State<HistoryPage> {
 
   final String oauthToken;
   final String deviceChangePattern = "_device_change.txt";
-  final String externalChangePattern = "_cam4_change.txt";
+  final String externalChangePattern1 = "_cam4_change.txt";
+  final String externalChangePattern2 = "_cam2_change.txt";
 
   // HttpClient httpClient = HttpClient();
   List<DropdownMenuItem<String>>? changeEntries;
@@ -35,14 +36,17 @@ class HistoryPageState extends State<HistoryPage> {
   bool localUI = false;
 
   LineChartBarData measuredTempSeries = LineChartBarData();
-  LineChartBarData extMeasuredTempSeries = LineChartBarData();
+  LineChartBarData extMeasuredTempSeries1 = LineChartBarData();
+  LineChartBarData extMeasuredTempSeries2 = LineChartBarData();
   LineChartBarData measuredHumiditySeries = LineChartBarData();
   LineChartBarData extMeasuredHumiditySeries = LineChartBarData();
   List<LineChartBarData> lineChartData =
       List.filled(0, LineChartBarData(), growable: true);
   List<FlSpot> temperatureList =
       List.filled(0, const FlSpot(0, 0.0), growable: true);
-  List<FlSpot> extTemperatureList =
+  List<FlSpot> extTemperatureList1 =
+      List.filled(0, const FlSpot(0, 0.0), growable: true);
+  List<FlSpot> extTemperatureList2 =
       List.filled(0, const FlSpot(0, 0.0), growable: true);
   List<FlSpot> humidityList =
       List.filled(0, const FlSpot(0, 0.0), growable: true);
@@ -56,7 +60,8 @@ class HistoryPageState extends State<HistoryPage> {
   String? selectedDate;
   Map<String, bool> plotSelectMap = {
     'temp': true,
-    'exttemp': true,
+    'exttemp1': true,
+    'exttemp2': true,
     'humid': false,
     'exthumid': false
   };
@@ -85,7 +90,8 @@ class HistoryPageState extends State<HistoryPage> {
     // Reset lists
     temperatureList = List.filled(0, const FlSpot(0, 0.0), growable: true);
     humidityList = List.filled(0, const FlSpot(0, 0.0), growable: true);
-    extTemperatureList = List.filled(0, const FlSpot(0, 0.0), growable: true);
+    extTemperatureList1 = List.filled(0, const FlSpot(0, 0.0), growable: true);
+    extTemperatureList2 = List.filled(0, const FlSpot(0, 0.0), growable: true);
     extHumidityList = List.filled(0, const FlSpot(0, 0.0), growable: true);
     boilerList = List.filled(0, const FlSpot(0, 0.0), growable: true);
     // print("Downloading file: $changeFile");
@@ -95,7 +101,14 @@ class HistoryPageState extends State<HistoryPage> {
         callback: processChangeFile,
         contentType: ContentType.text,
         timeoutSecs: 60);
-    String extChangeFile = "${changeFile.split('_')[0]}$externalChangePattern";
+    String extChangeFile = "${changeFile.split('_')[0]}$externalChangePattern1";
+    DropBoxAPIFn.getDropBoxFile(
+        oauthToken: oauthToken,
+        fileToDownload: "/$extChangeFile",
+        callback: processExtChangeFile,
+        contentType: ContentType.text,
+        timeoutSecs: 60);
+    extChangeFile = "${changeFile.split('_')[0]}$externalChangePattern2";
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
         fileToDownload: "/$extChangeFile",
@@ -170,7 +183,8 @@ class HistoryPageState extends State<HistoryPage> {
         lineChartData = [
           plotSelectMap['temp']! ? measuredTempSeries : emptySeries,
           plotSelectMap['humid']! ? measuredHumiditySeries : emptySeries,
-          plotSelectMap['exttemp']! ? extMeasuredTempSeries : emptySeries,
+          plotSelectMap['exttemp1']! ? extMeasuredTempSeries1 : emptySeries,
+          plotSelectMap['exttemp2']! ? extMeasuredTempSeries2 : emptySeries,
           plotSelectMap['exthumid']! ? extMeasuredHumiditySeries : emptySeries,
         ];
       });
@@ -178,17 +192,23 @@ class HistoryPageState extends State<HistoryPage> {
   }
 
   void processExtChangeFile(String filename, String contents) {
-    processCommonContents(contents, extTemperatureList, extHumidityList);
+    if (filename.contains("cam4")) {
+      processCommonContents(contents, extTemperatureList1, extHumidityList);
+      extMeasuredTempSeries1 = LineChartBarData(
+          spots: extTemperatureList1, color: Colors.green[400]);
+      extMeasuredHumiditySeries =
+          LineChartBarData(spots: extHumidityList, color: Colors.amber[600]);
+    } else {
+      processCommonContents(contents, extTemperatureList2, extHumidityList);
+      extMeasuredTempSeries2 = LineChartBarData(
+          spots: extTemperatureList2, color: Colors.green[800]);
+    }
     // print("Rx $tempCount temps $humidCount humids");
     // extMeasuredTempSeries =
     //     HistoryLineChart.createMeasuredSeries(extTemperatureList);
     // extMeasuredHumiditySeries =
     //     HistoryLineChart.createMeasuredSeries(extHumidityList);
     // print("Plotting chart");
-    extMeasuredTempSeries =
-        LineChartBarData(spots: extTemperatureList, color: Colors.green[400]);
-    extMeasuredHumiditySeries =
-        LineChartBarData(spots: extHumidityList, color: Colors.amber[600]);
 
     if (mounted) {
       LineChartBarData emptySeries = LineChartBarData();
@@ -197,7 +217,8 @@ class HistoryPageState extends State<HistoryPage> {
         lineChartData = [
           plotSelectMap['temp']! ? measuredTempSeries : emptySeries,
           plotSelectMap['humid']! ? measuredHumiditySeries : emptySeries,
-          plotSelectMap['exttemp']! ? extMeasuredTempSeries : emptySeries,
+          plotSelectMap['exttemp1']! ? extMeasuredTempSeries1 : emptySeries,
+          plotSelectMap['exttemp2']! ? extMeasuredTempSeries2 : emptySeries,
           plotSelectMap['exthumid']! ? extMeasuredHumiditySeries : emptySeries,
         ];
       });
@@ -220,7 +241,9 @@ class HistoryPageState extends State<HistoryPage> {
           List<String> parts = line.split(':');
           int time = getTime(parts[0].trim());
           double humid = double.parse(parts[2].trim());
-          humidList.add(FlSpot(time.toDouble(), humid));
+          if (humid > 0) {
+            humidList.add(FlSpot(time.toDouble(), humid));
+          }
         } on FormatException {
           print("Received incorrect humidity format: $line");
         }
@@ -258,7 +281,8 @@ class HistoryPageState extends State<HistoryPage> {
         lineChartData = [
           plotSelectMap['temp']! ? measuredTempSeries : emptySeries,
           plotSelectMap['humid']! ? measuredHumiditySeries : emptySeries,
-          plotSelectMap['exttemp']! ? extMeasuredTempSeries : emptySeries,
+          plotSelectMap['exttemp1']! ? extMeasuredTempSeries1 : emptySeries,
+          plotSelectMap['exttemp2']! ? extMeasuredTempSeries2 : emptySeries,
           plotSelectMap['exthumid']! ? extMeasuredHumiditySeries : emptySeries,
         ];
       });
@@ -295,6 +319,8 @@ class HistoryPageState extends State<HistoryPage> {
   Widget build(BuildContext context) {
     bool evening =
         (selectedDate == todayFile && DateTime.now().hour < 17) ? false : true;
+    List<FlSpot> extTempList = List.from(extTemperatureList1);
+    extTempList.addAll(extTemperatureList2);
     Widget returnWidget = ListView(children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Container(
@@ -389,9 +415,7 @@ class HistoryPageState extends State<HistoryPage> {
             // width: 400.0,
             width: MediaQuery.of(context).size.width,
             child: ShowRange(
-                localUI: localUI,
-                label: "Ext Temp:",
-                valsByHour: extTemperatureList),
+                localUI: localUI, label: "Ext Temp:", valsByHour: extTempList),
           ),
         ],
       ),
@@ -448,71 +472,79 @@ class SelectPlots extends StatelessWidget {
       return Colors.grey;
     }
 
-    return Container(
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Text("Int Temp",
-            style: TextStyle(
-              fontSize: 11.0,
-              // fontWeight: FontWeight.bold,
-              color: Colors.red[600],
-            )),
-        Checkbox(
-            checkColor: Colors.white,
-            fillColor: MaterialStateProperty.resolveWith(getColor),
-            value: stateMap['temp'] ?? false,
-            onChanged: (bool? value) {
-              stateMap['temp'] = value!;
-              onChange(stateMap);
-            })
-      ]),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Text("Ext Temp",
-            style: TextStyle(
-              fontSize: 11.0,
-              // fontWeight: FontWeight.bold,
-              color: Colors.green[400],
-            )),
-        Checkbox(
-            checkColor: Colors.white,
-            fillColor: MaterialStateProperty.resolveWith(getColor),
-            value: stateMap['exttemp'] ?? false,
-            onChanged: (bool? value) {
-              stateMap['exttemp'] = value ?? false;
-              onChange(stateMap);
-            })
-      ]),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Text("Int Humid",
-            style: TextStyle(
+    return Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text("Int Temp",
+              style: TextStyle(
                 fontSize: 11.0,
                 // fontWeight: FontWeight.bold,
-                color: Colors.purple)),
-        Checkbox(
-            checkColor: Colors.white,
-            fillColor: MaterialStateProperty.resolveWith(getColor),
-            value: stateMap['humid'] ?? false,
-            onChanged: (bool? value) {
-              stateMap['humid'] = value ?? false;
-              onChange(stateMap);
-            })
-      ]),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Text("Ext Humid",
-            style: TextStyle(
+                color: Colors.red[600],
+              )),
+          Checkbox(
+              checkColor: Colors.white,
+              fillColor: MaterialStateProperty.resolveWith(getColor),
+              value: stateMap['temp'] ?? false,
+              onChanged: (bool? value) {
+                stateMap['temp'] = value!;
+                onChange(stateMap);
+              }),
+          Text("Ext Temp (Left)",
+              style: TextStyle(
                 fontSize: 11.0,
                 // fontWeight: FontWeight.bold,
-                color: Colors.amber[600])),
-        Checkbox(
-            checkColor: Colors.white,
-            fillColor: MaterialStateProperty.resolveWith(getColor),
-            value: stateMap['exthumid'] ?? false,
-            onChanged: (bool? value) {
-              stateMap['exthumid'] = value ?? false;
-              onChange(stateMap);
-            })
-      ]),
-    ]));
+                color: Colors.green[400],
+              )),
+          Checkbox(
+              checkColor: Colors.white,
+              fillColor: MaterialStateProperty.resolveWith(getColor),
+              value: stateMap['exttemp1'] ?? false,
+              onChanged: (bool? value) {
+                stateMap['exttemp1'] = value ?? false;
+                onChange(stateMap);
+              }),
+          Text("Ext Temp (Right)",
+              style: TextStyle(
+                fontSize: 11.0,
+                // fontWeight: FontWeight.bold,
+                color: Colors.green[800],
+              )),
+          Checkbox(
+              checkColor: Colors.white,
+              fillColor: MaterialStateProperty.resolveWith(getColor),
+              value: stateMap['exttemp2'] ?? false,
+              onChanged: (bool? value) {
+                stateMap['exttemp2'] = value ?? false;
+                onChange(stateMap);
+              }),
+          const Text("Int Humid",
+              style: TextStyle(
+                  fontSize: 11.0,
+                  // fontWeight: FontWeight.bold,
+                  color: Colors.purple)),
+          Checkbox(
+              checkColor: Colors.white,
+              fillColor: MaterialStateProperty.resolveWith(getColor),
+              value: stateMap['humid'] ?? false,
+              onChanged: (bool? value) {
+                stateMap['humid'] = value ?? false;
+                onChange(stateMap);
+              }),
+          Text("Ext Humid",
+              style: TextStyle(
+                  fontSize: 11.0,
+                  // fontWeight: FontWeight.bold,
+                  color: Colors.amber[600])),
+          Checkbox(
+              checkColor: Colors.white,
+              fillColor: MaterialStateProperty.resolveWith(getColor),
+              value: stateMap['exthumid'] ?? false,
+              onChanged: (bool? value) {
+                stateMap['exthumid'] = value ?? false;
+                onChange(stateMap);
+              })
+        ]);
   }
 }
 
@@ -557,52 +589,6 @@ class ShowRange extends StatelessWidget {
             onChanged: (SfRangeValues newValues) {},
           ))
         ]));
-//     return Container(
-// //      decoration: BoxDecoration(
-// //        border: Border.all(
-// //          color: Colors.black,
-// //          width: 1.0,
-// //        ),
-// //      ),
-//       // padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
-//       child: Row(
-//         mainAxisSize: MainAxisSize.max,
-//         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-//         children: [
-//           Expanded(
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 // Container(
-//                 //   // padding: const EdgeInsets.only(left: 8.0, top: 15.0),
-//                 //   // height: 40.0,
-//                 //   // width: 150.0,
-//                 //   child: Text(
-//                 //     label,
-//                 //     style: Theme.of(context).textTheme.titleMedium,
-//                 //   ),
-//                 // ),
-//                 Container(
-//                   // padding: const EdgeInsets.only(bottom: 8.0, right: 10.0),
-//                   child: Text(
-//                       "$label Max: ${vals.max}, Min: ${vals.min}, Avg: ${vals.average.toStringAsFixed(1)}",
-//                       style: localUI
-//                           ? Theme.of(context).textTheme.headlineSmall
-//                           : Theme.of(context).textTheme.bodyMedium
-//                       // .displaySmall!
-//                       // .apply(fontSizeFactor: 0.4),
-// //                    style: TextStyle(
-// //                      fontSize: 18.0,
-// //                      fontWeight: FontWeight.bold,
-// //                    ),
-//                       ),
-//                 )
-//               ],
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
   }
 }
 
@@ -630,28 +616,6 @@ class HistoryLineChart extends StatelessWidget {
       }
     return minValue;
   }
-
-//  charts.RangeAnnotation getRangeAnnotation() {
-//    double minValue = getMinValue();
-//    List<charts.LineAnnotationSegment> lines = List();
-//    int nowTime = TempByHour.from(DateTime.now(), 0.0).hour;
-//    lines.add(new charts.LineAnnotationSegment(
-//      nowTime,
-//      charts.RangeAnnotationAxisType.domain,
-//      color: charts.MaterialPalette.red.shadeDefault,
-//      startLabel: TempByHour.hourFormat.format(nowTime),
-//      labelAnchor: charts.AnnotationLabelAnchor.middle,
-//    ));
-//    for (charts.Series s in seriesList)
-//      if (s.id.contains("Scheduled")) {
-//        for (TempByHour point in s.data)
-//          if (point.temperature != minValue)
-//            lines.add(new charts.LineAnnotationSegment(
-//                point.hour, charts.RangeAnnotationAxisType.domain,
-//                startLabel: TempByHour.hourFormat.format(point.hour)));
-//      }
-//    return new charts.RangeAnnotation(lines);
-//  }
 
   @override
   Widget build(BuildContext context) {
@@ -711,47 +675,6 @@ class HistoryLineChart extends StatelessWidget {
                           .apply(fontSizeFactor: 0.3));
                 })),
       ),
-    )
-        // seriesList,
-        // animate: true,
-        // primaryMeasureAxis: charts.NumericAxisSpec(
-        //   viewport: charts.NumericExtents(8.0, maxValue > 20.0 ? maxValue : 20.0),
-        //   tickProviderSpec: const charts.BasicNumericTickProviderSpec(
-        //       zeroBound: false, desiredTickCount: 14),
-        // ),
-        // domainAxis: charts.NumericAxisSpec(
-        //   viewport: const charts.NumericExtents(0, 2400),
-        //   tickProviderSpec:
-        //       const charts.BasicNumericTickProviderSpec(desiredTickCount: 10),
-        //   tickFormatterSpec:
-        //       charts.BasicNumericTickFormatterSpec.fromNumberFormat(
-        //           ValueByHour.hourFormat),
-        // ),
-        // defaultRenderer: charts.LineRendererConfig(includePoints: true),
-        // selectionModels: [
-        //   charts.SelectionModelConfig(
-        //     type: charts.SelectionModelType.info,
-        //     changedListener: onSelectionChanged,
-        //   )
-        // ],
-//      behaviors: [
-//        getRangeAnnotation(),
-//      ],
-        );
+    ));
   }
-
-  // static List<FlSpot> createMeasuredSeries(List<ValueByHour> timeTempPoints) {
-  //   // print("Creating new chart with $len");
-  //   return F1Spot(
-  //     id: 'Measured',
-  //     colorFn: ((ValueByHour tempByHour, __) {
-  //       charts.Color color;
-  //       color = charts.MaterialPalette.green.shadeDefault;
-  //       return color;
-  //     }),
-  //     domainFn: (ValueByHour tt, _) => tt.hour,
-  //     measureFn: (ValueByHour tt, _) => tt.value,
-  //     data: timeTempPoints,
-  //   );
-  // }
 }
