@@ -70,7 +70,7 @@ class MyAppState extends State<MyApp> {
       LocalSendReceive.username = secret.username;
       LocalSendReceive.passphrase = secret.password;
       LocalSendReceive.host = secret.controlHost;
-      Future<String> keyString = rootBundle.loadString('assets/id_rsa');
+      Future<String> keyString = rootBundle.loadString('assets/connect-data');
       keyString.then((String str) {
         LocalSendReceive.setKeys(str);
       });
