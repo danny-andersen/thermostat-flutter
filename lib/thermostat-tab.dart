@@ -278,7 +278,17 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     } else {
       DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm');
       lastHeardStr = formatter.format(lastHeardTime);
-      int diff = currentTime.difference(lastHeardTime).inMinutes;
+      int timezoneDifference = currentTime.timeZoneOffset.inMinutes;
+      if (currentTime.timeZoneName == 'BST' ||
+          currentTime.timeZoneName == 'GMT') {
+        timezoneDifference = 0;
+      }
+      int diff =
+          currentTime.difference(lastHeardTime).inMinutes - timezoneDifference;
+      if (diff == 60) {
+        //If exactly 60 mins then could be daylight savings
+        diff = 0;
+      }
       if (diff > 15) {
         boxColor = Colors.red;
       } else if (diff > 5) {
