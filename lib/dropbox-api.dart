@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:dartssh2/dartssh2.dart';
 
 enum ContentType { text, image, video }
 
@@ -44,6 +46,74 @@ class _CacheEntry<T> {
     final now = DateTime.now();
     final elapsed = now.difference(createdAt);
     return elapsed >= duration;
+  }
+}
+
+class LocalSendReceive {
+  static late List<SSHKeyPair> keys;
+  static late String host;
+  static late String username;
+  static late String passphrase;
+
+  static void setKeys(String keyString) {
+    keys = SSHKeyPair.fromPem(keyString, passphrase);
+  }
+
+  static Future<bool> sendLocalFile(String fileName, String contents) async {
+    //On same LAN as control station - send file to controlstation using sftp
+    bool success = false;
+    SSHClient? client;
+    try {
+      client = SSHClient(
+        await SSHSocket.connect(host, 22),
+        username: username,
+        identities: keys,
+      );
+      final sftp = await client.sftp();
+      final file = await sftp.open(fileName,
+          mode: SftpFileOpenMode.create | SftpFileOpenMode.write);
+      await file.writeBytes(utf8.encode(contents));
+      success = true;
+    } catch (e) {
+      print(
+          "Caught SSH / SFTP error for host $host writing file $fileName: $e");
+    } finally {
+      client?.close();
+      await client?.done;
+    }
+    return success;
+  }
+
+  static Future<Map<String, String>> getLocalFile(
+      List<String> fileNames) async {
+    //On same LAN as control station - get file from controlstation using sftp
+    Map<String, String> files = {};
+    SSHClient? client;
+    try {
+      client = SSHClient(
+        await SSHSocket.connect(host, 22),
+        username: username,
+        identities: keys,
+      );
+      final sftp = await client.sftp();
+      for (final String fileName in fileNames) {
+        try {
+          final file = await sftp.open(fileName);
+          final content = await file.readBytes();
+          files[fileName] = utf8.decode(content);
+        } catch (fe) {
+          print(
+              "Caught SSH / SFTP error connecting to $host reading file $fileName : $fe");
+        }
+      }
+    } catch (e) {
+      print("Caught SSH / SFTP error connecting to $host : $e");
+    } finally {
+      client?.close();
+      await client?.done;
+    }
+
+    return files;
   }
 }
 

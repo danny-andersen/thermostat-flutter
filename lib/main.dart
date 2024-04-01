@@ -63,9 +63,18 @@ class MyAppState extends State<MyApp> {
     if (thermStat.type != FileSystemEntityType.notFound) {
       localUI = true;
     }
+
     Future<Secret> secret =
         SecretLoader(secretPath: "assets/api-key.json").load();
     secret.then((Secret secret) {
+      LocalSendReceive.username = secret.username;
+      LocalSendReceive.passphrase = secret.password;
+      LocalSendReceive.host = secret.controlHost;
+      Future<String> keyString = rootBundle.loadString('assets/id_rsa');
+      keyString.then((String str) {
+        LocalSendReceive.setKeys(str);
+      });
+
       setState(() {
         oauthToken = secret.apiKey;
         DropBoxAPIFn.globalOauthToken = oauthToken;
@@ -190,7 +199,8 @@ class MyAppState extends State<MyApp> {
           length: 6,
           child: Scaffold(
             appBar: AppBar(
-              title: localUI ? const DateTimeWidget() : const Text('Thermostat'),
+              title:
+                  localUI ? const DateTimeWidget() : const Text('Thermostat'),
               centerTitle: true,
               automaticallyImplyLeading: false,
               bottom: const TabBar(
@@ -265,6 +275,7 @@ class Secret {
   final String apiKey;
   final String username;
   final String password;
+  final String controlHost;
   final String extHost;
   final int extStartPort;
   final int intStartPort;
@@ -272,6 +283,7 @@ class Secret {
       {this.apiKey = "",
       this.username = "",
       this.password = "",
+      this.controlHost = "",
       this.extHost = "",
       this.intStartPort = 0,
       this.extStartPort = 0});
@@ -280,6 +292,7 @@ class Secret {
         apiKey: jsonMap["api_key"],
         username: jsonMap["username"],
         password: jsonMap["password"],
+        controlHost: jsonMap["controlHost"],
         extHost: jsonMap["extHost"],
         extStartPort: jsonMap["extStartPort"],
         intStartPort: jsonMap["intStartPort"]);

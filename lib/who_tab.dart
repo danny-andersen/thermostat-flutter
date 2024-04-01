@@ -146,8 +146,8 @@ class WhoPageState extends State<WhoPage> {
             DeviceByHour? lastTime = lastDeviceTime[device];
             lastTime ??= DeviceByHour(0, "", false);
             String lastTimeStr = formatEventHour(lastTime.hour);
-            hours = int.parse("${lastTimeStr}".substring(0, 2));
-            mins = int.parse("${lastTimeStr}".substring(3, 5));
+            hours = int.parse(lastTimeStr.substring(0, 2));
+            mins = int.parse(lastTimeStr.substring(3, 5));
             int lastTimeMins = hours * 60 + mins;
             if (timeMins - 11 < lastTimeMins && (event && !lastTime.event)) {
               //Last event was a "Gone" and this event was "New"

@@ -1,6 +1,7 @@
 import 'dart:io';
-
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:dart_ping/dart_ping.dart';
+
 import 'dropbox-api.dart';
 
 part 'providers.g.dart';
@@ -8,18 +9,55 @@ part 'providers.g.dart';
 const String commandFile = "/command.txt";
 const String localCommandFile = "/home/danny/thermostat/command.txt";
 
-void toggleLights(stationId, lightStatus) {
+void toggleLights(stationId, onLocalLan, lightStatus) {
   String contents = "$stationId: Lights ${lightStatus > 0 ? 'OFF' : 'ON'}";
-  DropBoxAPIFn.sendDropBoxFile(
-      // oauthToken: state.oauthToken,
-      fileToUpload: commandFile,
-      contents: contents);
+  if (onLocalLan) {
+    Future<bool> localSend = LocalSendReceive.sendLocalFile(
+        "/home/danny/control_station$commandFile", contents);
+    localSend.then((success) {
+      if (!success) {
+        print("On local Lan but failed to send, so send again using Dropbox");
+        toggleLights(stationId, false, lightStatus);
+      }
+    });
+  } else {
+    //Remote from control station - use Dropbox to send command
+    DropBoxAPIFn.sendDropBoxFile(
+        // oauthToken: state.oauthToken,
+        fileToUpload: commandFile,
+        contents: contents);
+  }
+}
+
+void areWeOnLocalNetwork(Function callback) {
+  NetworkInterface.list().then((interfaces) {
+    for (NetworkInterface interface in interfaces) {
+      for (InternetAddress addr in interface.addresses) {
+        if (addr.address.contains('192.168.')) {
+          //On a private network
+          //Need to ping local thermostat to check we are on the same lan
+          Ping('thermostat-host', count: 1).stream.first.then((pingData) {
+            if (pingData.error == null) {
+              callback(true);
+            } else {
+              callback(false);
+            }
+          }).catchError((onError) {
+            callback(false);
+          });
+          break;
+        }
+      }
+    }
+  });
 }
 
 class ThermostatStatus {
-  ThermostatStatus({required this.localUI});
+  ThermostatStatus({required this.localUI, required this.onLocalLan});
   ThermostatStatus.fromStatus(ThermostatStatus oldState) {
     localUI = oldState.localUI;
+    onLocalLan = oldState.onLocalLan;
+    localGetInProgress = oldState.localGetInProgress;
     oauthToken = oldState.oauthToken;
     currentTemp = oldState.currentTemp;
     lastStatusReadTime = oldState.lastStatusReadTime;
@@ -44,6 +82,8 @@ class ThermostatStatus {
 
   ThermostatStatus.fromParams(
       this.localUI,
+      this.onLocalLan,
+      this.localGetInProgress,
       this.oauthToken,
       this.currentTemp,
       this.lastStatusReadTime,
@@ -65,6 +105,8 @@ class ThermostatStatus {
 
   ThermostatStatus copyWith(
       {bool? localUI,
+      bool? onLocalLan,
+      bool? localGetInProgress,
       String? oauthToken,
       double? currentTemp,
       DateTime? lastStatusReadTime,
@@ -85,6 +127,8 @@ class ThermostatStatus {
       bool? requestOutstanding}) {
     return ThermostatStatus.fromParams(
         localUI ?? this.localUI,
+        onLocalLan ?? this.onLocalLan,
+        localGetInProgress ?? this.localGetInProgress,
         oauthToken ?? this.oauthToken,
         currentTemp ?? this.currentTemp,
         lastStatusReadTime ?? this.lastStatusReadTime,
@@ -106,6 +150,8 @@ class ThermostatStatus {
   }
 
   late bool localUI;
+  late bool onLocalLan;
+  bool localGetInProgress = false;
   String oauthToken = "";
   double currentTemp = -100.0;
   DateTime lastStatusReadTime = DateTime(2000);
@@ -145,11 +191,14 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   ThermostatStatus build() {
     //Determine if running local to thermostat by the presence of the thermostat dir
     bool local = false;
+    ThermostatStatus status;
     FileStat thermStat = FileStat.statSync("/home/danny/thermostat");
     if (thermStat.type != FileSystemEntityType.notFound) {
       local = true;
     }
-    ThermostatStatus status = ThermostatStatus(localUI: local);
+    status = ThermostatStatus(localUI: local, onLocalLan: local ? true : false);
+    //Check if we are on local LAN
+    areWeOnLocalNetwork((onlan) => status.onLocalLan = onlan);
     return status;
   }
 
@@ -197,6 +246,32 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           state = state.copyWith(lastForecastReadTime: fcStat.changed);
         }
       }
+    } else if (state.onLocalLan && !state.localGetInProgress) {
+      //Use ftp to retrieve status file direct from control station
+      Future<Map<String, String>> localReceive =
+          LocalSendReceive.getLocalFile([localStatusFile]);
+      state.localGetInProgress = true;
+      localReceive.then((files) {
+        bool success = false;
+        state.localGetInProgress = false;
+        if (files.containsKey(localStatusFile)) {
+          String? statusStr = files[localStatusFile];
+          if (statusStr != null) {
+            processStatus(localStatusFile, statusStr);
+            success = true;
+          }
+        }
+        if (!success) {
+          //Failed to get some status files locally, use dropbox
+          DropBoxAPIFn.getDropBoxFile(
+            // oauthToken: state.oauthToken,
+            fileToDownload: statusFile,
+            callback: processStatus,
+            contentType: ContentType.text,
+            timeoutSecs: 5,
+          );
+        }
+      });
     } else {
       DropBoxAPIFn.getDropBoxFile(
         // oauthToken: state.oauthToken,
@@ -342,9 +417,9 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           requestedTemp: state.requestedTemp - 0.5, requestOutstanding: true);
     } else {
       state = state.copyWith(
-          requestedTemp: state.setTemp + 0.5, requestOutstanding: true);
+          requestedTemp: state.setTemp - 0.5, requestOutstanding: true);
     }
-    sendNewTemp(state.requestedTemp, true);
+    sendNewTemp(temp: state.requestedTemp, send: true);
   }
 
   void incrementRequestedTemp() {
@@ -357,15 +432,36 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
       state = state.copyWith(
           requestedTemp: state.setTemp + 0.5, requestOutstanding: true);
     }
-    sendNewTemp(state.requestedTemp, true);
+    sendNewTemp(temp: state.requestedTemp, send: true);
   }
 
-  void sendNewTemp(double temp, bool send) {
+  void sendNewTemp(
+      {required double temp, required bool send, bool dropboxOnly = false}) {
     if (send) {
       String contents = state.requestedTemp.toStringAsFixed(1);
-      if (state.localUI) {
-        File(localSetTempFile).writeAsStringSync(contents);
-      } else {
+      bool sendByDropbox = true;
+      if (!dropboxOnly) {
+        if (state.localUI) {
+          try {
+            File(localSetTempFile).writeAsStringSync(contents);
+            sendByDropbox = false;
+          } catch (e) {
+            print("On thermostat host and cannot write locally");
+          }
+        } else if (state.onLocalLan) {
+          sendByDropbox = false;
+          Future<bool> localSend =
+              LocalSendReceive.sendLocalFile(localSetTempFile, contents);
+          localSend.then((success) {
+            if (!success) {
+              print(
+                  "On local Lan but failed to send settemp, so send again using Dropbox");
+              sendNewTemp(temp: temp, send: send, dropboxOnly: true);
+            }
+          });
+        }
+      }
+      if (sendByDropbox) {
         DropBoxAPIFn.sendDropBoxFile(
             // oauthToken: state.oauthToken,
             fileToUpload: setTempFile,
@@ -376,10 +472,28 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
 
   void sendBoost() {
     String contents = "1: Boost ${state.boilerOn ? 'OFF' : 'ON'}";
-    print("Sending boost: $contents");
+    // print("Sending boost: $contents");
+    bool sendByDropbox = true;
     if (state.localUI) {
-      File(localCommandFile).writeAsStringSync(contents);
-    } else {
+      try {
+        File(localCommandFile).writeAsStringSync(contents);
+        sendByDropbox = false;
+      } catch (e) {
+        print("On thermostat host and cannot write locally");
+      }
+    } else if (state.onLocalLan) {
+      Future<bool> localSend =
+          LocalSendReceive.sendLocalFile(localCommandFile, contents);
+      localSend.then((success) {
+        if (!success) {
+          print(
+              "On local Lan but failed to send boost, so send again using Dropbox");
+        } else {
+          sendByDropbox = false;
+        }
+      });
+    }
+    if (sendByDropbox) {
       DropBoxAPIFn.sendDropBoxFile(
           // oauthToken: state.oauthToken,
           fileToUpload: commandFile,
@@ -389,9 +503,11 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
 }
 
 class CameraStatus {
-  CameraStatus({required this.localUI});
+  CameraStatus({required this.localUI, required this.onLocalLan});
   CameraStatus.fromStatus(CameraStatus oldState) {
     localUI = oldState.localUI;
+    onLocalLan = oldState.onLocalLan;
+    localGetInProgress = oldState.localGetInProgress;
     oauthToken = oldState.oauthToken;
 
     extTemp = oldState.extTemp;
@@ -405,6 +521,8 @@ class CameraStatus {
 
   CameraStatus.fromParams(
       this.localUI,
+      this.onLocalLan,
+      this.localGetInProgress,
       this.oauthToken,
       this.extTemp,
       this.lastExtReadTime,
@@ -416,6 +534,8 @@ class CameraStatus {
 
   CameraStatus copyWith({
     bool? localUI,
+    bool? onLocalLan,
+    bool? localGetInProgress,
     String? oauthToken,
     Map<int, double>? extTemp,
     Map<String, DateTime>? lastExtReadTime,
@@ -427,6 +547,8 @@ class CameraStatus {
   }) {
     return CameraStatus.fromParams(
       localUI ?? this.localUI,
+      onLocalLan ?? this.onLocalLan,
+      localGetInProgress ?? this.localGetInProgress,
       oauthToken ?? this.oauthToken,
       extTemp ?? this.extTemp,
       lastExtReadTime ?? this.lastExtReadTime,
@@ -439,6 +561,8 @@ class CameraStatus {
   }
 
   late bool localUI;
+  late bool onLocalLan;
+  bool localGetInProgress = false;
   String oauthToken = "";
 
   Map<int, double> extTemp = {2: -100.0, 4: -100.0};
@@ -479,7 +603,10 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
     if (thermStat.type != FileSystemEntityType.notFound) {
       local = true;
     }
-    CameraStatus status = CameraStatus(localUI: local);
+    CameraStatus status =
+        CameraStatus(localUI: local, onLocalLan: local ? true : false);
+    //Check if we are on local LAN
+    areWeOnLocalNetwork((onlan) => status.onLocalLan = onlan);
     return status;
   }
 
@@ -494,35 +621,72 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
     }
     if (updateState) {
       // newState = CameraStatus.fromStatus(state);
-      getExternalStatus();
+      getExternalStatus(extFiles: externalstatusFile);
     }
   }
 
-  void getExternalStatus() {
-    if (state.localUI) {
-      for (final extfile in localExternalstatusFile) {
-        FileStat stat = FileStat.statSync(extfile);
-        DateTime? lastTime = state.lastExtReadTime[extfile];
-        lastTime ??= DateTime(2000);
-        if (stat.changed.isAfter(lastTime)) {
-          String statusStr = File(extfile).readAsStringSync();
-          processExternalStatus(extfile, statusStr);
-          Map<String, DateTime> newMap =
-              Map<String, DateTime>.from(state.lastExtReadTime);
-          newMap[extfile] = stat.changed;
-          state = state.copyWith(lastExtReadTime: newMap);
+  void getExternalStatus({required extFiles, bool dropboxOnly = false}) {
+    //Copy external files required into local list so it can be safely changed
+    List<String> filesFromDropbox = [];
+    if (!dropboxOnly) {
+      if (state.localUI) {
+        for (final extfile in localExternalstatusFile) {
+          FileStat stat = FileStat.statSync(extfile);
+          DateTime? lastTime = state.lastExtReadTime[extfile];
+          lastTime ??= DateTime(2000);
+          if (stat.changed.isAfter(lastTime)) {
+            String statusStr = File(extfile).readAsStringSync();
+            processExternalStatus(extfile, statusStr);
+            Map<String, DateTime> newMap =
+                Map<String, DateTime>.from(state.lastExtReadTime);
+            newMap[extfile] = stat.changed;
+            state = state.copyWith(lastExtReadTime: newMap);
+          }
         }
+      } else if (state.onLocalLan && !state.localGetInProgress) {
+        //Use ftp to retrieve status files direct from control station
+        Future<Map<String, String>> localReceive =
+            LocalSendReceive.getLocalFile(localExternalstatusFile);
+        state.localGetInProgress = true;
+        localReceive.then((files) {
+          filesFromDropbox.addAll(extFiles);
+          state.localGetInProgress = false;
+          for (final extfile in localExternalstatusFile) {
+            if (files.containsKey(extfile)) {
+              String? statusStr = files[extfile];
+              if (statusStr != null) {
+                List<String> parts = extfile.split('/');
+                String filename = parts[parts.length - 1];
+                //Succeeded getting file locally, remove from dropbox list
+                String fileToRemove = '';
+                for (final ext in filesFromDropbox) {
+                  if (ext.contains(filename)) fileToRemove = ext;
+                  break;
+                }
+                filesFromDropbox.remove(fileToRemove);
+                processExternalStatus(extfile, statusStr);
+              }
+            }
+          }
+          if (filesFromDropbox.isNotEmpty) {
+            //Failed to get some status files locally, use dropbox
+            getExternalStatus(extFiles: filesFromDropbox, dropboxOnly: true);
+          }
+        });
+      } else {
+        //retrieve from dropbox
+        filesFromDropbox.addAll(extFiles);
       }
-    } else {
-      for (final extfile in externalstatusFile) {
-        DropBoxAPIFn.getDropBoxFile(
-          // oauthToken: state.oauthToken,
-          fileToDownload: extfile,
-          callback: processExternalStatus,
-          contentType: ContentType.text,
-          timeoutSecs: 5,
-        );
-      }
+    }
+
+    for (final extfile in filesFromDropbox) {
+      DropBoxAPIFn.getDropBoxFile(
+        // oauthToken: state.oauthToken,
+        fileToDownload: extfile,
+        callback: processExternalStatus,
+        contentType: ContentType.text,
+        timeoutSecs: 5,
+      );
     }
   }
 

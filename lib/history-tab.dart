@@ -570,7 +570,7 @@ class ShowRange extends StatelessWidget {
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-          Text("$label", style: Theme.of(context).textTheme.bodyMedium),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
           // .displaySmall!
           // .apply(fontSizeFactor: 0.4),
 

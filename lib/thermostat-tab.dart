@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -90,7 +89,6 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
   String extHost = "";
   int intStartPort = 0;
   int extStartPort = 0;
-  bool onCameraLocalLan = false;
   List stationsWithSwitch = [6];
   final Map<int, String> extStationNames = {
     2: "House RH side",
@@ -111,16 +109,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
   @override
   void initState() {
     //Trigger first refresh shortly after widget initialised, to allow state to be initialised
-    timer = Timer(const Duration(seconds: 1), firstRefresh);
-    NetworkInterface.list().then((interfaces) {
-      for (NetworkInterface interface in interfaces) {
-        for (InternetAddress addr in interface.addresses) {
-          if (addr.address == '192.168.1.61') {
-            onCameraLocalLan = true;
-          }
-        }
-      }
-    });
+    timer = Timer(const Duration(seconds: 2), updateStatus);
     super.initState();
   }
 
@@ -129,26 +118,24 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     ref.read(thermostatStatusNotifierProvider).oauthToken = token;
   }
 
-  void firstRefresh() {
-    ref.read(thermostatStatusNotifierProvider.notifier).refreshStatus();
-    ref.read(cameraStatusNotifierProvider.notifier).refreshStatus();
-    timer = Timer.periodic(
-        ref.read(thermostatStatusNotifierProvider).localUI
-            ? const Duration(milliseconds: 500)
-            : const Duration(seconds: 20),
-        updateStatus);
+  int getRefreshTimerDurationMs() {
+    //If local UI refresh quickly to immediate feedback
+    //If on Local lan can get files quickly directly from control station, unless there is an issue
+    //e.g. request is hanging, in which case get from dropbox less frequently
+    return ref.read(thermostatStatusNotifierProvider).localUI
+        ? 500
+        : ref.read(thermostatStatusNotifierProvider).onLocalLan &&
+                !ref.read(thermostatStatusNotifierProvider).localGetInProgress
+            ? 10000
+            : 20000;
   }
 
-  void updateStatus(timer) {
+  void updateStatus() {
+    //Note: Set timer before we call refresh otherwise will always have a get in progress
+    timer = Timer(
+        Duration(milliseconds: getRefreshTimerDurationMs()), updateStatus);
     ref.read(thermostatStatusNotifierProvider.notifier).refreshStatus();
     ref.read(cameraStatusNotifierProvider.notifier).refreshStatus();
-    if (!timer.isActive) {
-      timer = Timer.periodic(
-          ref.read(thermostatStatusNotifierProvider).localUI
-              ? const Duration(milliseconds: 500)
-              : const Duration(seconds: 20),
-          updateStatus);
-    }
   }
 
   @override
@@ -160,6 +147,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
 
   Future<void> _statusButtonActionChooser(
       int stationId,
+      bool onLocalLan,
       String stationName,
       double? lightStatus,
       String camUrl,
@@ -196,7 +184,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
           0,
           TextButton(
             onPressed: () {
-              toggleLights(stationId, lightStatus);
+              toggleLights(stationId, onLocalLan, lightStatus);
               Navigator.of(context).pop();
             },
             child: Text('Toggle lights ${lightStatus > 0 ? "off" : "on"}'),
@@ -248,8 +236,8 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
           MaterialPageRoute(
             builder: (context) => VideoScreen(
               oauthToken: oauthToken,
-              videoName: "${fileEntries[0].fullPathName}",
-              mediaList: [],
+              videoName: fileEntries[0].fullPathName,
+              mediaList: const [],
               folderPath: "",
               fileIndex: -1,
             ),
@@ -270,6 +258,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
 
   Widget createStatusBox(
       {int stationId = 0,
+      required bool onLocalLan,
       required String stationName,
       required DateTime? lastHeardTime,
       required String? lastEventStr,
@@ -334,7 +323,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     }
     String camUrl = "";
     if (!localUI && stationId != 0) {
-      if (onCameraLocalLan) {
+      if (onLocalLan) {
         int portNo = intStartPort + (stationId - 2);
         camUrl = "${stationCamUrlByName[stationName]}:$portNo";
       } else {
@@ -345,8 +334,8 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     return GestureDetector(
         onTap: stationId != 0
             ? () {
-                _statusButtonActionChooser(stationId, stationName, lightStatus,
-                    camUrl, lastEventStr, context);
+                _statusButtonActionChooser(stationId, onLocalLan, stationName,
+                    lightStatus, camUrl, lastEventStr, context);
               }
             : () => {},
         child: ColoredBox(
@@ -446,6 +435,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     if (!localUI) {
       statusBoxes.add(createStatusBox(
           stationName: "Thermostat",
+          onLocalLan: status.onLocalLan,
           lastHeardTime: status.lastHeardFrom,
           lastEventStr: status.intPirLastEvent,
           currentPirStatus: status.intPirState,
@@ -453,6 +443,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     }
     extStationNames.forEach((id, name) => statusBoxes.add(createStatusBox(
         stationId: id,
+        onLocalLan: status.onLocalLan,
         stationName: name,
         lastHeardTime: cameraStatus.extLastHeardFrom[id],
         lastEventStr: cameraStatus.extPirLastEvent[id],
@@ -529,7 +520,7 @@ class SetTempButtonBar extends ConsumerWidget {
                   if (temp > 25) temp = 25;
                   ref
                       .read(thermostatStatusNotifierProvider.notifier)
-                      .sendNewTemp(temp, true);
+                      .sendNewTemp(temp: temp, send: true);
                 },
 
                 // inputFormatters: [
@@ -1112,7 +1103,7 @@ class _TemperatureGaugeState extends ConsumerState<TemperatureGauge> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Boost Mode', textAlign: TextAlign.center),
+          title: const Text('Boost Mode', textAlign: TextAlign.center),
           actions: <Widget>[
             TextButton(
               onPressed: () {

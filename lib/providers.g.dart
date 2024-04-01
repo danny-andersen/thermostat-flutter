@@ -7,7 +7,7 @@ part of 'providers.dart';
 // **************************************************************************
 
 String _$thermostatStatusNotifierHash() =>
-    r'8ca25560f85f3c5c6835ae8b9088de239398d4e6';
+    r'2ba65e6fcbe39b3be19cb1b76ca092c47d9c1a13';
 
 /// See also [ThermostatStatusNotifier].
 @ProviderFor(ThermostatStatusNotifier)
@@ -24,7 +24,7 @@ final thermostatStatusNotifierProvider = AutoDisposeNotifierProvider<
 
 typedef _$ThermostatStatusNotifier = AutoDisposeNotifier<ThermostatStatus>;
 String _$cameraStatusNotifierHash() =>
-    r'2dea9722f224250e035a5c2198cd8e668e60a278';
+    r'5c11b12819ca51f0730ec7b8416f20320fecb1a5';
 
 /// See also [CameraStatusNotifier].
 @ProviderFor(CameraStatusNotifier)
