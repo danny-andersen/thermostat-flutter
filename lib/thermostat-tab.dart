@@ -109,7 +109,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
   @override
   void initState() {
     //Trigger first refresh shortly after widget initialised, to allow state to be initialised
-    timer = Timer(const Duration(seconds: 2), updateStatus);
+    timer = Timer(const Duration(seconds: 1), updateStatus);
     super.initState();
   }
 
@@ -122,10 +122,10 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     //If local UI refresh quickly to immediate feedback
     //If on Local lan can get files quickly directly from control station, unless there is an issue
     //e.g. request is hanging, in which case get from dropbox less frequently
-    return ref.read(thermostatStatusNotifierProvider).localUI
+    final provider = ref.read(thermostatStatusNotifierProvider);
+    return provider.localUI
         ? 500
-        : ref.read(thermostatStatusNotifierProvider).onLocalLan &&
-                !ref.read(thermostatStatusNotifierProvider).localGetInProgress
+        : provider.onLocalLan && !provider.localGetInProgress
             ? 10000
             : 20000;
   }

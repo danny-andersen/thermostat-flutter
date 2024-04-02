@@ -93,7 +93,7 @@ flutter:
   assets:
     - assets/icon/dial.png
     - assets/api-key.json
-    - assets/id_rsa
+    - assets/connect-data
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
