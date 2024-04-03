@@ -642,7 +642,7 @@ class HistoryLineChart extends StatelessWidget {
               return LineTooltipItem(
                 '${touchedSpot.y.toStringAsFixed(1)}${([
                   1,
-                  3
+                  4
                 ].contains(touchedSpot.barIndex)) ? '%' : '°C'}@${getTimeStrFromFraction(touchedSpot.x)}',
                 textStyle,
               );
