@@ -48,7 +48,9 @@ void resetStation(stationId, onLocalLan) {
     //Remote from control station - use Dropbox to send command
     DropBoxAPIFn.sendDropBoxFile(
         // oauthToken: state.oauthToken,
-        fileToUpload: "/${remoteStnCommandFile}${stationId}.txt",
+        fileToUpload: stationId == 0
+            ? controlStnCommandFile
+            : "/${remoteStnCommandFile}${stationId}.txt",
         contents: contents);
   }
 }
