@@ -35,7 +35,7 @@ void resetStation(stationId, onLocalLan) {
   String contents = "reset";
   if (onLocalLan) {
     Future<bool> localSend = LocalSendReceive.sendLocalFile(
-        "/home/danny/${stationsWithSwitch.contains(stationId) ? "camera_with_switch" : "camera_station"}$controlStnCommandFile",
+        "/home/danny/${stationId == 0 ? "monitor_home" : stationsWithSwitch.contains(stationId) ? "camera_with_switch" : "camera_station"}$controlStnCommandFile",
         contents,
         hostNameById[stationId]);
     localSend.then((success) {
