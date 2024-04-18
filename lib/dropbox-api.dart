@@ -59,13 +59,15 @@ class LocalSendReceive {
     keys = SSHKeyPair.fromPem(keyString, passphrase);
   }
 
-  static Future<bool> sendLocalFile(String fileName, String contents) async {
+  static Future<bool> sendLocalFile(String fileName, String contents,
+      [String? hostToSend]) async {
     //On same LAN as control station - send file to controlstation using sftp
     bool success = false;
     SSHClient? client;
+    String hostName = hostToSend ?? host;
     try {
       client = SSHClient(
-        await SSHSocket.connect(host, 22),
+        await SSHSocket.connect(hostName, 22),
         username: username,
         identities: keys,
       );

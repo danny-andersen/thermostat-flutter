@@ -10,6 +10,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 // import 'package:webview_flutter/webview_flutter.dart';
 // import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
+import 'local_settings.dart';
 import 'video_screen.dart';
 import 'providers.dart';
 import 'dropbox-api.dart';
@@ -89,21 +90,6 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
   String extHost = "";
   int intStartPort = 0;
   int extStartPort = 0;
-  List stationsWithSwitch = [6];
-  final Map<int, String> extStationNames = {
-    2: "House RH side",
-    3: "Front Door",
-    4: "House LH side",
-    5: "Hall",
-    6: "Conservatory"
-  };
-  final Map<String, String> stationCamUrlByName = {
-    "House RH side": "https://house-rh-side-cam0",
-    "Front Door": "https://front-door-cam",
-    "House LH side": "https://house-lh-side",
-    "Hall": "https://masterstation",
-    "Conservatory": "https://conservatory-cam",
-  };
   late Timer timer;
 
   @override
@@ -179,6 +165,15 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
         child: const Text('Cancel'),
       ),
     ];
+    actions.insert(
+        0,
+        TextButton(
+          onPressed: () {
+            resetStation(stationId, onLocalLan);
+            Navigator.of(context).pop();
+          },
+          child: const Text('Reset station'),
+        ));
     if (lightStatus != null && stationsWithSwitch.contains(stationId)) {
       actions.insert(
           0,
@@ -190,7 +185,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
             child: Text('Toggle lights ${lightStatus > 0 ? "off" : "on"}'),
           ));
     }
-    if (!localUI) {
+    if (!localUI && stationId != 0) {
       actions.insert(
           0,
           TextButton(
@@ -342,12 +337,10 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       }
     }
     return GestureDetector(
-        onTap: stationId != 0
-            ? () {
-                _statusButtonActionChooser(stationId, onLocalLan, stationName,
-                    lightStatus, camUrl, lastEventStr, context);
-              }
-            : () => {},
+        onTap: () {
+          _statusButtonActionChooser(stationId, onLocalLan, stationName,
+              lightStatus, camUrl, lastEventStr, context);
+        },
         child: ColoredBox(
           color: boxColor,
           child: Padding(

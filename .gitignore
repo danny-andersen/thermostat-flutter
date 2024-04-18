@@ -13,6 +13,7 @@ migrate_working_dir/
 #Key files
 assets/api-key.json
 assets/connect-data
+lib/local_settings.dart
 
 # IntelliJ related
 *.iml

@@ -3,17 +3,19 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:dart_ping/dart_ping.dart';
 
 import 'dropbox-api.dart';
+import 'local_settings.dart';
 
 part 'providers.g.dart';
 
-const String commandFile = "/command.txt";
-const String localCommandFile = "/home/danny/thermostat/command.txt";
+const String controlStnCommandFile = "/command.txt";
+const String thermostatLocalCommandFile = "/home/danny/thermostat/command.txt";
+const String remoteStnCommandFile = "command-cam";
 
 void toggleLights(stationId, onLocalLan, lightStatus) {
   String contents = "$stationId: Lights ${lightStatus > 0 ? 'OFF' : 'ON'}";
   if (onLocalLan) {
     Future<bool> localSend = LocalSendReceive.sendLocalFile(
-        "/home/danny/control_station$commandFile", contents);
+        "/home/danny/control_station$controlStnCommandFile", contents);
     localSend.then((success) {
       if (!success) {
         print("On local Lan but failed to send, so send again using Dropbox");
@@ -24,7 +26,29 @@ void toggleLights(stationId, onLocalLan, lightStatus) {
     //Remote from control station - use Dropbox to send command
     DropBoxAPIFn.sendDropBoxFile(
         // oauthToken: state.oauthToken,
-        fileToUpload: commandFile,
+        fileToUpload: controlStnCommandFile,
+        contents: contents);
+  }
+}
+
+void resetStation(stationId, onLocalLan) {
+  String contents = "reset";
+  if (onLocalLan) {
+    Future<bool> localSend = LocalSendReceive.sendLocalFile(
+        "/home/danny/${stationsWithSwitch.contains(stationId) ? "camera_with_switch" : "camera_station"}$controlStnCommandFile",
+        contents,
+        hostNameById[stationId]);
+    localSend.then((success) {
+      if (!success) {
+        print("On local Lan but failed to send, so send again using Dropbox");
+        resetStation(stationId, false);
+      }
+    });
+  } else {
+    //Remote from control station - use Dropbox to send command
+    DropBoxAPIFn.sendDropBoxFile(
+        // oauthToken: state.oauthToken,
+        fileToUpload: "/${remoteStnCommandFile}${stationId}.txt",
         contents: contents);
   }
 }
@@ -476,14 +500,14 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
     bool sendByDropbox = true;
     if (state.localUI) {
       try {
-        File(localCommandFile).writeAsStringSync(contents);
+        File(thermostatLocalCommandFile).writeAsStringSync(contents);
         sendByDropbox = false;
       } catch (e) {
         print("On thermostat host and cannot write locally");
       }
     } else if (state.onLocalLan) {
       Future<bool> localSend =
-          LocalSendReceive.sendLocalFile(localCommandFile, contents);
+          LocalSendReceive.sendLocalFile(thermostatLocalCommandFile, contents);
       localSend.then((success) {
         if (!success) {
           print(
@@ -496,7 +520,7 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
     if (sendByDropbox) {
       DropBoxAPIFn.sendDropBoxFile(
           // oauthToken: state.oauthToken,
-          fileToUpload: commandFile,
+          fileToUpload: controlStnCommandFile,
           contents: contents);
     }
   }
