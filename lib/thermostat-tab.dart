@@ -321,12 +321,14 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       stationName,
       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
     );
+    bool firstIcon = true;
     List<Widget> nameChildren = [nameText];
     if (lightStatus != null && stationsWithSwitch.contains(stationId)) {
       //This station has a light switch - show whether on or off
       nameChildren.add(const SizedBox(
         width: 5,
       ));
+      firstIcon = false;
       nameChildren.add(Icon(
         // <-- Icon
         lightStatus > 0 ? Icons.lightbulb : Icons.lightbulb_outline,
@@ -334,9 +336,11 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       ));
     }
     if (camStatus != null) {
-      nameChildren.add(const SizedBox(
-        width: 5,
-      ));
+      if (firstIcon) {
+        nameChildren.add(const SizedBox(
+          width: 5,
+        ));
+      }
       nameChildren.add(Icon(
         // <-- Icon
         camStatus > 0 ? Icons.camera_alt : Icons.no_photography_outlined,
