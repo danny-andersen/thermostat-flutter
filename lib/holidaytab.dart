@@ -288,7 +288,7 @@ class _HolidayPageState extends State<HolidayPage> {
             ElevatedButton(
                 onPressed: minusPressed,
                 style: const ButtonStyle(
-                    backgroundColor: MaterialStatePropertyAll(Colors.blue)),
+                    backgroundColor: WidgetStatePropertyAll(Colors.blue)),
                 child: const Icon(
                   Icons.remove,
                   color: Colors.white,
@@ -304,7 +304,7 @@ class _HolidayPageState extends State<HolidayPage> {
             ElevatedButton(
                 onPressed: plusPressed,
                 style: const ButtonStyle(
-                    backgroundColor: MaterialStatePropertyAll(Colors.blue)),
+                    backgroundColor: WidgetStatePropertyAll(Colors.blue)),
                 child: const Icon(
                   Icons.add,
                   color: Colors.white,
@@ -316,7 +316,7 @@ class _HolidayPageState extends State<HolidayPage> {
           ElevatedButton(
               onPressed: sendNewHoliday,
               style: const ButtonStyle(
-                  backgroundColor: MaterialStatePropertyAll(Colors.blue)),
+                  backgroundColor: WidgetStatePropertyAll(Colors.blue)),
               child: Text(
                 "Send New Holiday Schedule",
                 style: textStyle!.apply(
@@ -333,7 +333,7 @@ class _HolidayPageState extends State<HolidayPage> {
           ElevatedButton(
               onPressed: cancelHoliday,
               style: const ButtonStyle(
-                  backgroundColor: MaterialStatePropertyAll(Colors.blue)),
+                  backgroundColor: WidgetStatePropertyAll(Colors.blue)),
               child: Text(
                 "Cancel",
                 style: textStyle.apply(

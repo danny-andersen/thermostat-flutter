@@ -460,11 +460,11 @@ class SelectPlots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color getColor(Set<MaterialState> states) {
-      const Set<MaterialState> interactiveStates = <MaterialState>{
-        MaterialState.pressed,
-        MaterialState.hovered,
-        MaterialState.focused,
+    Color getColor(Set<WidgetState> states) {
+      const Set<WidgetState> interactiveStates = <WidgetState>{
+        WidgetState.pressed,
+        WidgetState.hovered,
+        WidgetState.focused,
       };
       if (states.any(interactiveStates.contains)) {
         return Colors.blue;
@@ -484,7 +484,7 @@ class SelectPlots extends StatelessWidget {
               )),
           Checkbox(
               checkColor: Colors.white,
-              fillColor: MaterialStateProperty.resolveWith(getColor),
+              fillColor: WidgetStateProperty.resolveWith(getColor),
               value: stateMap['temp'] ?? false,
               onChanged: (bool? value) {
                 stateMap['temp'] = value!;
@@ -498,7 +498,7 @@ class SelectPlots extends StatelessWidget {
               )),
           Checkbox(
               checkColor: Colors.white,
-              fillColor: MaterialStateProperty.resolveWith(getColor),
+              fillColor: WidgetStateProperty.resolveWith(getColor),
               value: stateMap['exttemp1'] ?? false,
               onChanged: (bool? value) {
                 stateMap['exttemp1'] = value ?? false;
@@ -512,7 +512,7 @@ class SelectPlots extends StatelessWidget {
               )),
           Checkbox(
               checkColor: Colors.white,
-              fillColor: MaterialStateProperty.resolveWith(getColor),
+              fillColor: WidgetStateProperty.resolveWith(getColor),
               value: stateMap['exttemp2'] ?? false,
               onChanged: (bool? value) {
                 stateMap['exttemp2'] = value ?? false;
@@ -525,7 +525,7 @@ class SelectPlots extends StatelessWidget {
                   color: Colors.purple)),
           Checkbox(
               checkColor: Colors.white,
-              fillColor: MaterialStateProperty.resolveWith(getColor),
+              fillColor: WidgetStateProperty.resolveWith(getColor),
               value: stateMap['humid'] ?? false,
               onChanged: (bool? value) {
                 stateMap['humid'] = value ?? false;
@@ -538,7 +538,7 @@ class SelectPlots extends StatelessWidget {
                   color: Colors.amber[600])),
           Checkbox(
               checkColor: Colors.white,
-              fillColor: MaterialStateProperty.resolveWith(getColor),
+              fillColor: WidgetStateProperty.resolveWith(getColor),
               value: stateMap['exthumid'] ?? false,
               onChanged: (bool? value) {
                 stateMap['exthumid'] = value ?? false;
@@ -630,7 +630,6 @@ class HistoryLineChart extends StatelessWidget {
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
           maxContentWidth: 100,
-          tooltipBgColor: Colors.black,
           getTooltipItems: (touchedSpots) {
             return touchedSpots.map((LineBarSpot touchedSpot) {
               final textStyle = TextStyle(

@@ -136,6 +136,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       bool onLocalLan,
       String stationName,
       double? lightStatus,
+      int? camStatus,
       String camUrl,
       String? lastEvent,
       BuildContext context) async {
@@ -194,6 +195,17 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
             },
             child: const Text('Show Live webcam'),
           ));
+      if (camStatus != null) {
+        actions.insert(
+            0,
+            TextButton(
+              onPressed: () {
+                toggleCamera(stationId, onLocalLan, camStatus);
+                Navigator.of(context).pop();
+              },
+              child: Text('Turn Camera ${camStatus > 0 ? "off" : "on"}'),
+            ));
+      }
       if (lastEventSearchStr != '') {
         actions.insert(
             0,
@@ -258,7 +270,8 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       required DateTime? lastHeardTime,
       required String? lastEventStr,
       required bool? currentPirStatus,
-      required double? lightStatus}) {
+      required double? lightStatus,
+      required int? camStatus}) {
     lastEventStr ??= "";
     currentPirStatus ??= false;
     DateTime currentTime = DateTime.now();
@@ -308,24 +321,30 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       stationName,
       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
     );
-    Widget nameWidget = nameText;
+    List<Widget> nameChildren = [nameText];
     if (lightStatus != null && stationsWithSwitch.contains(stationId)) {
       //This station has a light switch - show whether on or off
-      nameWidget = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          nameText,
-          const SizedBox(
-            width: 5,
-          ),
-          Icon(
-            // <-- Icon
-            lightStatus > 0 ? Icons.lightbulb : Icons.lightbulb_outline,
-            size: 20.0,
-          ),
-        ],
-      );
+      nameChildren.add(const SizedBox(
+        width: 5,
+      ));
+      nameChildren.add(Icon(
+        // <-- Icon
+        lightStatus > 0 ? Icons.lightbulb : Icons.lightbulb_outline,
+        size: 20.0,
+      ));
     }
+    if (camStatus != null) {
+      nameChildren.add(const SizedBox(
+        width: 5,
+      ));
+      nameChildren.add(Icon(
+        // <-- Icon
+        camStatus > 0 ? Icons.camera_alt : Icons.no_photography_outlined,
+        size: 20.0,
+      ));
+    }
+    Widget nameWidget =
+        Row(mainAxisSize: MainAxisSize.min, children: nameChildren);
     String camUrl = "";
     if (!localUI && stationId != 0) {
       if (onLocalLan) {
@@ -339,7 +358,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     return GestureDetector(
         onTap: () {
           _statusButtonActionChooser(stationId, onLocalLan, stationName,
-              lightStatus, camUrl, lastEventStr, context);
+              lightStatus, camStatus, camUrl, lastEventStr, context);
         },
         child: ColoredBox(
           color: boxColor,
@@ -442,7 +461,8 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
           lastHeardTime: status.lastHeardFrom,
           lastEventStr: status.intPirLastEvent,
           currentPirStatus: status.intPirState,
-          lightStatus: null));
+          lightStatus: null,
+          camStatus: null));
     }
     extStationNames.forEach((id, name) => statusBoxes.add(createStatusBox(
         stationId: id,
@@ -451,7 +471,8 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
         lastHeardTime: cameraStatus.extLastHeardFrom[id],
         lastEventStr: cameraStatus.extPirLastEvent[id],
         currentPirStatus: cameraStatus.extPirState[id],
-        lightStatus: cameraStatus.lightStatus[id])));
+        lightStatus: cameraStatus.lightStatus[id],
+        camStatus: cameraStatus.camStatus[id])));
 
     widgets.add(
       Container(
@@ -498,10 +519,10 @@ class SetTempButtonBar extends ConsumerWidget {
                 .read(thermostatStatusNotifierProvider.notifier)
                 .decRequestedTemp,
             style: const ButtonStyle(
-                maximumSize: MaterialStatePropertyAll(Size.fromHeight(40)),
+                maximumSize: WidgetStatePropertyAll(Size.fromHeight(40)),
                 textStyle:
-                    MaterialStatePropertyAll(TextStyle(color: Colors.white)),
-                backgroundColor: MaterialStatePropertyAll(Colors.blue)),
+                    WidgetStatePropertyAll(TextStyle(color: Colors.white)),
+                backgroundColor: WidgetStatePropertyAll(Colors.blue)),
             child: const Icon(Icons.arrow_downward_rounded)),
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           SizedBox(
@@ -543,8 +564,8 @@ class SetTempButtonBar extends ConsumerWidget {
                 .incrementRequestedTemp,
             style: const ButtonStyle(
                 textStyle:
-                    MaterialStatePropertyAll(TextStyle(color: Colors.white)),
-                backgroundColor: MaterialStatePropertyAll(Colors.red)),
+                    WidgetStatePropertyAll(TextStyle(color: Colors.white)),
+                backgroundColor: WidgetStatePropertyAll(Colors.red)),
             child: const Icon(Icons.arrow_upward)),
       ],
     );

@@ -31,8 +31,17 @@ void toggleLights(stationId, onLocalLan, lightStatus) {
   }
 }
 
+void toggleCamera(stationId, onLocalLan, camStatus) {
+  String contents = "camera-${camStatus > 0 ? 'off' : 'on'}";
+  sendCommandToHost(stationId, onLocalLan, contents);
+}
+
 void resetStation(stationId, onLocalLan) {
   String contents = "reset";
+  sendCommandToHost(stationId, onLocalLan, contents);
+}
+
+void sendCommandToHost(stationId, onLocalLan, contents) {
   if (onLocalLan) {
     Future<bool> localSend = LocalSendReceive.sendLocalFile(
         "/home/danny/${stationId == 0 ? "monitor_home" : stationsWithSwitch.contains(stationId) ? "camera_with_switch" : "camera_station"}$controlStnCommandFile",
@@ -50,7 +59,7 @@ void resetStation(stationId, onLocalLan) {
         // oauthToken: state.oauthToken,
         fileToUpload: stationId == 0
             ? controlStnCommandFile
-            : "/${remoteStnCommandFile}${stationId}.txt",
+            : "/$remoteStnCommandFile$stationId.txt",
         contents: contents);
   }
 }
@@ -543,6 +552,7 @@ class CameraStatus {
     extPirState = oldState.extPirState;
     extPirLastEvent = oldState.extPirLastEvent;
     lightStatus = oldState.lightStatus;
+    camStatus = oldState.camStatus;
   }
 
   CameraStatus.fromParams(
@@ -556,7 +566,8 @@ class CameraStatus {
       this.extLastHeardFrom,
       this.extPirState,
       this.extPirLastEvent,
-      this.lightStatus);
+      this.lightStatus,
+      this.camStatus);
 
   CameraStatus copyWith({
     bool? localUI,
@@ -570,6 +581,7 @@ class CameraStatus {
     Map<int, bool>? extPirState,
     Map<int, String>? extPirLastEvent,
     Map<int, double>? lightStatus,
+    Map<int, int>? camStatus,
   }) {
     return CameraStatus.fromParams(
       localUI ?? this.localUI,
@@ -583,6 +595,7 @@ class CameraStatus {
       extPirState ?? this.extPirState,
       extPirLastEvent ?? this.extPirLastEvent,
       lightStatus ?? this.lightStatus,
+      camStatus ?? this.camStatus,
     );
   }
 
@@ -598,6 +611,7 @@ class CameraStatus {
   Map<int, bool> extPirState = {4: false, 3: false, 2: false};
   Map<int, String> extPirLastEvent = {5: "", 4: "", 3: "", 2: ""};
   Map<int, double> lightStatus = {6: 0};
+  Map<int, int> camStatus = {2: 0, 3: 0, 4: 0, 5: 0, 6: 0};
 }
 
 @riverpod
@@ -778,6 +792,14 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
         Map<int, bool> newMap = Map<int, bool>.from(state.extPirState);
         newMap[stationNo] = str.contains('1');
         state = state.copyWith(extPirState: newMap);
+      } else if (line.startsWith('CAMERA:')) {
+        String camStr = line.split(':')[1].trim();
+        int cam = camStr == "ON" ? 1 : 0;
+        if (cam != state.camStatus[stationNo]) {
+          Map<int, int> newMap = Map<int, int>.from(state.camStatus);
+          newMap[stationNo] = cam;
+          state = state.copyWith(camStatus: newMap);
+        }
       }
     });
   }
