@@ -170,33 +170,35 @@ class SchedulePageState extends State<SchedulePage> {
   }
 
   void processScheduleFile(String filename, String contents) {
-    selectedSchedule = Schedule.fromFile(selectedScheduleEntry!, contents);
-    newSchedule = selectedSchedule!.copy();
-    Set<String> dayRangeSet = {};
-    for (ScheduleDay day in selectedSchedule!.days) {
-      dayRangeSet.add(day.dayRange);
-    }
-    for (String day in ScheduleDay.daysofWeek) {
-      dayRangeSet.add(day);
-    }
-    scheduleDays.clear();
-    if (mounted) {
-      setState(() {
-        for (String dayRange in dayRangeSet) {
-          scheduleDays.add(DropdownMenuItem<String>(
-            value: dayRange,
-            child: Text(dayRange),
-          ));
-        }
-        if (selectedDayRange != null) {
-          generateHourTempSeries(selectedDayRange!);
-          selectedScheduleEntry = selectedScheduleEntry;
-          chartsToPlot = [
-            hourTempSeries,
-            measuredTempSeries,
-          ];
-        }
-      });
+    if (selectedScheduleEntry != null) {
+      selectedSchedule = Schedule.fromFile(selectedScheduleEntry!, contents);
+      newSchedule = selectedSchedule!.copy();
+      Set<String> dayRangeSet = {};
+      for (ScheduleDay day in selectedSchedule!.days) {
+        dayRangeSet.add(day.dayRange);
+      }
+      for (String day in ScheduleDay.daysofWeek) {
+        dayRangeSet.add(day);
+      }
+      scheduleDays.clear();
+      if (mounted) {
+        setState(() {
+          for (String dayRange in dayRangeSet) {
+            scheduleDays.add(DropdownMenuItem<String>(
+              value: dayRange,
+              child: Text(dayRange),
+            ));
+          }
+          if (selectedDayRange != null) {
+            generateHourTempSeries(selectedDayRange!);
+            selectedScheduleEntry = selectedScheduleEntry;
+            chartsToPlot = [
+              hourTempSeries,
+              measuredTempSeries,
+            ];
+          }
+        });
+      }
     }
     // if (showNowSchedulePressed) {
     //   daySelected(ScheduleDay.weekDaysByInt[DateTime.now().weekday]);

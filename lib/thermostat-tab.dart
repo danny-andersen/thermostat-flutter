@@ -153,7 +153,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
       String year = date.substring(0, 4);
       String month = date.substring(4, 6);
       String day = date.substring(6, 8);
-      filePath = "/motion_images/$year-$month-$day/";
+      filePath = "/motion_images/$year-$month-$day";
       String camName = getFilenamefromSource(stationName);
       lastEventSearchStr = "-$camName";
       // print("Looking for motion images $lastEventSearchStr in path $filePath");

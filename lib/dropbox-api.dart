@@ -331,7 +331,7 @@ class DropBoxAPIFn {
         request.headers.add("Authorization", "Bearer $oauthToken");
         request.headers.add(HttpHeaders.contentTypeHeader, "application/json");
         request.write(
-            "{\"match_field_options\":{\"path\": \"$filePath\", \"max_results\": $maxResults, \"filename_only\": true}, \"query\": \"$filePattern\"}");
+            "{\"options\":{\"path\": \"$filePath\", \"max_results\": $maxResults, \"filename_only\": true}, \"query\": \"$filePattern\"}");
         return request.close();
       }).then((HttpClientResponse response) async {
         String contents = await response.transform(utf8.decoder).join();
