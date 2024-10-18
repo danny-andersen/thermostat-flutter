@@ -24,8 +24,10 @@ if (flutterVersionName == null) {
 
 android {
     // compileSdkVersion flutter.compileSdkVersion
+    namespace "com.example.thermostat_flutter"
     compileSdkVersion Math.max(flutter.compileSdkVersion, 34)
-    ndkVersion flutter.ndkVersion
+    // ndkVersion flutter.ndkVersion
+    ndkVersion "25.1.8937393"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
