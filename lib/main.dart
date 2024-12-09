@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart'; // Provides [Player], [Media], [Playlist] etc.
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:thermostat_flutter/airquality.dart';
 
 import 'package:thermostat_flutter/dropbox-api.dart';
 import 'package:thermostat_flutter/who_tab.dart';
@@ -51,13 +52,9 @@ class MyAppState extends State<MyApp> {
   String username = "";
   String password = "";
 
-  // Future<String> loadAsset() async {
-  //   return await rootBundle.loadString('assets/api-key.json');
-  // }
 
   @override
   void initState() {
-//    print("Loading API KEY");
     //Determine if running local to thermostat by the presence of the thermostat dir
     FileStat thermStat = FileStat.statSync("/home/danny/thermostat");
     if (thermStat.type != FileSystemEntityType.notFound) {
@@ -83,12 +80,6 @@ class MyAppState extends State<MyApp> {
 
         statusPage.localUI = localUI;
         statusPage.statePage.localUI = localUI;
-        // Cancel any current time as will want to do it more frequently if local
-        // statusPage.statePage.timer.cancel();
-        // statusPage.statePage.refreshStatus(statusPage.statePage.timer);
-
-        // statusPage.statePage.username = secret.username;
-        // statusPage.statePage.password = secret.password;
         statusPage.statePage.extHost = secret.extHost;
         statusPage.statePage.extStartPort = secret.extStartPort;
         statusPage.statePage.intStartPort = secret.intStartPort;
@@ -192,65 +183,10 @@ class MyAppState extends State<MyApp> {
           // primarySwatch: Colors.blue,
           fontFamily: 'Roboto',
         ),
-//      home: ThermostatPage(title: 'Thermostat'),
-        home:
-            // screenType != ScreenType.embedded ?
-            DefaultTabController(
-          length: 6,
-          child: Scaffold(
-            appBar: AppBar(
-              title:
-                  localUI ? const DateTimeWidget() : const Text('Thermostat'),
-              centerTitle: true,
-              automaticallyImplyLeading: false,
-              bottom: const TabBar(
-                isScrollable: true,
-                tabs: [
-                  Tab(
-                    text: "Stat",
-//                icon: Icon(Icons.stay_current_landscape)
-                  ),
-                  Tab(text: 'Hist'),
-                  Tab(text: 'Hols'),
-                  Tab(text: 'Sched'),
-                  Tab(text: 'Who'),
-                  Tab(text: 'Cam'),
-                ],
-              ),
-            ),
-            body: TabBarView(
-              children: [
-                statusPage,
-                HistoryPage(oauthToken: oauthToken),
-                HolidayPage(oauthToken: oauthToken),
-                SchedulePage(oauthToken: oauthToken),
-                WhoPage(oauthToken: oauthToken),
-                CameraPage(oauthToken: oauthToken),
-              ],
-            ),
-//          floatingActionButton: FloatingActionButton(
-//            onPressed: getStatus,
-//            tooltip: 'Refresh',
-//            child: Icon(Icons.refresh),
-//          ), // This trailing comma makes auto-formatting nicer for build methods.
-          ),
-        )
-        // : Material(child: statusPage),
+       home: StatefulHome(statusPage: statusPage, oauthToken: oauthToken),
         );
   }
 
-//   @override
-//   void initState() {
-// //    print("Loading API KEY");
-//     Future<Secret> secret =
-//         SecretLoader(secretPath: "assets/api-key.json").load();
-//     secret.then((Secret secret) {
-//       setState(() {
-//         this.oauthToken = secret.apiKey;
-//       });
-//     });
-//     super.initState();
-//   }
 
   @override
   void dispose() {
@@ -259,45 +195,150 @@ class MyAppState extends State<MyApp> {
   }
 }
 
-class SecretLoader {
-  final String? secretPath;
 
-  SecretLoader({this.secretPath});
-  Future<Secret> load() {
-    return rootBundle.loadStructuredData<Secret>(secretPath!, (jsonStr) async {
-      final secret = Secret.fromJson(jsonDecode(jsonStr));
-      return secret;
+class StatefulHome extends StatefulWidget {
+  StatefulHome({super.key, required this.statusPage, required this.oauthToken});
+  final Widget statusPage;
+  final String oauthToken;
+  @override
+  _StatefulHomeState createState() => _StatefulHomeState();
+}
+
+class _StatefulHomeState extends State<StatefulHome> {
+  late Widget statusPage;
+  late String oauthToken;
+  final PageController _pageController = PageController();
+  final List<String> _pageTitles = ['Current Status', 'Air Quality', 'History Page', 'Holiday Setting', 'Heating Schedule', 'Whos In and Out', 'Security Videos'];
+  late List<Widget> _pages;
+  // Map<String, Widget> pages = {};
+  // late Widget currentPage;
+  // late String currentPageTitle;
+  int _currentPageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    statusPage = widget.statusPage;
+    oauthToken = widget.oauthToken;
+    
+    _pages = [statusPage,
+      AirQualityPage(oauthToken: oauthToken), 
+      HistoryPage(oauthToken: oauthToken), 
+      HolidayPage(oauthToken: oauthToken), 
+      SchedulePage(oauthToken: oauthToken), 
+      WhoPage(oauthToken: oauthToken), 
+      CameraPage(oauthToken: oauthToken) ];
+    // pages.addAll({'Status': statusPage, 
+    //     'History': HistoryPage(oauthToken: oauthToken),
+    //     'Holiday': HolidayPage(oauthToken: oauthToken),
+    //     'Schedule': SchedulePage(oauthToken: oauthToken),
+    //     'Who': WhoPage(oauthToken: oauthToken),
+    //     'Video': CameraPage(oauthToken: oauthToken),
+    //     });
+    // currentPage = statusPage;
+    // currentPageTitle = _pageTitles[_currentPageIndex];
+  }
+
+  void switchPage(int index) {
+    setState(() {
+      _currentPageIndex = index;
+      // currentPage = pages[pageKey]!;
+      // currentPageTitle = pageKey;
+    });
+    _pageController.jumpToPage(index);
+    Navigator.pop(context); // Close the drawer after switching
+  }
+
+  void onPageChanged(int index) {
+    setState(() {
+      _currentPageIndex = index;
     });
   }
-}
-
-class Secret {
-  final String apiKey;
-  final String username;
-  final String password;
-  final String controlHost;
-  final String extHost;
-  final int extStartPort;
-  final int intStartPort;
-  Secret(
-      {this.apiKey = "",
-      this.username = "",
-      this.password = "",
-      this.controlHost = "",
-      this.extHost = "",
-      this.intStartPort = 0,
-      this.extStartPort = 0});
-  factory Secret.fromJson(Map<String, dynamic> jsonMap) {
-    return Secret(
-        apiKey: jsonMap["api_key"],
-        username: jsonMap["username"],
-        password: jsonMap["password"],
-        controlHost: jsonMap["controlHost"],
-        extHost: jsonMap["extHost"],
-        extStartPort: jsonMap["extStartPort"],
-        intStartPort: jsonMap["intStartPort"]);
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_pageTitles[_currentPageIndex]),
+      ),
+      drawer: CustomDrawer(
+        pageTitles: _pageTitles,
+        onPageSelected: switchPage,
+      ),
+      body: PageView(
+        controller: _pageController,
+        children: _pages,
+        onPageChanged: onPageChanged,
+      ),
+    );
   }
 }
+
+class CustomDrawer extends StatelessWidget {
+  final List<String> pageTitles;
+  final Function(int) onPageSelected;
+
+  CustomDrawer({required this.pageTitles, required this.onPageSelected});
+
+ 
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.blue,
+            ),
+            child: Text(
+              'Menu',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+              ),
+            ),
+          ),
+        ...List.generate(
+              pageTitles.length,
+              (index) {
+              IconData icon;
+              switch (pageTitles[index]) {
+                case 'Current Status':
+                  icon = Icons.home;
+                  break;
+                case 'Air Quality':
+                  icon = Icons.air;
+                  break;
+                case 'History Page':
+                  icon = Icons.history;
+                  break;
+                case 'Holiday Setting':
+                  icon = Icons.calendar_month;
+                  break;
+                case 'Heating Schedule':
+                  icon = Icons.schedule;
+                  break;
+                case 'Whos In and Out':
+                  icon = Icons.person;
+                  break;
+                case 'Security Videos':
+                  icon = Icons.switch_video;
+                  break;
+              default:
+                  icon = Icons.home;
+              }
+              return ListTile(
+              leading: Icon(icon),
+              title: Text(pageTitles[index]),
+              onTap: () => onPageSelected(index),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+}
+
 
 class DateTimeWidget extends StatefulWidget {
   const DateTimeWidget({super.key});
@@ -342,5 +383,45 @@ class _DateTimeWidgetState extends State<DateTimeWidget> {
         ),
       ],
     );
+  }
+}
+
+class SecretLoader {
+  final String? secretPath;
+
+  SecretLoader({this.secretPath});
+  Future<Secret> load() {
+    return rootBundle.loadStructuredData<Secret>(secretPath!, (jsonStr) async {
+      final secret = Secret.fromJson(jsonDecode(jsonStr));
+      return secret;
+    });
+  }
+}
+
+class Secret {
+  final String apiKey;
+  final String username;
+  final String password;
+  final String controlHost;
+  final String extHost;
+  final int extStartPort;
+  final int intStartPort;
+  Secret(
+      {this.apiKey = "",
+      this.username = "",
+      this.password = "",
+      this.controlHost = "",
+      this.extHost = "",
+      this.intStartPort = 0,
+      this.extStartPort = 0});
+  factory Secret.fromJson(Map<String, dynamic> jsonMap) {
+    return Secret(
+        apiKey: jsonMap["api_key"],
+        username: jsonMap["username"],
+        password: jsonMap["password"],
+        controlHost: jsonMap["controlHost"],
+        extHost: jsonMap["extHost"],
+        extStartPort: jsonMap["extStartPort"],
+        intStartPort: jsonMap["intStartPort"]);
   }
 }

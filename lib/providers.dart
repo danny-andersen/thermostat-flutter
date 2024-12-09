@@ -112,6 +112,12 @@ class ThermostatStatus {
     boilerOn = oldState.boilerOn;
     minsToSetTemp = oldState.minsToSetTemp;
 
+    iaq = oldState.iaq;
+    co2 = oldState.co2;
+    voc = oldState.voc;
+    airqAccuracy = oldState.airqAccuracy;
+    gasAlarm = oldState.gasAlarm;
+
     requestOutstanding = oldState.requestOutstanding;
   }
 
@@ -136,6 +142,11 @@ class ThermostatStatus {
       this.intPirLastEvent,
       this.boilerOn,
       this.minsToSetTemp,
+      this.iaq,
+      this.co2,
+      this.voc,
+      this.airqAccuracy,
+      this.gasAlarm,
       this.requestOutstanding);
 
   ThermostatStatus copyWith(
@@ -159,6 +170,11 @@ class ThermostatStatus {
       String? intPirLastEvent,
       bool? boilerOn,
       int? minsToSetTemp,
+      double? iaq,
+      double? co2,
+      double? voc,
+      int? airqAccuracy,
+      int? gasAlarm,
       bool? requestOutstanding}) {
     return ThermostatStatus.fromParams(
         localUI ?? this.localUI,
@@ -181,6 +197,11 @@ class ThermostatStatus {
         intPirLastEvent ?? this.intPirLastEvent,
         boilerOn ?? this.boilerOn,
         minsToSetTemp ?? this.minsToSetTemp,
+        iaq ?? this.iaq,
+        co2 ?? this.co2,
+        voc ?? this.voc,
+        airqAccuracy ?? this.airqAccuracy,
+        gasAlarm ?? this.gasAlarm,
         requestOutstanding ?? this.requestOutstanding);
   }
 
@@ -205,6 +226,12 @@ class ThermostatStatus {
 
   bool boilerOn = false;
   int minsToSetTemp = 0;
+
+  double iaq = 0.0;
+  double co2 = 400.0;
+  double voc = 0.0;
+  int airqAccuracy = 0;
+  int gasAlarm = 0;
 
   bool requestOutstanding = false;
 }
@@ -422,6 +449,36 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         bool newPirState = str.contains('1');
         if (newPirState != state.intPirState) {
           state = state.copyWith(intPirState: newPirState);
+        }
+      } else if (line.startsWith('IAQ:')) {
+        String str = line.substring(line.indexOf(':') + 1, line.length);
+        double newIaq = double.parse(str);
+        if (newIaq != state.iaq) {
+          state = state.copyWith(iaq: newIaq);
+        }
+      } else if (line.startsWith('CO2:')) {
+        String str = line.substring(line.indexOf(':') + 1, line.length);
+        double newCO2 = double.parse(str);
+        if (newCO2 != state.co2) {
+          state = state.copyWith(co2: newCO2);
+        }
+      } else if (line.startsWith('VOC:')) {
+        String str = line.substring(line.indexOf(':') + 1, line.length);
+        double newVOC = double.parse(str);
+        if (newVOC != state.voc) {
+          state = state.copyWith(voc: newVOC);
+        }
+      } else if (line.startsWith('AIRQ_QUALITY:')) {
+        String str = line.substring(line.indexOf(':') + 1, line.length);
+        int newacc = int.parse(str);
+        if (newacc != state.airqAccuracy) {
+          state = state.copyWith(airqAccuracy: newacc);
+        }
+      } else if (line.startsWith('GAS:')) {
+        String str = line.substring(line.indexOf(':') + 1, line.length);
+        int newgas = int.parse(str);
+        if (newgas != state.gasAlarm) {
+          state = state.copyWith(gasAlarm: newgas);
         }
       }
     });
