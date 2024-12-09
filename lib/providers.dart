@@ -468,7 +468,7 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         if (newVOC != state.voc) {
           state = state.copyWith(voc: newVOC);
         }
-      } else if (line.startsWith('AIRQ_QUALITY:')) {
+      } else if (line.startsWith('AIRQ_ACC:')) {
         String str = line.substring(line.indexOf(':') + 1, line.length);
         int newacc = int.parse(str);
         if (newacc != state.airqAccuracy) {
