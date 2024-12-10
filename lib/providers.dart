@@ -240,6 +240,7 @@ class ThermostatStatus {
 class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   final String statusFile = "/thermostat_status.txt";
   final String localStatusFile = "/home/danny/thermostat/status.txt";
+  final String localControlStatusFile = "/home/danny/control_station/status.txt";
 
   final String setTempFile = "/setTemp.txt";
   final String localSetTempFile = "/home/danny/thermostat/setTemp.txt";
@@ -281,6 +282,7 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   void getStatus() {
     if (state.localUI) {
       FileStat statusStat = FileStat.statSync(localStatusFile);
+      FileStat controlStatusStat = FileStat.statSync(localControlStatusFile);
       FileStat motdStat = FileStat.statSync(localMotd);
       FileStat fcStat = FileStat.statSync(localForecastExt);
       //Only update state (and so the display) if something has changed
@@ -291,6 +293,11 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
             statusStat.changed.isAfter(state.lastStatusReadTime)) {
           String statusStr = File(localStatusFile).readAsStringSync();
           processStatus(localStatusFile, statusStr);
+          if (controlStatusStat.type != FileSystemEntityType.notFound) {
+            //The control status file holds the correct gas sensor output
+            String controlStatusStr = File(localControlStatusFile).readAsStringSync();
+            processGasStatus(controlStatusStr); 
+          }
           state = state.copyWith(lastStatusReadTime: statusStat.changed);
         }
         if (motdStat.type != FileSystemEntityType.notFound &&
@@ -311,15 +318,15 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
     } else if (state.onLocalLan && !state.localGetInProgress) {
       //Use ftp to retrieve status file direct from control station
       Future<Map<String, String>> localReceive =
-          LocalSendReceive.getLocalFile([localStatusFile]);
+          LocalSendReceive.getLocalFile([localControlStatusFile]);
       state.localGetInProgress = true;
       localReceive.then((files) {
         bool success = false;
         state.localGetInProgress = false;
-        if (files.containsKey(localStatusFile)) {
-          String? statusStr = files[localStatusFile];
+        if (files.containsKey(localControlStatusFile)) {
+          String? statusStr = files[localControlStatusFile];
           if (statusStr != null) {
-            processStatus(localStatusFile, statusStr);
+            processStatus(localControlStatusFile, statusStr);
             success = true;
           }
         }
@@ -346,6 +353,7 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   }
 
   void processStatus(String filename, String contents) {
+    //Note: filename parameter is not used but is required by File loader callback
     contents.split('\n').forEach((line) {
       if (line.startsWith('Current temp:')) {
         double newTemp = state.currentTemp;
@@ -450,7 +458,14 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         if (newPirState != state.intPirState) {
           state = state.copyWith(intPirState: newPirState);
         }
-      } else if (line.startsWith('IAQ:')) {
+      }
+    });
+    processGasStatus(contents);
+  }
+
+  void processGasStatus(String contents) {
+    contents.split('\n').forEach((line) {
+      if (line.startsWith('IAQ:')) {
         String str = line.substring(line.indexOf(':') + 1, line.length);
         double newIaq = double.parse(str);
         if (newIaq != state.iaq) {
