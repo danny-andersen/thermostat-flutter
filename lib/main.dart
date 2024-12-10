@@ -198,14 +198,14 @@ class MyAppState extends State<MyApp> {
 
 class StatefulHome extends StatefulWidget {
   StatefulHome({super.key, required this.statusPage, required this.oauthToken});
-  final Widget statusPage;
+  final ThermostatPage statusPage;
   final String oauthToken;
   @override
   _StatefulHomeState createState() => _StatefulHomeState();
 }
 
 class _StatefulHomeState extends State<StatefulHome> {
-  late Widget statusPage;
+  late ThermostatPage statusPage;
   late String oauthToken;
   final PageController _pageController = PageController();
   final List<String> _pageTitles = ['Current Status', 'Air Quality', 'History Page', 'Holiday Setting', 'Heating Schedule', 'Whos In and Out', 'Security Videos'];
@@ -258,7 +258,8 @@ class _StatefulHomeState extends State<StatefulHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_pageTitles[_currentPageIndex]),
+        title:
+            statusPage.localUI && _pageTitles[_currentPageIndex].startsWith('Current') ? DateTimeWidget() : Text(_pageTitles[_currentPageIndex])
       ),
       drawer: CustomDrawer(
         pageTitles: _pageTitles,
@@ -341,7 +342,6 @@ class CustomDrawer extends StatelessWidget {
 
 
 class DateTimeWidget extends StatefulWidget {
-  const DateTimeWidget({super.key});
 
   @override
   _DateTimeWidgetState createState() => _DateTimeWidgetState();
@@ -379,7 +379,7 @@ class _DateTimeWidgetState extends State<DateTimeWidget> {
       children: [
         Text(
           _currentDateTime,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
       ],
     );

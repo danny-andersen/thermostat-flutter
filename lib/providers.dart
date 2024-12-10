@@ -116,7 +116,9 @@ class ThermostatStatus {
     co2 = oldState.co2;
     voc = oldState.voc;
     airqAccuracy = oldState.airqAccuracy;
+    lastQtime = oldState.lastQtime;
     gasAlarm = oldState.gasAlarm;
+    lastGasTime = oldState.lastGasTime;
 
     requestOutstanding = oldState.requestOutstanding;
   }
@@ -146,7 +148,9 @@ class ThermostatStatus {
       this.co2,
       this.voc,
       this.airqAccuracy,
+      this.lastQtime,
       this.gasAlarm,
+      this.lastGasTime,
       this.requestOutstanding);
 
   ThermostatStatus copyWith(
@@ -174,7 +178,9 @@ class ThermostatStatus {
       double? co2,
       double? voc,
       int? airqAccuracy,
+      DateTime? lastQtime,
       int? gasAlarm,
+      DateTime? lastGasTime,
       bool? requestOutstanding}) {
     return ThermostatStatus.fromParams(
         localUI ?? this.localUI,
@@ -201,7 +207,9 @@ class ThermostatStatus {
         co2 ?? this.co2,
         voc ?? this.voc,
         airqAccuracy ?? this.airqAccuracy,
+        lastQtime ?? this.lastQtime,
         gasAlarm ?? this.gasAlarm,
+        lastGasTime ?? this.lastGasTime,
         requestOutstanding ?? this.requestOutstanding);
   }
 
@@ -231,7 +239,9 @@ class ThermostatStatus {
   double co2 = 400.0;
   double voc = 0.0;
   int airqAccuracy = 0;
+  DateTime? lastQtime;
   int gasAlarm = 0;
+  DateTime? lastGasTime;
 
   bool requestOutstanding = false;
 }
@@ -458,9 +468,14 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         if (newPirState != state.intPirState) {
           state = state.copyWith(intPirState: newPirState);
         }
+      } else if (line.startsWith('Last Q time:')) {
+        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
+        if (!dateStr.startsWith('Never')) {
+          //Valid Air Q data : parse
+          processGasStatus(contents);
+        }
       }
     });
-    processGasStatus(contents);
   }
 
   void processGasStatus(String contents) {
@@ -489,11 +504,23 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         if (newacc != state.airqAccuracy) {
           state = state.copyWith(airqAccuracy: newacc);
         }
+      } else if (line.startsWith('Last Q time:')) {
+        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
+        DateTime newLastQ = DateTime.parse(dateStr);
+        if (newLastQ != state.lastQtime) {
+          state = state.copyWith(lastQtime: newLastQ);
+        }
       } else if (line.startsWith('GAS:')) {
         String str = line.substring(line.indexOf(':') + 1, line.length);
         int newgas = int.parse(str);
         if (newgas != state.gasAlarm) {
           state = state.copyWith(gasAlarm: newgas);
+        }
+      } else if (line.startsWith('Last Gas time:')) {
+        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
+        DateTime newLastG = DateTime.parse(dateStr);
+        if (newLastG != state.lastQtime) {
+          state = state.copyWith(lastGasTime: newLastG);
         }
       }
     });

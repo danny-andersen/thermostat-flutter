@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'providers.dart';
 
 
@@ -22,6 +26,8 @@ class AirQualityPage extends ConsumerStatefulWidget {
 class _AirQualityPageState extends ConsumerState< AirQualityPage> {
   _AirQualityPageState({required this.oauthToken});
   String oauthToken;
+  late Timer timer;
+
   final List<Map<String, dynamic>> data = [
     {'label': 'Value 1', 'value': 30.0},
     {'label': 'Value 2', 'value': 70.0},
@@ -31,6 +37,21 @@ class _AirQualityPageState extends ConsumerState< AirQualityPage> {
   ];
 
   @override
+  void initState() {
+    //Trigger first refresh shortly after widget initialised, to allow state to be initialised
+    timer = Timer(const Duration(seconds: 1), updateStatus);
+    super.initState();
+  }
+
+  void updateStatus() {
+    //Note: Set timer before we call refresh otherwise will always have a get in progress
+    timer = Timer(
+        Duration(milliseconds: 30000), updateStatus);
+    ref.read(thermostatStatusNotifierProvider.notifier).refreshStatus();
+    ref.read(cameraStatusNotifierProvider.notifier).refreshStatus();
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Determine the available size dynamically
     final screenHeight = MediaQuery.of(context).size.height;
@@ -38,16 +59,46 @@ class _AirQualityPageState extends ConsumerState< AirQualityPage> {
 
     final ThermostatStatus status = ref.watch(thermostatStatusNotifierProvider);
 
+    DateTime currentTime = DateTime.now();
+    Color textColor = Colors.red;
+    String lastQHeardStr = "Never";
+
+    if (status.lastQtime != null) {
+      DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      lastQHeardStr = formatter.format(status.lastQtime!);
+      int timezoneDifference = currentTime.timeZoneOffset.inMinutes;
+      if (currentTime.timeZoneName == 'BST' ||
+          currentTime.timeZoneName == 'GMT') {
+        timezoneDifference = 0;
+      }
+      int diff =
+          currentTime.difference(status.lastQtime!).inMinutes - timezoneDifference;
+      if (diff == 60) {
+        //If exactly 60 mins then could be daylight savings
+        diff = 0;
+      }
+      if (diff > 15) {
+        textColor = Colors.red;
+      } else if (diff > 5) {
+        textColor = Colors.amber;
+      } else {
+        textColor = Colors.green;
+      }
+    }
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(4.0),
           child: Column(
             children: [
+              Text(
+                'Last Update: ${lastQHeardStr}',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+              ),
               // Dynamically adjust gauge size
-              _AirQualityGauge(status, screenWidth * 0.7),
-              // SizedBox(height: 20),
-              _CO2Gauge(status, screenWidth * 0.7),
+              _AirQualityGauge(status, screenHeight * 0.3),
+              _CO2Gauge(status, screenHeight * 0.3),
               // SizedBox(height: 10),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -66,10 +117,11 @@ class _AirQualityPageState extends ConsumerState< AirQualityPage> {
 }
 
 Widget _AirQualityGauge(ThermostatStatus status, double size) {
+    Color iaqColor = status.airqAccuracy == 0 ? Colors.grey : _getIaqColor(status.iaq);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
+        const Text(
           'Air Quality Index (IAQ)',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
@@ -99,25 +151,25 @@ Widget _AirQualityGauge(ThermostatStatus status, double size) {
                 ),
               ],
               annotations: <GaugeAnnotation>[
-        GaugeAnnotation(
+                GaugeAnnotation(
                   widget: Text(
                     "${status.iaq.toStringAsFixed(1)}",
                     style: TextStyle(
-                      fontSize: 22, // Larger text for larger gauges
+                      fontSize: 20, // Larger text for larger gauges
                       fontWeight: FontWeight.bold,
-                      color: _getIaqColor(status.iaq), 
+                      color: iaqColor, 
                     ), 
                   ),
                   angle: 90,
                   positionFactor: 0.2,
                 ),
-        GaugeAnnotation(
+                GaugeAnnotation(
                   widget: Text(
                     "${getIaqText(status.iaq)}",
                     style: TextStyle(
-                      fontSize: 18, // Larger text for larger gauges
+                      fontSize: 16, // Larger text for larger gauges
                       fontWeight: FontWeight.bold,
-                      color: _getIaqColor(status.iaq), 
+                      color: iaqColor, 
                     ), 
                   ),
                   angle: 90,
@@ -128,9 +180,9 @@ Widget _AirQualityGauge(ThermostatStatus status, double size) {
                       Text(
                         "VOC: ${status.voc.toStringAsFixed(2)}",
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: _getIaqColor(status.iaq), 
+                          color: iaqColor, 
                         ),
                       ),
                   angle: 90,
@@ -139,7 +191,7 @@ Widget _AirQualityGauge(ThermostatStatus status, double size) {
                 GaugeAnnotation(
                   widget: 
                       Text(
-                        "Accuracy: ${getAccuracyText(status.airqAccuracy)}",
+                        status.airqAccuracy == 0 ? "Not Calibrated!!" : "Accuracy: ${getAccuracyText(status.airqAccuracy)}",
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -158,10 +210,11 @@ Widget _AirQualityGauge(ThermostatStatus status, double size) {
   }
 
 Widget _CO2Gauge(ThermostatStatus status, double size) {
+    Color co2Color = status.airqAccuracy == 0 ? Colors.grey : _getCo2Color(status.iaq);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
+        const Text(
           'CO2 Level (ppm)',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
@@ -187,34 +240,34 @@ Widget _CO2Gauge(ThermostatStatus status, double size) {
                 ),
               ],
               annotations: <GaugeAnnotation>[
-        GaugeAnnotation(
+                GaugeAnnotation(
                   widget: Text(
                     status.co2.toStringAsFixed(1),
                     style: TextStyle(
-                      fontSize: 22, // Larger text for larger gauges
+                      fontSize: 20, // Larger text for larger gauges
                       fontWeight: FontWeight.bold,
-                      color: _getCo2Color(status.co2), 
+                      color: co2Color, 
                     ), 
                   ),
                   angle: 90,
-                  positionFactor: 0.2,
+                  positionFactor: 0.3,
                 ),
-        GaugeAnnotation(
+                GaugeAnnotation(
                   widget: Text(
                     "${getCO2Text(status.co2)}",
                     style: TextStyle(
-                      fontSize: 18, // Larger text for larger gauges
+                      fontSize: 16, // Larger text for larger gauges
                       fontWeight: FontWeight.bold,
-                      color: _getCo2Color(status.co2), 
+                      color: co2Color, 
                     ), 
                   ),
                   angle: 90,
-                  positionFactor: 0.35,
+                  positionFactor: 0.45,
                 ),
                 GaugeAnnotation(
                   widget: 
                       Text(
-                        "Accuracy: ${getAccuracyText(status.airqAccuracy)}",
+                        status.airqAccuracy == 0 ? "Not Calibrated!!" : "Accuracy: ${getAccuracyText(status.airqAccuracy)}",
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -256,7 +309,7 @@ Widget _CO2Gauge(ThermostatStatus status, double size) {
   Color _getCo2Color(double val) {
     if (val <= 1000) return  Colors.green;
     if (val <= 2000) return Colors.orange;
-    return Colors.red;
+    return Colors.grey;
   }
 
   String getCO2Text(double val) {
