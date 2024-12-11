@@ -119,6 +119,7 @@ class ThermostatStatus {
     lastQtime = oldState.lastQtime;
     gasAlarm = oldState.gasAlarm;
     lastGasTime = oldState.lastGasTime;
+    batteryV = oldState.batteryV;
 
     requestOutstanding = oldState.requestOutstanding;
   }
@@ -151,6 +152,7 @@ class ThermostatStatus {
       this.lastQtime,
       this.gasAlarm,
       this.lastGasTime,
+      this.batteryV,
       this.requestOutstanding);
 
   ThermostatStatus copyWith(
@@ -181,6 +183,7 @@ class ThermostatStatus {
       DateTime? lastQtime,
       int? gasAlarm,
       DateTime? lastGasTime,
+      double? batteryV,
       bool? requestOutstanding}) {
     return ThermostatStatus.fromParams(
         localUI ?? this.localUI,
@@ -210,6 +213,7 @@ class ThermostatStatus {
         lastQtime ?? this.lastQtime,
         gasAlarm ?? this.gasAlarm,
         lastGasTime ?? this.lastGasTime,
+        batteryV ?? this.batteryV,
         requestOutstanding ?? this.requestOutstanding);
   }
 
@@ -242,6 +246,7 @@ class ThermostatStatus {
   DateTime? lastQtime;
   int gasAlarm = 0;
   DateTime? lastGasTime;
+  double batteryV = 0.0;
 
   bool requestOutstanding = false;
 }
@@ -250,7 +255,8 @@ class ThermostatStatus {
 class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   final String statusFile = "/thermostat_status.txt";
   final String localStatusFile = "/home/danny/thermostat/status.txt";
-  final String localControlStatusFile = "/home/danny/control_station/status.txt";
+  final String localControlStatusFile =
+      "/home/danny/control_station/status.txt";
 
   final String setTempFile = "/setTemp.txt";
   final String localSetTempFile = "/home/danny/thermostat/setTemp.txt";
@@ -305,8 +311,9 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           processStatus(localStatusFile, statusStr);
           if (controlStatusStat.type != FileSystemEntityType.notFound) {
             //The control status file holds the correct gas sensor output
-            String controlStatusStr = File(localControlStatusFile).readAsStringSync();
-            processGasStatus(controlStatusStr); 
+            String controlStatusStr =
+                File(localControlStatusFile).readAsStringSync();
+            processGasStatus(controlStatusStr);
           }
           state = state.copyWith(lastStatusReadTime: statusStat.changed);
         }
@@ -521,6 +528,12 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         DateTime newLastG = DateTime.parse(dateStr);
         if (newLastG != state.lastQtime) {
           state = state.copyWith(lastGasTime: newLastG);
+        }
+      } else if (line.startsWith('Gas BV:')) {
+        String str = line.substring(line.indexOf(':') + 2, line.length);
+        double newbv = double.parse(str);
+        if (newbv != state.batteryV) {
+          state = state.copyWith(batteryV: newbv);
         }
       }
     });
