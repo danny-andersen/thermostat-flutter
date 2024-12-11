@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart'; // Provides [Player], [Media], [Playlist] etc.
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:thermostat_flutter/airquality.dart';
 
 import 'package:thermostat_flutter/dropbox-api.dart';
 import 'package:thermostat_flutter/who_tab.dart';
@@ -17,6 +16,8 @@ import 'package:thermostat_flutter/thermostat-tab.dart';
 import 'package:thermostat_flutter/history-tab.dart';
 import 'package:thermostat_flutter/holidaytab.dart';
 import 'package:thermostat_flutter/schedule-tab.dart';
+import 'package:thermostat_flutter/airquality-history.dart';
+import 'package:thermostat_flutter/airquality.dart';
 // import 'package:flutterpi_gstreamer_video_player/flutterpi_gstreamer_video_player.dart';
 
 HttpAuthCredentialDatabase httpAuthCredentialDatabase =
@@ -51,7 +52,6 @@ class MyAppState extends State<MyApp> {
   bool localUI = false;
   String username = "";
   String password = "";
-
 
   @override
   void initState() {
@@ -171,22 +171,21 @@ class MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     // ScreenType screenType = FormFactor.getScreenType(context);
     return MaterialApp(
-        title: 'Home Controller',
-        theme: ThemeData(
-          useMaterial3: true,
+      title: 'Home Controller',
+      theme: ThemeData(
+        useMaterial3: true,
 
-          // Define the default brightness and colors.
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.dark,
-          ), // This is the theme of your application.
-          // primarySwatch: Colors.blue,
-          fontFamily: 'Roboto',
-        ),
-       home: StatefulHome(statusPage: statusPage, oauthToken: oauthToken),
-        );
+        // Define the default brightness and colors.
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ), // This is the theme of your application.
+        // primarySwatch: Colors.blue,
+        fontFamily: 'Roboto',
+      ),
+      home: StatefulHome(statusPage: statusPage, oauthToken: oauthToken),
+    );
   }
-
 
   @override
   void dispose() {
@@ -194,7 +193,6 @@ class MyAppState extends State<MyApp> {
     super.dispose();
   }
 }
-
 
 class StatefulHome extends StatefulWidget {
   StatefulHome({super.key, required this.statusPage, required this.oauthToken});
@@ -208,7 +206,16 @@ class _StatefulHomeState extends State<StatefulHome> {
   late ThermostatPage statusPage;
   late String oauthToken;
   final PageController _pageController = PageController();
-  final List<String> _pageTitles = ['Current Status', 'Air Quality', 'History Page', 'Holiday Setting', 'Heating Schedule', 'Whos In and Out', 'Security Videos'];
+  final List<String> _pageTitles = [
+    'Current Status',
+    'Temperature History',
+    'Air Quality',
+    'Air Quality History',
+    'Holiday Setting',
+    'Heating Schedule',
+    'Whos In and Out',
+    'Security Videos'
+  ];
   late List<Widget> _pages;
   // Map<String, Widget> pages = {};
   // late Widget currentPage;
@@ -220,15 +227,18 @@ class _StatefulHomeState extends State<StatefulHome> {
     super.initState();
     statusPage = widget.statusPage;
     oauthToken = widget.oauthToken;
-    
-    _pages = [statusPage,
-      AirQualityPage(oauthToken: oauthToken), 
-      HistoryPage(oauthToken: oauthToken), 
-      HolidayPage(oauthToken: oauthToken), 
-      SchedulePage(oauthToken: oauthToken), 
-      WhoPage(oauthToken: oauthToken), 
-      CameraPage(oauthToken: oauthToken) ];
-    // pages.addAll({'Status': statusPage, 
+
+    _pages = [
+      statusPage,
+      HistoryPage(oauthToken: oauthToken),
+      AirQualityPage(oauthToken: oauthToken),
+      AirQualityHistoryPage(oauthToken: oauthToken),
+      HolidayPage(oauthToken: oauthToken),
+      SchedulePage(oauthToken: oauthToken),
+      WhoPage(oauthToken: oauthToken),
+      CameraPage(oauthToken: oauthToken)
+    ];
+    // pages.addAll({'Status': statusPage,
     //     'History': HistoryPage(oauthToken: oauthToken),
     //     'Holiday': HolidayPage(oauthToken: oauthToken),
     //     'Schedule': SchedulePage(oauthToken: oauthToken),
@@ -254,13 +264,15 @@ class _StatefulHomeState extends State<StatefulHome> {
       _currentPageIndex = index;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            statusPage.localUI && _pageTitles[_currentPageIndex].startsWith('Current') ? DateTimeWidget() : Text(_pageTitles[_currentPageIndex])
-      ),
+          title: statusPage.localUI &&
+                  _pageTitles[_currentPageIndex].startsWith('Current')
+              ? DateTimeWidget()
+              : Text(_pageTitles[_currentPageIndex])),
       drawer: CustomDrawer(
         pageTitles: _pageTitles,
         onPageSelected: switchPage,
@@ -280,7 +292,6 @@ class CustomDrawer extends StatelessWidget {
 
   CustomDrawer({required this.pageTitles, required this.onPageSelected});
 
- 
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -299,36 +310,37 @@ class CustomDrawer extends StatelessWidget {
               ),
             ),
           ),
-        ...List.generate(
-              pageTitles.length,
-              (index) {
-              IconData icon;
-              switch (pageTitles[index]) {
-                case 'Current Status':
-                  icon = Icons.home;
-                  break;
-                case 'Air Quality':
-                  icon = Icons.air;
-                  break;
-                case 'History Page':
-                  icon = Icons.history;
-                  break;
-                case 'Holiday Setting':
-                  icon = Icons.calendar_month;
-                  break;
-                case 'Heating Schedule':
-                  icon = Icons.schedule;
-                  break;
-                case 'Whos In and Out':
-                  icon = Icons.person;
-                  break;
-                case 'Security Videos':
-                  icon = Icons.switch_video;
-                  break;
+          ...List.generate(pageTitles.length, (index) {
+            IconData icon;
+            switch (pageTitles[index]) {
+              case 'Current Status':
+                icon = Icons.home;
+                break;
+              case 'Temperature History':
+                icon = Icons.history;
+                break;
+              case 'Air Quality':
+                icon = Icons.air;
+                break;
+              case 'Air Quality History':
+                icon = Icons.history;
+                break;
+              case 'Holiday Setting':
+                icon = Icons.calendar_month;
+                break;
+              case 'Heating Schedule':
+                icon = Icons.schedule;
+                break;
+              case 'Whos In and Out':
+                icon = Icons.person;
+                break;
+              case 'Security Videos':
+                icon = Icons.switch_video;
+                break;
               default:
-                  icon = Icons.home;
-              }
-              return ListTile(
+                icon = Icons.home;
+            }
+            return ListTile(
               leading: Icon(icon),
               title: Text(pageTitles[index]),
               onTap: () => onPageSelected(index),
@@ -340,9 +352,7 @@ class CustomDrawer extends StatelessWidget {
   }
 }
 
-
 class DateTimeWidget extends StatefulWidget {
-
   @override
   _DateTimeWidgetState createState() => _DateTimeWidgetState();
 }

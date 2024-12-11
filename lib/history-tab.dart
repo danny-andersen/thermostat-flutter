@@ -304,9 +304,9 @@ class HistoryPageState extends State<HistoryPage> {
       String dateStr = fileName.split('_')[0];
       return DropdownMenuItem<String>(value: fileName, child: Text(dateStr));
     });
-    String dateStr = todayFile.split('_')[0];
-    entries.insert(
-        0, DropdownMenuItem<String>(value: todayFile, child: Text(dateStr)));
+    // String dateStr = todayFile.split('_')[0];
+    // entries.insert(
+    //     0, DropdownMenuItem<String>(value: todayFile, child: Text(dateStr)));
     if (mounted) {
       setState(() {
         changeEntries = entries;
