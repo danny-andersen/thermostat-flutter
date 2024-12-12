@@ -6,9 +6,7 @@ import 'package:sprintf/sprintf.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
 import 'package:format/format.dart';
-
 import 'package:fast_csv/csv_converter.dart' as csv;
-
 import 'package:syncfusion_flutter_sliders/sliders.dart';
 
 import 'dropbox-api.dart';
@@ -116,7 +114,8 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
     for (int i = 1; i < result.length; i++) {
       final row = result[i];
       try {
-        double hourmin = getHourMin(row[0].trim());
+        var t = getHourMin(row[0].trim());
+        double hourmin = t.$2;
         double iaq = double.parse(row[4].trim());
         airQualityList.add(FlSpot(hourmin, iaq));
         double co2 = double.parse(row[5].trim());
@@ -140,11 +139,19 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
   }
 
   void processGasFile(String filename, String contents) {
+    String filed = filename.split('_')[0].split('/')[1];
+    String procDate =
+        "${filed.substring(0, 4)}-${filed.substring(4, 6)}-${filed.substring(6, 8)}";
+    DateTime processDate = DateTime.parse(procDate);
     final result = csv.CsvConverter().convert(contents);
     for (int i = 1; i < result.length; i++) {
       final row = result[i];
       try {
-        double time = getHourMin(row[0].trim());
+        var t = getHourMin(row[0].trim());
+        double time = t.$2;
+        if (t.$1 != processDate.day) {
+          continue; //Skip entries that are from previous day
+        }
         double redchg = double.parse(row[3].trim());
         reducerChgList.add(FlSpot(time, redchg));
         double nh3chg = double.parse(row[5].trim());
@@ -155,7 +162,6 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
         //ignore row
       }
     }
-    ;
 
     reducerChgSeries =
         LineChartBarData(spots: reducerChgList, color: Colors.green[800]);
@@ -169,9 +175,10 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
     }
   }
 
-  double getHourMin(String timestr) {
-    DateTime time = DateTime.parse(timestr);
-    return (time.hour * 100) + ((100 * time.minute) ~/ 60).toDouble();
+  (int, double) getHourMin(entryTimeStamp) {
+    DateTime dt = DateTime.parse(entryTimeStamp);
+    double time = (dt.hour * 100) + ((100 * dt.minute) ~/ 60).toDouble();
+    return (dt.day, time);
   }
 
   void getChangeFileList() {
