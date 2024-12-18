@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:dart_ping/dart_ping.dart';
+import 'package:flutter/material.dart';
 
 import 'dropbox-api.dart';
 import 'local_settings.dart';
@@ -85,6 +86,100 @@ void areWeOnLocalNetwork(Function callback) {
       }
     }
   });
+}
+
+String getIaqText(double iaq) {
+  if (iaq <= 50) return "Excellent";
+  if (iaq <= 100) return "Good";
+  if (iaq <= 150) return "Lightly polluted";
+  if (iaq <= 200) return "Polluted - Ventilate";
+  if (iaq <= 250) return "Heavily Polluted";
+  if (iaq <= 350) return "Severely Polluted";
+  return "Extreme Pollution";
+}
+
+Color getIaqColor(double val) {
+  if (val <= 50) return Colors.greenAccent;
+  if (val <= 100) return Colors.green[800]!;
+  if (val <= 150) return Colors.yellow;
+  if (val <= 200) return Colors.amber;
+  if (val <= 250) return Colors.red;
+  if (val <= 350) return Colors.purple[800]!;
+  return Colors.brown;
+}
+
+Color getCo2Color(double val) {
+  if (val <= 1000) return Colors.green;
+  if (val <= 2000) return Colors.orange;
+  return Colors.grey;
+}
+
+String getCO2Text(double val) {
+  if (val <= 1000) return "Normal";
+  if (val <= 2000) return "Ventilate";
+  return "Danger!!!";
+}
+
+String getAccuracyText(int calibrationStatus) {
+  if (calibrationStatus == 0) return "Not calibrated";
+  if (calibrationStatus == 1) return "Poor";
+  if (calibrationStatus == 2) return "Good";
+  return "Excellent";
+}
+
+Color getAccuracyColor(int calibrationStatus) {
+  if (calibrationStatus == 0) return Colors.red;
+  if (calibrationStatus == 1) return Colors.orange;
+  if (calibrationStatus == 2) return Colors.yellow;
+  return Colors.green;
+}
+
+Color getAlarmColor(int val) {
+  if (val == 3) return Colors.red;
+  if (val == 2) return Colors.orange;
+  if (val == 1) return Colors.yellow;
+  return Colors.green;
+}
+
+Widget getAllGasAlarmStatus(bool localUI, int status) {
+  String statusStr = "All OK";
+  Color alarmColor = Colors.green;
+  if (status == 0x80) {
+    statusStr = "Possible Gas Event";
+    alarmColor = Colors.brown;
+  }
+  int co2Status = status & 0x03;
+  int nh3Status = (status & 0x0C) >> 2;
+  int no2Status = (status & 0x30) >> 4;
+  if (co2Status > 0) {
+    statusStr = "Carbon Dioxide ${getAlarmStatus(co2Status)}";
+    alarmColor = getAlarmColor(co2Status);
+  } else if (nh3Status > 0) {
+    statusStr = "Ammonia/Propane/Butane ${getAlarmStatus(nh3Status)}";
+    alarmColor = getAlarmColor(nh3Status);
+  } else if (no2Status > 0) {
+    statusStr = "Nitrogen Dioxide ${getAlarmStatus(no2Status)}";
+    alarmColor = getAlarmColor(no2Status);
+  }
+  return Text('Gas Sensor: $statusStr',
+      textAlign: TextAlign.left,
+      style: TextStyle(
+        fontSize: localUI ? 20 : 15,
+        fontWeight: FontWeight.bold,
+        color: alarmColor,
+      ));
+}
+
+String getAlarmStatus(int status) {
+  if (status == 3) {
+    return "Critical!";
+  } else if (status == 2) {
+    return "High!";
+  } else if (status == 1) {
+    return "Warning!";
+  } else {
+    return "Normal";
+  }
 }
 
 class ThermostatStatus {

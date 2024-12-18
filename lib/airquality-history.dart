@@ -27,6 +27,7 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
   final String oauthToken;
   final String gasSensorPattern = "_gassensor.csv";
   final String airqualityPattern = "_airquality.csv";
+  final String co2SensorPattern = "_co2sensor.csv";
 
   // HttpClient httpClient = HttpClient();
   List<DropdownMenuItem<String>>? changeEntries;
@@ -86,6 +87,7 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
     oxChgList = List.filled(0, const FlSpot(0, 0.0), growable: true);
     airQualityList = List.filled(0, const FlSpot(0, 0.0), growable: true);
     cO2List = List.filled(0, const FlSpot(0, 0.0), growable: true);
+    String dateStr = todayFile.split('_')[0];
     // print("Downloading file: $changeFile");
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
@@ -93,7 +95,14 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
         callback: processAirQFile,
         contentType: ContentType.text,
         timeoutSecs: 60);
-    String gasChangeFile = "${todayFile.split('_')[0]}$gasSensorPattern";
+    String co2SensorFile = "$dateStr$co2SensorPattern";
+    DropBoxAPIFn.getDropBoxFile(
+        oauthToken: oauthToken,
+        fileToDownload: "/$co2SensorFile",
+        callback: processCO2File,
+        contentType: ContentType.text,
+        timeoutSecs: 60);
+    String gasChangeFile = "$dateStr$gasSensorPattern";
     DropBoxAPIFn.getDropBoxFile(
         oauthToken: oauthToken,
         fileToDownload: "/$gasChangeFile",
@@ -118,9 +127,22 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
         double hourmin = t.$2;
         double iaq = double.parse(row[4].trim());
         airQualityList.add(FlSpot(hourmin, iaq));
-        double co2 = double.parse(row[5].trim());
+      } on Exception {
+        //ignore row
+      }
+    }
+  }
+
+  void processCO2File(String filename, String contents) {
+    final result = csv.CsvConverter().convert(contents);
+    for (int i = 1; i < result.length; i++) {
+      final row = result[i];
+      try {
+        var t = getHourMin(row[0].trim());
+        double hourmin = t.$2;
+        double co2 = double.parse(row[1].trim());
         cO2List.add(FlSpot(hourmin, co2));
-      } on Exception catch (e) {
+      } on Exception {
         //ignore row
       }
     }
@@ -158,7 +180,7 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
         nh3ChgList.add(FlSpot(time, nh3chg));
         double oxchg = double.parse(row[7].trim());
         oxChgList.add(FlSpot(time, oxchg));
-      } on Exception catch (e) {
+      } on Exception {
         //ignore row
       }
     }

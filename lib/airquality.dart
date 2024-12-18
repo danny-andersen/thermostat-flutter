@@ -11,9 +11,6 @@ class AirQualityPage extends ConsumerStatefulWidget {
   AirQualityPage({super.key, required this.oauthToken});
   String oauthToken;
   late _AirQualityPageState statePage;
-  //  =
-  //     _ThermostatPageState(oauthToken: "BLANK", localUI: false);
-  // // _ThermostatPageState state = _ThermostatPageState(oauthToken: "BLANK");
 
   @override
   ConsumerState<AirQualityPage> createState() {
@@ -61,8 +58,9 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
           child: Column(
             children: [
               // Dynamically adjust gauge size
-              _AirQualityGauge(status, screenHeight * 0.3),
-              _CO2Gauge(status, screenHeight * 0.3),
+              _AirQualityGauge(
+                  status, screenHeight * (status.localUI ? 0.35 : 0.3)),
+              _CO2Gauge(status, screenHeight * (status.localUI ? 0.35 : 0.3)),
               _GasSensorWidget(status),
               // SizedBox(height: 10),
             ],
@@ -74,13 +72,14 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
 
   Widget _AirQualityGauge(ThermostatStatus status, double size) {
     Color iaqColor =
-        status.airqAccuracy == 0 ? Colors.grey : _getIaqColor(status.iaq);
+        status.airqAccuracy == 0 ? Colors.grey : getIaqColor(status.iaq);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           'Air Quality Index (IAQ)',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              fontSize: status.localUI ? 22 : 15, fontWeight: FontWeight.bold),
         ),
         getLastHeardText(status.lastQtime),
         SizedBox(
@@ -156,9 +155,9 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
                         ? "Not Calibrated!!"
                         : "Accuracy: ${getAccuracyText(status.airqAccuracy)}",
                     style: TextStyle(
-                        fontSize: 14,
+                        fontSize: status.localUI ? 18 : 14,
                         fontWeight: FontWeight.bold,
-                        color: _getAccuracyColor(status.airqAccuracy)),
+                        color: getAccuracyColor(status.airqAccuracy)),
                   ),
                   angle: 90,
                   positionFactor: 0.7, // Adjust to position accuracy label
@@ -173,13 +172,14 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
 
   Widget _CO2Gauge(ThermostatStatus status, double size) {
     Color co2Color =
-        status.airqAccuracy == 0 ? Colors.grey : _getCo2Color(status.iaq);
+        status.airqAccuracy == 0 ? Colors.grey : getCo2Color(status.iaq);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           'CO2 Level (ppm)',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              fontSize: status.localUI ? 22 : 16, fontWeight: FontWeight.bold),
         ),
         SizedBox(
           width: size,
@@ -230,19 +230,6 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
                   angle: 90,
                   positionFactor: 0.45,
                 ),
-                GaugeAnnotation(
-                  widget: Text(
-                    status.airqAccuracy == 0
-                        ? "Not Calibrated!!"
-                        : "Accuracy: ${getAccuracyText(status.airqAccuracy)}",
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: _getAccuracyColor(status.airqAccuracy)),
-                  ),
-                  angle: 90,
-                  positionFactor: 0.7, // Adjust to position accuracy label
-                ),
               ],
             ),
           ]),
@@ -252,37 +239,38 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
   }
 
   Widget _GasSensorWidget(ThermostatStatus status) {
-    return Column(
+    return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        // crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Dangerous Gas Sensor  ',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Icon(getBatteryIcon(status.batteryV)),
-              Text("${status.batteryV}V"),
-            ],
+          const Text(
+            'Dangerous Gas Sensor  ',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          getLastHeardText(status.lastGasTime),
-          const SizedBox(height: 16),
-          Column(children: [
-            _buildLabeledStatus(
-                label: "Carbon Monoxide", value: status.gasAlarm & 0x03),
-            _buildLabeledStatus(
-                label: "Ammonia/Propane/Butane",
-                value: (status.gasAlarm & 0x0C) >> 2),
-            _buildLabeledStatus(
-                label: "Nitrogen Dioxide",
-                value: (status.gasAlarm & 0x30) >> 4),
-          ])
-        ]);
+          Icon(getBatteryIcon(status.batteryV)),
+          Text("${status.batteryV}V"),
+        ],
+      ),
+      getLastHeardText(status.lastGasTime),
+      const SizedBox(height: 16),
+      Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        _buildLabeledStatus(
+            localUI: status.localUI,
+            label: "Carbon Monoxide",
+            value: status.gasAlarm & 0x03),
+        _buildLabeledStatus(
+            localUI: status.localUI,
+            label: "Ammonia/Propane/Butane",
+            value: (status.gasAlarm & 0x0C) >> 2),
+        _buildLabeledStatus(
+            localUI: status.localUI,
+            label: "Nitrogen Dioxide",
+            value: (status.gasAlarm & 0x30) >> 4),
+      ])
+    ]);
   }
 
   IconData getBatteryIcon(batteryVoltage) {
@@ -338,60 +326,8 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
     );
   }
 
-  String getIaqText(double iaq) {
-    if (iaq <= 50) return "Excellent";
-    if (iaq <= 100) return "Good";
-    if (iaq <= 150) return "Lightly polluted";
-    if (iaq <= 200) return "Polluted - Ventilate";
-    if (iaq <= 250) return "Heavily Polluted";
-    if (iaq <= 350) return "Severely Polluted";
-    return "Extreme Pollution";
-  }
-
-  Color _getIaqColor(double val) {
-    if (val <= 50) return Colors.greenAccent;
-    if (val <= 100) return Colors.green[800]!;
-    if (val <= 150) return Colors.yellow;
-    if (val <= 200) return Colors.amber;
-    if (val <= 250) return Colors.red;
-    if (val <= 350) return Colors.purple[800]!;
-    return Colors.brown;
-  }
-
-  Color _getCo2Color(double val) {
-    if (val <= 1000) return Colors.green;
-    if (val <= 2000) return Colors.orange;
-    return Colors.grey;
-  }
-
-  String getCO2Text(double val) {
-    if (val <= 1000) return "Normal";
-    if (val <= 2000) return "Ventilate";
-    return "Danger!!!";
-  }
-
-  String getAccuracyText(int calibrationStatus) {
-    if (calibrationStatus == 0) return "Not calibrated";
-    if (calibrationStatus == 1) return "Poor";
-    if (calibrationStatus == 2) return "Good";
-    return "Excellent";
-  }
-
-  Color _getAccuracyColor(int calibrationStatus) {
-    if (calibrationStatus == 0) return Colors.red;
-    if (calibrationStatus == 1) return Colors.orange;
-    if (calibrationStatus == 2) return Colors.yellow;
-    return Colors.green;
-  }
-
-  Color _getValueColor(int val) {
-    if (val == 3) return Colors.red;
-    if (val == 2) return Colors.orange;
-    if (val == 1) return Colors.yellow;
-    return Colors.green;
-  }
-
-  Widget _buildLabeledStatus({required String label, required int value}) {
+  Widget _buildLabeledStatus(
+      {required bool localUI, required String label, required int value}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -400,49 +336,26 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
             children: [
               Text(label,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: _getValueColor(value), fontSize: 16)),
+                  style: TextStyle(
+                    color: getAlarmColor(value),
+                    fontSize: localUI ? 20 : 16,
+                  )),
             ],
           ),
         ),
-        // const SizedBox(width: 8),
         Expanded(
           child: Column(
             children: [
-              Text(_getAlarmStatus(value),
+              Text(getAlarmStatus(value),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: _getValueColor(value), fontSize: 16)),
+                  style: TextStyle(
+                    color: getAlarmColor(value),
+                    fontSize: localUI ? 20 : 16,
+                  )),
             ],
           ),
         ),
       ],
     );
-    //                     return Padding(
-    //   padding: const EdgeInsets.symmetric(vertical: 4.0),
-    //   child: Row(
-    //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //     children: [
-    //       Text(
-    //         label,
-    //         style: TextStyle(color: _getValueColor(value), fontSize: 16),
-    //       ),
-    //       Text(
-    //         _getAlarmStatus(value),
-    //         style: TextStyle(color: _getValueColor(value), fontSize: 16),
-    //       ),
-    //     ],
-    //   ),
-    // );
-  }
-
-  _getAlarmStatus(int status) {
-    if (status == 3) {
-      return "Critical!";
-    } else if (status == 2) {
-      return "High!";
-    } else if (status == 1) {
-      return "Warning!";
-    } else {
-      return "Normal";
-    }
   }
 }

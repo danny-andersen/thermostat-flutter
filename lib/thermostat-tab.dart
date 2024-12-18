@@ -396,13 +396,15 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     final ThermostatStatus status = ref.watch(thermostatStatusNotifierProvider);
     final CameraStatus cameraStatus = ref.watch(cameraStatusNotifierProvider);
     List<Widget> widgets = [
-      const SizedBox(height: 10),
+      // const SizedBox(height: 10),
       SizedBox(
         height: localUI ? 480 : 380,
         child: const TemperatureGauge(),
       ),
       const SetTempButtonBar(),
       const RHGauge(),
+      const SizedBox(height: 10),
+      AirStatusBar(),
     ];
     if (localUI) {
       widgets.addAll([
@@ -493,6 +495,44 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
 
     Widget returnWidget = ListView(children: widgets);
     return returnWidget;
+  }
+}
+
+class AirStatusBar extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThermostatStatus status = ref.watch(thermostatStatusNotifierProvider);
+    return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Text(
+            'Air Quality: ${getIaqText(status.iaq)} (${status.iaq})',
+            textAlign: TextAlign.left,
+            style: TextStyle(
+              fontSize: status.localUI ? 20 : 15,
+              fontWeight: FontWeight.bold,
+              color: getIaqColor(status.iaq),
+            ),
+          ),
+        ],
+      ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Text(
+            'CO2: ${getCO2Text(status.co2)} (${status.co2})',
+            textAlign: TextAlign.left,
+            style: TextStyle(
+              fontSize: status.localUI ? 20 : 15,
+              fontWeight: FontWeight.bold,
+              color: getCo2Color(status.co2),
+            ),
+          ),
+          getAllGasAlarmStatus(status.localUI, status.gasAlarm),
+        ],
+      ),
+    ]);
   }
 }
 
