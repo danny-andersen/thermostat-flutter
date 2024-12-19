@@ -353,7 +353,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
         Expanded(
           child: Column(
             children: [
-              Text(getAlarmStatus(value),
+              Text(standby ? "Possible.." : getAlarmStatus(value),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: labelColor,

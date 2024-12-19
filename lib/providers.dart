@@ -171,9 +171,7 @@ Widget getAllGasAlarmStatus(bool localUI, int status) {
 }
 
 String getAlarmStatus(int status) {
-  if (status == 0x80) {
-    return "Standby..";
-  } else if (status == 3) {
+  if (status == 3) {
     return "Critical!";
   } else if (status == 2) {
     return "High!";
