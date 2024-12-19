@@ -259,14 +259,17 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
       Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         _buildLabeledStatus(
             localUI: status.localUI,
+            standby: status.gasAlarm == 0x80,
             label: "Carbon Monoxide",
-            value: status.gasAlarm & 0x03),
+            value: (status.gasAlarm & 0x03)),
         _buildLabeledStatus(
             localUI: status.localUI,
+            standby: status.gasAlarm == 0x80,
             label: "Ammonia/Propane/Butane",
             value: (status.gasAlarm & 0x0C) >> 2),
         _buildLabeledStatus(
             localUI: status.localUI,
+            standby: status.gasAlarm == 0x80,
             label: "Nitrogen Dioxide",
             value: (status.gasAlarm & 0x30) >> 4),
       ])
@@ -327,7 +330,11 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
   }
 
   Widget _buildLabeledStatus(
-      {required bool localUI, required String label, required int value}) {
+      {required bool localUI,
+      required bool standby,
+      required String label,
+      required int value}) {
+    Color labelColor = standby ? Colors.deepOrange : getAlarmColor(value);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -337,7 +344,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
               Text(label,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: getAlarmColor(value),
+                    color: labelColor,
                     fontSize: localUI ? 20 : 16,
                   )),
             ],
@@ -349,7 +356,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
               Text(getAlarmStatus(value),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: getAlarmColor(value),
+                    color: labelColor,
                     fontSize: localUI ? 20 : 16,
                   )),
             ],
