@@ -19,9 +19,10 @@ class BarometerPage extends ConsumerStatefulWidget {
 
 class _BarometerPageState extends ConsumerState<BarometerPage> {
   _BarometerPageState({required this.oauthToken});
-  String _trend = "Stable";
   String oauthToken;
   late Timer timer;
+  String trend24hr = "??";
+  String trend48hr = "??";
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _BarometerPageState extends ConsumerState<BarometerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final BarometerStatus status = ref.watch(barometerStatusNotifierProvider);
 
     return Scaffold(
@@ -54,14 +55,69 @@ class _BarometerPageState extends ConsumerState<BarometerPage> {
         child: Column(
           children: [
             _BarometerGauge(
-                status, screenWidth * (status.localUI ? 0.35 : 0.3)),
+                status, screenHeight * (status.localUI ? 0.35 : 0.5)),
           ],
         ),
       ),
     ));
   }
 
+  double getMedianPressure(
+      BarometerStatus status, List<DateTime> keys, int offset) {
+    final int medianSize = 10;
+    List<double?> pressures = [];
+    for (int i = 0; i < medianSize; i++) {
+      pressures.add(status.pressureByDateTime[keys[offset + i]]);
+    }
+    pressures.sort();
+    return pressures[(medianSize / 2).toInt()]!;
+  }
+
+  void setTrend(status) {
+    final int hours24 = 24 * 60 * 2;
+    if (status.pressureByDateTime.length < hours24) {
+      return;
+    }
+    final int hours48 = 48 * 60 * 2;
+    List<DateTime> keys = status.pressureByDateTime.keys.toList();
+    keys.sort();
+    double _24hourAgo = getMedianPressure(
+        status, keys, status.pressureByDateTime.length - hours24);
+    double delta = status.currentPressure - _24hourAgo;
+    if (delta > 30) {
+      trend24hr = "Rising Rapidly";
+    } else if (delta > 5) {
+      trend24hr = "Rising";
+    } else if (delta < -30) {
+      trend24hr = "Falling Rapidly";
+    } else if (delta < -5) {
+      trend24hr = "Falling";
+    } else {
+      trend24hr = "Stable";
+    }
+    if (status.pressureByDateTime.length < hours48) {
+      return;
+    }
+    double _48hourAgo = getMedianPressure(
+        status, keys, status.pressureByDateTime.length - hours48);
+    delta = status.currentPressure - _48hourAgo;
+    if (delta > 60) {
+      trend48hr = "Rising Rapidly";
+    } else if (delta > 10) {
+      trend48hr = "Rising";
+    } else if (delta < -60) {
+      trend48hr = "Falling Rapidly";
+    } else if (delta < -10) {
+      trend48hr = "Falling";
+    } else {
+      trend48hr = "Stable";
+    }
+  }
+
   Widget _BarometerGauge(BarometerStatus status, double size) {
+    if (status.pressureByDateTime.isNotEmpty) {
+      setTrend(status);
+    }
     return SizedBox(
       height: size,
       child: SfRadialGauge(
@@ -153,23 +209,29 @@ class _BarometerPageState extends ConsumerState<BarometerPage> {
                   ),
                 ),
                 angle: 90,
-                positionFactor: 0.4,
+                positionFactor: 0.3,
               ),
               GaugeAnnotation(
                 widget: Text(
-                  "Trend: $_trend",
+                  "24hr Trend: $trend24hr",
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: _trend == "Rising"
-                        ? Colors.green
-                        : _trend == "Falling"
-                            ? Colors.red
-                            : Colors.blue,
                   ),
                 ),
                 angle: 90,
-                positionFactor: 0.5,
+                positionFactor: 0.45,
+              ),
+              GaugeAnnotation(
+                widget: Text(
+                  "48hr Trend: $trend48hr",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                angle: 90,
+                positionFactor: 0.55,
               )
             ],
           )
