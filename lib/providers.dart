@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:dart_ping/dart_ping.dart';
 import 'package:flutter/material.dart';
+import 'package:sprintf/sprintf.dart';
+import 'package:fast_csv/csv_converter.dart' as csv;
 
 import 'dropbox-api.dart';
 import 'local_settings.dart';
@@ -744,6 +746,158 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   }
 }
 
+class BarometerStatus {
+  BarometerStatus({required this.localUI, required this.onLocalLan});
+  BarometerStatus.fromStatus(BarometerStatus oldState) {
+    localUI = oldState.localUI;
+    onLocalLan = oldState.onLocalLan;
+    localGetInProgress = oldState.localGetInProgress;
+    oauthToken = oldState.oauthToken;
+
+    pressureByDateTime = oldState.pressureByDateTime;
+    lastPressureTime = oldState.lastPressureTime;
+    currentPressure = oldState.currentPressure;
+  }
+
+  BarometerStatus.fromParams(
+    this.localUI,
+    this.onLocalLan,
+    this.localGetInProgress,
+    this.oauthToken,
+    this.pressureByDateTime,
+    this.lastPressureTime,
+    this.currentPressure,
+  );
+
+  BarometerStatus copyWith({
+    Map<DateTime, double>? pressureByDateTime,
+  }) {
+    Map<DateTime, double> newPressureByDateTime =
+        Map.from(this.pressureByDateTime);
+    double newCurrentPressure = currentPressure;
+    DateTime newlastPressureTime = lastPressureTime;
+    if (pressureByDateTime != null && pressureByDateTime.isNotEmpty) {
+      newPressureByDateTime.addAll(pressureByDateTime);
+      List<DateTime> pressureDates = newPressureByDateTime.keys.toList();
+      pressureDates.sort();
+      DateTime lastTime = pressureDates.last;
+      if (lastTime.isAfter(lastPressureTime)) {
+        newCurrentPressure = newPressureByDateTime[lastTime] ?? 0.0;
+        newlastPressureTime = DateTime.fromMillisecondsSinceEpoch(
+            lastTime.millisecondsSinceEpoch);
+      }
+    }
+    return BarometerStatus.fromParams(
+        localUI,
+        onLocalLan,
+        localGetInProgress,
+        oauthToken,
+        newPressureByDateTime,
+        newlastPressureTime,
+        newCurrentPressure);
+  }
+
+  late bool localUI;
+  late bool onLocalLan;
+  bool localGetInProgress = false;
+  String oauthToken = "";
+
+  Map<DateTime, double> pressureByDateTime = {};
+  DateTime lastPressureTime = DateTime(2000);
+  double currentPressure = 0.0;
+}
+
+@riverpod
+class BarometerStatusNotifier extends _$BarometerStatusNotifier {
+  final String pressureFile = "_airquality.csv";
+  final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
+  final String localStatusFile = "/home/danny/control_station/airquality.txt";
+
+  @override
+  BarometerStatus build() {
+    //Determine if running local to thermostat by the presence of the thermostat dir
+    bool local = false;
+    final FileStat thermStat = FileStat.statSync("/home/danny/thermostat");
+    if (thermStat.type != FileSystemEntityType.notFound) {
+      local = true;
+    }
+    BarometerStatus status =
+        BarometerStatus(localUI: local, onLocalLan: local ? true : false);
+    //Check if we are on local LAN
+    areWeOnLocalNetwork((onlan) => status.onLocalLan = onlan);
+    return status;
+  }
+
+  void refreshStatus() {
+    // getSetTemp();
+    bool updateState = true;
+    if (state.localUI) {
+      //Check that thermostat has turned backlight on
+      //if not then do nothing as display not visible
+      updateState = FileStat.statSync(localDisplayOnFile).type !=
+          FileSystemEntityType.notFound;
+    }
+    if (updateState) {
+      // newState = CameraStatus.fromStatus(state);
+      getStatus();
+    }
+  }
+
+  void getStatus({bool dropboxOnly = false}) {
+    DateTime now = DateTime.now();
+    bool localRead = false;
+    String todayFile =
+        sprintf("%s%02i%02i%s", [now.year, now.month, now.day, pressureFile]);
+    if (!dropboxOnly && state.localUI) {
+      //Get todays file from local storage
+      FileStat stat = FileStat.statSync(localStatusFile);
+      if (stat.type != FileSystemEntityType.notFound) {
+        String statusStr = File(localStatusFile).readAsStringSync();
+        localRead = true;
+        processPressureFile(localStatusFile, statusStr);
+      }
+    }
+    if (!localRead) {
+      DropBoxAPIFn.getDropBoxFile(
+        // oauthToken: state.oauthToken,
+        fileToDownload: '/$todayFile',
+        callback: processPressureFile,
+        contentType: ContentType.text,
+        timeoutSecs: 300, //Cache entry timeout
+      );
+    }
+    for (int i = 1; i < 3; i++) {
+      DateTime prevDay = now.subtract(Duration(days: i));
+      String histFile = sprintf("/%s%02i%02i%s",
+          [prevDay.year, prevDay.month, prevDay.day, pressureFile]);
+      //retrieve from dropbox
+      DropBoxAPIFn.getDropBoxFile(
+        // oauthToken: state.oauthToken,
+        fileToDownload: histFile,
+        callback: processPressureFile,
+        contentType: ContentType.text,
+        timeoutSecs: 300, //Cache entry timeout
+      );
+    }
+  }
+
+  void processPressureFile(String filename, String contents) {
+    Map<DateTime, double> pressureMap = {};
+    final result = csv.CsvConverter().convert(contents);
+    for (int i = 1; i < result.length; i++) {
+      final row = result[i];
+      try {
+        var t = DateTime.parse(row[0].trim());
+        double pressure = double.parse(row[2].trim());
+        pressureMap[t] = pressure / 100.0;
+      } on Exception {
+        //ignore row
+      }
+    }
+    state = state.copyWith(pressureByDateTime: pressureMap);
+  }
+}
+
 class CameraStatus {
   CameraStatus({required this.localUI, required this.onLocalLan});
   CameraStatus.fromStatus(CameraStatus oldState) {
@@ -932,7 +1086,7 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
         fileToDownload: extfile,
         callback: processExternalStatus,
         contentType: ContentType.text,
-        timeoutSecs: 5,
+        timeoutSecs: 15,
       );
     }
   }

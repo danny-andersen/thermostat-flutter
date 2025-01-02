@@ -197,12 +197,6 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
     }
   }
 
-  (int, double) getHourMin(entryTimeStamp) {
-    DateTime dt = DateTime.parse(entryTimeStamp);
-    double time = (dt.hour * 100) + ((100 * dt.minute) ~/ 60).toDouble();
-    return (dt.day, time);
-  }
-
   void getChangeFileList() {
     DropBoxAPIFn.searchDropBoxFileNames(
         oauthToken: oauthToken,

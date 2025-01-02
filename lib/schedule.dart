@@ -151,6 +151,12 @@ String getTimeStrFromHoursMins(double time) {
   return sprintf("%02i:%02i", [hours, mins]);
 }
 
+(int, double) getHourMin(entryTimeStamp) {
+  DateTime dt = DateTime.parse(entryTimeStamp);
+  double time = (dt.hour * 100) + ((100 * dt.minute) ~/ 60).toDouble();
+  return (dt.day, time);
+}
+
 //Schedule is a simple list of ScheduleDay entries
 class Schedule {
   //The dropbox file holding this schedule

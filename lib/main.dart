@@ -18,6 +18,7 @@ import 'package:thermostat_flutter/holidaytab.dart';
 import 'package:thermostat_flutter/schedule-tab.dart';
 import 'package:thermostat_flutter/airquality-history.dart';
 import 'package:thermostat_flutter/airquality.dart';
+import 'package:thermostat_flutter/barometer-screen.dart';
 // import 'package:flutterpi_gstreamer_video_player/flutterpi_gstreamer_video_player.dart';
 
 HttpAuthCredentialDatabase httpAuthCredentialDatabase =
@@ -209,6 +210,7 @@ class _StatefulHomeState extends State<StatefulHome> {
   final List<String> _pageTitles = [
     'Current Status',
     'Temperature History',
+    'Barometer',
     'Air Quality',
     'Air Quality History',
     'Holiday Setting',
@@ -231,6 +233,7 @@ class _StatefulHomeState extends State<StatefulHome> {
     _pages = [
       statusPage,
       HistoryPage(oauthToken: oauthToken),
+      BarometerPage(oauthToken: oauthToken),
       AirQualityPage(oauthToken: oauthToken),
       AirQualityHistoryPage(oauthToken: oauthToken),
       HolidayPage(oauthToken: oauthToken),
@@ -318,6 +321,9 @@ class CustomDrawer extends StatelessWidget {
                 break;
               case 'Temperature History':
                 icon = Icons.history;
+                break;
+              case 'Barometer':
+                icon = Icons.route;
                 break;
               case 'Air Quality':
                 icon = Icons.air;
