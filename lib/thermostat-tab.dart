@@ -502,12 +502,14 @@ class AirStatusBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ThermostatStatus status = ref.watch(thermostatStatusNotifierProvider);
+    bool iaqValid = status.lastQtime == null ? false : true;
+    bool co2Valid = status.co2 == 400 ? false : true;
     return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           Text(
-            'Air Quality: ${getIaqText(status.iaq)} (${status.iaq})',
+            'Air Quality: ${iaqValid ? "${getIaqText(status.iaq)} (${status.iaq})" : "??"}',
             textAlign: TextAlign.left,
             style: TextStyle(
               fontSize: status.localUI ? 20 : 15,
@@ -521,7 +523,7 @@ class AirStatusBar extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           Text(
-            'CO2: ${getCO2Text(status.co2)} (${status.co2})',
+            'CO2: ${co2Valid ? "${getCO2Text(status.co2)} (${status.co2})" : "??"}',
             textAlign: TextAlign.left,
             style: TextStyle(
               fontSize: status.localUI ? 20 : 15,
@@ -529,7 +531,7 @@ class AirStatusBar extends ConsumerWidget {
               color: getCo2Color(status.co2),
             ),
           ),
-          getAllGasAlarmStatus(status.localUI, status.gasAlarm),
+          getAllGasAlarmStatus(status),
         ],
       ),
     ]);

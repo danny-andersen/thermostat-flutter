@@ -73,6 +73,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
   Widget _AirQualityGauge(ThermostatStatus status, double size) {
     Color iaqColor =
         status.airqAccuracy == 0 ? Colors.grey : getIaqColor(status.iaq);
+    bool iaqValid = status.lastQtime == null ? false : true;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -115,7 +116,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
               annotations: <GaugeAnnotation>[
                 GaugeAnnotation(
                   widget: Text(
-                    "${status.iaq.toStringAsFixed(1)}",
+                    iaqValid ? "${status.iaq.toStringAsFixed(1)}" : '??',
                     style: TextStyle(
                       fontSize: 20, // Larger text for larger gauges
                       fontWeight: FontWeight.bold,
@@ -127,7 +128,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
                 ),
                 GaugeAnnotation(
                   widget: Text(
-                    "${getIaqText(status.iaq)}",
+                    iaqValid ? "${getIaqText(status.iaq)}" : ' ',
                     style: TextStyle(
                       fontSize: 16, // Larger text for larger gauges
                       fontWeight: FontWeight.bold,
@@ -139,7 +140,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
                 ),
                 GaugeAnnotation(
                   widget: Text(
-                    "VOC: ${status.voc.toStringAsFixed(2)}",
+                    iaqValid ? "VOC: ${status.voc.toStringAsFixed(2)}" : ' ',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -151,9 +152,11 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
                 ),
                 GaugeAnnotation(
                   widget: Text(
-                    status.airqAccuracy == 0
-                        ? "Not Calibrated!!"
-                        : "Accuracy: ${getAccuracyText(status.airqAccuracy)}",
+                    iaqValid
+                        ? (status.airqAccuracy == 0
+                            ? "Not Calibrated!!"
+                            : "Accuracy: ${getAccuracyText(status.airqAccuracy)}")
+                        : ' ',
                     style: TextStyle(
                         fontSize: status.localUI ? 18 : 14,
                         fontWeight: FontWeight.bold,
@@ -208,7 +211,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
               annotations: <GaugeAnnotation>[
                 GaugeAnnotation(
                   widget: Text(
-                    status.co2.toStringAsFixed(1),
+                    status.co2 == 400 ? '??' : status.co2.toStringAsFixed(1),
                     style: TextStyle(
                       fontSize: 20, // Larger text for larger gauges
                       fontWeight: FontWeight.bold,
@@ -220,7 +223,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
                 ),
                 GaugeAnnotation(
                   widget: Text(
-                    "${getCO2Text(status.co2)}",
+                    status.co2 == 400 ? ' ' : "${getCO2Text(status.co2)}",
                     style: TextStyle(
                       fontSize: 16, // Larger text for larger gauges
                       fontWeight: FontWeight.bold,

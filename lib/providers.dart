@@ -143,30 +143,35 @@ Color getAlarmColor(int val) {
   return Colors.green;
 }
 
-Widget getAllGasAlarmStatus(bool localUI, int status) {
+Widget getAllGasAlarmStatus(ThermostatStatus status) {
   String statusStr = "All OK";
   Color alarmColor = Colors.green;
-  if (status == 0x80) {
-    statusStr = "Possible Gas Event";
+  if (status.lastGasTime != null) {
+    if (status.gasAlarm == 0x80) {
+      statusStr = "Possible Gas Event";
+      alarmColor = Colors.deepOrange;
+    }
+    int co2Status = status.gasAlarm & 0x03;
+    int nh3Status = (status.gasAlarm & 0x0C) >> 2;
+    int no2Status = (status.gasAlarm & 0x30) >> 4;
+    if (co2Status > 0) {
+      statusStr = "Carbon Dioxide ${getAlarmStatus(co2Status)}";
+      alarmColor = getAlarmColor(co2Status);
+    } else if (nh3Status > 0) {
+      statusStr = "Ammonia/Propane/Butane ${getAlarmStatus(nh3Status)}";
+      alarmColor = getAlarmColor(nh3Status);
+    } else if (no2Status > 0) {
+      statusStr = "Nitrogen Dioxide ${getAlarmStatus(no2Status)}";
+      alarmColor = getAlarmColor(no2Status);
+    }
+  } else {
+    statusStr = "??";
     alarmColor = Colors.deepOrange;
-  }
-  int co2Status = status & 0x03;
-  int nh3Status = (status & 0x0C) >> 2;
-  int no2Status = (status & 0x30) >> 4;
-  if (co2Status > 0) {
-    statusStr = "Carbon Dioxide ${getAlarmStatus(co2Status)}";
-    alarmColor = getAlarmColor(co2Status);
-  } else if (nh3Status > 0) {
-    statusStr = "Ammonia/Propane/Butane ${getAlarmStatus(nh3Status)}";
-    alarmColor = getAlarmColor(nh3Status);
-  } else if (no2Status > 0) {
-    statusStr = "Nitrogen Dioxide ${getAlarmStatus(no2Status)}";
-    alarmColor = getAlarmColor(no2Status);
   }
   return Text('Gas Sensor: $statusStr',
       textAlign: TextAlign.left,
       style: TextStyle(
-        fontSize: localUI ? 20 : 15,
+        fontSize: status.localUI ? 20 : 15,
         fontWeight: FontWeight.bold,
         color: alarmColor,
       ));
@@ -351,7 +356,6 @@ class ThermostatStatus {
 @riverpod
 class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
   final String statusFile = "/thermostat_status.txt";
-  final String localStatusFile = "/home/danny/thermostat/status.txt";
   final String localControlStatusFile =
       "/home/danny/control_station/status.txt";
 
@@ -394,8 +398,7 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
 
   void getStatus() {
     if (state.localUI) {
-      FileStat statusStat = FileStat.statSync(localStatusFile);
-      FileStat controlStatusStat = FileStat.statSync(localControlStatusFile);
+      FileStat statusStat = FileStat.statSync(localControlStatusFile);
       FileStat motdStat = FileStat.statSync(localMotd);
       FileStat fcStat = FileStat.statSync(localForecastExt);
       //Only update state (and so the display) if something has changed
@@ -404,14 +407,8 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           fcStat.changed.isAfter(state.lastForecastReadTime)) {
         if (statusStat.type != FileSystemEntityType.notFound &&
             statusStat.changed.isAfter(state.lastStatusReadTime)) {
-          String statusStr = File(localStatusFile).readAsStringSync();
-          processStatus(localStatusFile, statusStr);
-          if (controlStatusStat.type != FileSystemEntityType.notFound) {
-            //The control status file holds the correct gas sensor output
-            String controlStatusStr =
-                File(localControlStatusFile).readAsStringSync();
-            processGasStatus(controlStatusStr);
-          }
+          String statusStr = File(localControlStatusFile).readAsStringSync();
+          processStatus(localControlStatusFile, statusStr);
           state = state.copyWith(lastStatusReadTime: statusStat.changed);
         }
         if (motdStat.type != FileSystemEntityType.notFound &&
@@ -572,13 +569,8 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         if (newPirState != state.intPirState) {
           state = state.copyWith(intPirState: newPirState);
         }
-      } else if (line.startsWith('Last Q time:')) {
-        String dateStr = line.substring(line.indexOf(':') + 2, line.length);
-        if (!dateStr.startsWith('Never')) {
-          //Valid Air Q data : parse
-          processGasStatus(contents);
-        }
       }
+      processGasStatus(contents);
     });
   }
 
@@ -610,9 +602,11 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         }
       } else if (line.startsWith('Last Q time:')) {
         String dateStr = line.substring(line.indexOf(':') + 2, line.length);
-        DateTime newLastQ = DateTime.parse(dateStr);
-        if (newLastQ != state.lastQtime) {
-          state = state.copyWith(lastQtime: newLastQ);
+        if (!dateStr.contains('Never')) {
+          DateTime newLastQ = DateTime.parse(dateStr);
+          if (newLastQ != state.lastQtime) {
+            state = state.copyWith(lastQtime: newLastQ);
+          }
         }
       } else if (line.startsWith('GAS:')) {
         String str = line.substring(line.indexOf(':') + 1, line.length);
@@ -622,9 +616,11 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         }
       } else if (line.startsWith('Last Gas time:')) {
         String dateStr = line.substring(line.indexOf(':') + 2, line.length);
-        DateTime newLastG = DateTime.parse(dateStr);
-        if (newLastG != state.lastQtime) {
-          state = state.copyWith(lastGasTime: newLastG);
+        if (!dateStr.contains('Never')) {
+          DateTime newLastG = DateTime.parse(dateStr);
+          if (newLastG != state.lastQtime) {
+            state = state.copyWith(lastGasTime: newLastG);
+          }
         }
       } else if (line.startsWith('Gas BV:')) {
         String str = line.substring(line.indexOf(':') + 2, line.length);
@@ -882,19 +878,21 @@ class BarometerStatusNotifier extends _$BarometerStatusNotifier {
   }
 
   void processPressureFile(String filename, String contents) {
-    Map<DateTime, double> pressureMap = {};
-    final result = csv.CsvConverter().convert(contents);
-    for (int i = 1; i < result.length; i++) {
-      final row = result[i];
-      try {
-        var t = DateTime.parse(row[0].trim());
-        double pressure = double.parse(row[2].trim());
-        pressureMap[t] = pressure / 100.0;
-      } on Exception {
-        //ignore row
+    if (!contents.contains("error")) {
+      Map<DateTime, double> pressureMap = {};
+      final result = csv.CsvConverter().convert(contents);
+      for (int i = 1; i < result.length; i++) {
+        final row = result[i];
+        try {
+          var t = DateTime.parse(row[0].trim());
+          double pressure = double.parse(row[2].trim());
+          pressureMap[t] = pressure / 100.0;
+        } on Exception {
+          //ignore row
+        }
       }
+      state = state.copyWith(pressureByDateTime: pressureMap);
     }
-    state = state.copyWith(pressureByDateTime: pressureMap);
   }
 }
 
