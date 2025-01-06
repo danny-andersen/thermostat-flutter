@@ -63,7 +63,7 @@ class _BarometerPageState extends ConsumerState<BarometerPage> {
         child: Column(
           children: [
             _BarometerGauge(
-                status, screenHeight * (status.localUI ? 0.35 : 0.45)),
+                status, screenHeight * (status.localUI ? 0.5 : 0.45)),
             Text(
               "Barometric Forecast: $forecast",
               style: TextStyle(
@@ -72,8 +72,9 @@ class _BarometerPageState extends ConsumerState<BarometerPage> {
               ),
             ),
             Container(
-                padding: const EdgeInsets.only(left: 0.0, top: 5.0, right: 5.0),
-                height: 300.0,
+                padding: EdgeInsets.only(
+                    left: 0.0, top: status.localUI ? 15.0 : 10.0, right: 5.0),
+                height: status.localUI ? 400.0 : 300.0,
                 width: MediaQuery.of(context).size.width,
                 //            child: TimeSeriesRangeAnnotationMarginChart.withSampleData(),
                 child: HistoryLineChart(status)),
