@@ -126,7 +126,9 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
         var t = getHourMin(row[0].trim());
         double hourmin = t.$2;
         double iaq = double.parse(row[4].trim());
-        airQualityList.add(FlSpot(hourmin, iaq));
+        if (iaq != 0) {
+          airQualityList.add(FlSpot(hourmin, iaq));
+        }
       } on Exception {
         //ignore row
       }
@@ -141,7 +143,9 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
         var t = getHourMin(row[0].trim());
         double hourmin = t.$2;
         double co2 = double.parse(row[1].trim());
-        cO2List.add(FlSpot(hourmin, co2));
+        if (co2 != 400) {
+          cO2List.add(FlSpot(hourmin, co2));
+        }
       } on Exception {
         //ignore row
       }
@@ -151,7 +155,7 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
       spots: airQualityList,
       color: Colors.red[600],
     );
-    cO2Series = LineChartBarData(spots: cO2List, color: Colors.purple);
+    cO2Series = LineChartBarData(spots: cO2List, color: Colors.blue);
 
     if (mounted) {
       setState(() {
@@ -352,7 +356,7 @@ class SelectPlots extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.0,
                 // fontWeight: FontWeight.bold,
-                color: Colors.purple,
+                color: Colors.blue,
               )),
           Checkbox(
               checkColor: Colors.white,
