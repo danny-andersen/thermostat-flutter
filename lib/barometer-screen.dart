@@ -147,6 +147,7 @@ class _BarometerPageState extends ConsumerState<BarometerPage> {
     }
     final int hours24 = 24 * 60 * 2;
     final int hours48 = 48 * 60 * 2;
+    forecast = "??";
     List<DateTime> keys = status.pressureByDateTime.keys.toList();
     keys.sort();
     double _12hourAgo = getMedianPressure(
@@ -168,6 +169,7 @@ class _BarometerPageState extends ConsumerState<BarometerPage> {
     delta = status.currentPressure - _48hourAgo;
     trend48hr = setForecast(delta, status.currentPressure, 48);
     if (forecast == "??") {
+      //If we haven't set the forecast yet, then all trends are stable
       forecast = "No change";
     }
   }
