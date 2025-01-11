@@ -73,7 +73,14 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
   Widget _AirQualityGauge(ThermostatStatus status, double size) {
     Color iaqColor =
         status.airqAccuracy == 0 ? Colors.grey : getIaqColor(status.iaq);
-    bool iaqValid = status.lastQtime == null ? false : true;
+    bool iaqValid = false;
+    if (status.lastQtime != null) {
+      int diff = getLastHeardTimeDiff(status.lastQtime!);
+      if (diff > 30) {
+        //Havent had a reading for over 30 mins so assume not valid
+        iaqValid = false;
+      }
+    }
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -299,24 +306,28 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
     }
   }
 
-  Text getLastHeardText(lastTime) {
+  int getLastHeardTimeDiff(DateTime heard) {
     DateTime currentTime = DateTime.now();
+    int timezoneDifference = currentTime.timeZoneOffset.inMinutes;
+    if (currentTime.timeZoneName == 'BST' ||
+        currentTime.timeZoneName == 'GMT') {
+      timezoneDifference = 0;
+    }
+    int diff = currentTime.difference(heard).inMinutes - timezoneDifference;
+    if (diff == 60) {
+      //If exactly 60 mins then could be daylight savings
+      diff = 0;
+    }
+    return diff;
+  }
+
+  Text getLastHeardText(lastTime) {
     Color textColor = Colors.red;
     DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     String lastHeard = 'Never';
     if (lastTime != null) {
       lastHeard = formatter.format(lastTime);
-      int timezoneDifference = currentTime.timeZoneOffset.inMinutes;
-      if (currentTime.timeZoneName == 'BST' ||
-          currentTime.timeZoneName == 'GMT') {
-        timezoneDifference = 0;
-      }
-      int diff =
-          currentTime.difference(lastTime!).inMinutes - timezoneDifference;
-      if (diff == 60) {
-        //If exactly 60 mins then could be daylight savings
-        diff = 0;
-      }
+      int diff = getLastHeardTimeDiff(lastTime);
       if (diff > 15) {
         textColor = Colors.red;
       } else if (diff > 8) {

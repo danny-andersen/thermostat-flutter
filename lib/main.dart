@@ -84,7 +84,7 @@ class MyAppState extends State<MyApp> {
         statusPage.statePage.extHost = secret.extHost;
         statusPage.statePage.extStartPort = secret.extStartPort;
         statusPage.statePage.intStartPort = secret.intStartPort;
-        if (!localUI) {
+        if (!localUI && !Platform.isLinux) {
           //TODO: When (if?) Inapp_webview supports Linux devices, then remove this condition
           //Until then it causes a null exception as there is no native implementation
 

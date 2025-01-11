@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -187,14 +188,16 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
           ));
     }
     if (!localUI && stationId != 0) {
-      actions.insert(
-          0,
-          TextButton(
-            onPressed: () {
-              _navigateToWebView(stationName, camUrl, context);
-            },
-            child: const Text('Show Live webcam'),
-          ));
+      if (!Platform.isLinux) {
+        actions.insert(
+            0,
+            TextButton(
+              onPressed: () {
+                _navigateToWebView(stationName, camUrl, context);
+              },
+              child: const Text('Show Live webcam'),
+            ));
+      }
       if (camStatus != null) {
         actions.insert(
             0,
