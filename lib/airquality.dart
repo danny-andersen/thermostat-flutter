@@ -73,7 +73,7 @@ class _AirQualityPageState extends ConsumerState<AirQualityPage> {
   Widget _AirQualityGauge(ThermostatStatus status, double size) {
     Color iaqColor =
         status.airqAccuracy == 0 ? Colors.grey : getIaqColor(status.iaq);
-    bool iaqValid = false;
+    bool iaqValid = true;
     if (status.lastQtime != null) {
       int diff = getLastHeardTimeDiff(status.lastQtime!);
       if (diff > 30) {
