@@ -18,12 +18,12 @@ class _HolidayPageState extends State<HolidayPage> {
       Uri.parse("https://content.dropboxapi.com/2/files/download");
   final String currentHolidayFile = "/holiday.txt.current";
   final String holidayFile = "/holiday.txt";
+  final double holidayTemp = 10.0;
 
   DateTime _fromDate = DateTime(2022);
   TimeOfDay _fromTime = const TimeOfDay(hour: 0, minute: 0);
   DateTime _toDate = DateTime(2022);
   TimeOfDay _toTime = const TimeOfDay(hour: 0, minute: 0);
-  double holidayTemp = 10.0;
   int nextHours = 1;
   bool holidaySet = false;
   bool onHoliday = false;
@@ -88,12 +88,6 @@ class _HolidayPageState extends State<HolidayPage> {
                   fields.length > 5 ? int.parse(fields[5]) : 0);
             } on FormatException {
               print("Received incorrect holiday end line: $line");
-            }
-          } else if (line.startsWith('Temp,')) {
-            try {
-              holidayTemp = double.parse(fields[1]);
-            } on FormatException {
-              print("Couldn't parse temp double: $line");
             }
           }
         });
