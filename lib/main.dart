@@ -72,24 +72,30 @@ class MyAppState extends State<MyApp> {
       keyString.then((String str) {
         LocalSendReceive.setKeys(str);
       });
+      oauthToken = secret.apiKey;
+      DropBoxAPIFn.globalOauthToken = oauthToken;
 
+      //Get the external IP address of the cameras from the dropbox file to override the hardcoded IP address
+      DropBoxAPIFn.getDropBoxFile(
+        fileToDownload: "/external_ip.txt",
+        callback: processIPAddress,
+        contentType: ContentType.text,
+        timeoutSecs: 30,
+      );
       setState(() {
-        oauthToken = secret.apiKey;
-        DropBoxAPIFn.globalOauthToken = oauthToken;
         statusPage.oauthToken = oauthToken;
         statusPage.statePage.setSecret(oauthToken);
 
         statusPage.localUI = localUI;
         statusPage.statePage.localUI = localUI;
-        statusPage.statePage.extHost = secret.extHost;
         statusPage.statePage.extStartPort = secret.extStartPort;
         statusPage.statePage.intStartPort = secret.intStartPort;
         if (!localUI && !Platform.isLinux) {
           //TODO: When (if?) Inapp_webview supports Linux devices, then remove this condition
           //Until then it causes a null exception as there is no native implementation
-
           URLCredential creds = URLCredential(
-              username: secret.username, password: secret.password);
+              username: LocalSendReceive.username,
+              password: LocalSendReceive.passphrase);
 
           httpAuthCredentialDatabase.setHttpAuthCredential(
               protectionSpace: URLProtectionSpace(
@@ -100,24 +106,10 @@ class MyAppState extends State<MyApp> {
               credential: creds);
           httpAuthCredentialDatabase.setHttpAuthCredential(
               protectionSpace: URLProtectionSpace(
-                  host: secret.extHost,
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.extStartPort),
-              credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
                   host: "front-door-cam",
                   protocol: "https",
                   realm: "Motion",
                   port: secret.intStartPort + 1),
-              credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
-                  host: secret.extHost,
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.extStartPort + 1),
               credential: creds);
           httpAuthCredentialDatabase.setHttpAuthCredential(
               protectionSpace: URLProtectionSpace(
@@ -128,24 +120,10 @@ class MyAppState extends State<MyApp> {
               credential: creds);
           httpAuthCredentialDatabase.setHttpAuthCredential(
               protectionSpace: URLProtectionSpace(
-                  host: secret.extHost,
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.extStartPort + 2),
-              credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
                   host: "masterstation",
                   protocol: "https",
                   realm: "Motion",
                   port: secret.intStartPort + 3),
-              credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
-                  host: secret.extHost,
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.extStartPort + 3),
               credential: creds);
           httpAuthCredentialDatabase.setHttpAuthCredential(
               protectionSpace: URLProtectionSpace(
@@ -154,17 +132,57 @@ class MyAppState extends State<MyApp> {
                   realm: "Motion",
                   port: secret.intStartPort + 4),
               credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
-                  host: secret.extHost,
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.extStartPort + 4),
-              credential: creds);
         }
       });
     });
     super.initState();
+  }
+
+  void processIPAddress(String filename, String contents) {
+    setState(() {
+      //Read contents of file and set the external IP address
+      statusPage.statePage.extHost = contents.trim();
+      URLCredential creds = URLCredential(
+          username: LocalSendReceive.username,
+          password: LocalSendReceive.passphrase);
+
+      //Set the credentials for the external cameras ip d
+      httpAuthCredentialDatabase.setHttpAuthCredential(
+          protectionSpace: URLProtectionSpace(
+              host: statusPage.statePage.extHost,
+              protocol: "https",
+              realm: "Motion",
+              port: statusPage.statePage.extStartPort),
+          credential: creds);
+      httpAuthCredentialDatabase.setHttpAuthCredential(
+          protectionSpace: URLProtectionSpace(
+              host: statusPage.statePage.extHost,
+              protocol: "https",
+              realm: "Motion",
+              port: statusPage.statePage.extStartPort + 1),
+          credential: creds);
+      httpAuthCredentialDatabase.setHttpAuthCredential(
+          protectionSpace: URLProtectionSpace(
+              host: statusPage.statePage.extHost,
+              protocol: "https",
+              realm: "Motion",
+              port: statusPage.statePage.extStartPort + 2),
+          credential: creds);
+      httpAuthCredentialDatabase.setHttpAuthCredential(
+          protectionSpace: URLProtectionSpace(
+              host: statusPage.statePage.extHost,
+              protocol: "https",
+              realm: "Motion",
+              port: statusPage.statePage.extStartPort + 3),
+          credential: creds);
+      httpAuthCredentialDatabase.setHttpAuthCredential(
+          protectionSpace: URLProtectionSpace(
+              host: statusPage.statePage.extHost,
+              protocol: "https",
+              realm: "Motion",
+              port: statusPage.statePage.extStartPort + 4),
+          credential: creds);
+    });
   }
 
   // This widget is the root of your application.
@@ -436,7 +454,7 @@ class Secret {
         username: jsonMap["username"],
         password: jsonMap["password"],
         controlHost: jsonMap["controlHost"],
-        extHost: jsonMap["extHost"],
+        // extHost: jsonMap["extHost"],
         extStartPort: jsonMap["extStartPort"],
         intStartPort: jsonMap["intStartPort"]);
   }
