@@ -1163,3 +1163,174 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
     });
   }
 }
+
+class RelayStatus {
+  RelayStatus({required this.onLocalLan});
+
+  RelayStatus.fromParams(
+    this.onLocalLan,
+    this.localGetInProgress,
+    this.oauthToken,
+    this.actualRelayStates,
+    this.requestedRelayStates,
+  );
+
+  RelayStatus copyWith({
+    List<bool>? actualRelayStates,
+    List<bool>? requestedRelayStates,
+  }) {
+    List<bool> newRelayStates = List<bool>.from(this.actualRelayStates);
+    if (actualRelayStates != null && actualRelayStates.isNotEmpty) {
+      for (int i = 0; i < actualRelayStates.length; i++) {
+        if (actualRelayStates[i] != newRelayStates[i]) {
+          newRelayStates[i] = actualRelayStates[i];
+        }
+      }
+    }
+    List<bool> newReqRelayStates = List<bool>.from(this.requestedRelayStates);
+    if (requestedRelayStates != null && requestedRelayStates.isNotEmpty) {
+      for (int i = 0; i < requestedRelayStates.length; i++) {
+        if (requestedRelayStates[i] != newReqRelayStates[i]) {
+          newReqRelayStates[i] = requestedRelayStates[i];
+        }
+      }
+    }
+    return RelayStatus.fromParams(onLocalLan, localGetInProgress, oauthToken,
+        newRelayStates, newReqRelayStates);
+  }
+
+  RelayStatus setRelayState({required int relayIndex, required bool state}) {
+    List<bool> newReqRelayStates = List<bool>.from(requestedRelayStates);
+    newReqRelayStates[relayIndex] = state;
+    return copyWith(requestedRelayStates: newReqRelayStates);
+  }
+
+  late bool onLocalLan;
+  bool localGetInProgress = false;
+  String oauthToken = "";
+
+  List<bool> actualRelayStates = [false, false, false, false];
+  List<bool> requestedRelayStates = [false, false, false, false];
+}
+
+@riverpod
+class RelayStatusNotifier extends _$RelayStatusNotifier {
+  final String relayFile = "relay_status.txt";
+  final String relayCommandFile = "relay_command.txt";
+  final String localRelayStatusFile =
+      "/home/danny/control_station/relay_status.txt";
+
+  @override
+  RelayStatus build() {
+    RelayStatus status = RelayStatus(onLocalLan: false);
+    //Check if we are on local LAN
+    areWeOnLocalNetwork((onlan) => status.onLocalLan = onlan);
+    return status;
+  }
+
+  void refreshStatus() {
+    getStatus();
+  }
+
+  void setRelayState(int index, bool reqState) {
+    state = state.setRelayState(relayIndex: index, state: reqState);
+    //Send command to control station
+    sendRelayCommandToHost(index: index, reqState: reqState);
+  }
+
+  void sendRelayCommandToHost(
+      {required int index, required bool reqState, bool dropboxOnly = false}) {
+    String contents = "${index + 1}=${reqState ? '1' : '0'}";
+    bool onLocalLan = state.onLocalLan;
+    if (!dropboxOnly && onLocalLan) {
+      //Send command to control station
+      Future<bool> localSend = LocalSendReceive.sendLocalFile(
+          "/home/danny/control_station/$relayCommandFile", contents);
+      localSend.then((success) {
+        if (!success) {
+          print("On local Lan but failed to send, so send again using Dropbox");
+          sendRelayCommandToHost(
+              index: index, reqState: reqState, dropboxOnly: true);
+        }
+      });
+    } else {
+      //Remote from control station - use Dropbox to send command
+      DropBoxAPIFn.sendDropBoxFile(
+          // oauthToken: state.oauthToken,
+          fileToUpload: relayCommandFile,
+          contents: contents);
+    }
+  }
+
+  void getStatus({bool dropboxOnly = false}) {
+    bool localRead = false;
+    if (!dropboxOnly && state.onLocalLan && !state.localGetInProgress) {
+      //Use ftp to retrieve status file direct from control station
+      Future<Map<String, String>> localReceive =
+          LocalSendReceive.getLocalFile([localRelayStatusFile]);
+      state.localGetInProgress = true;
+      localReceive.then((files) {
+        bool success = false;
+        state.localGetInProgress = false;
+        if (files.containsKey(localRelayStatusFile)) {
+          String? statusStr = files[localRelayStatusFile];
+          if (statusStr != null) {
+            processRelayStateFile(localRelayStatusFile, statusStr);
+            success = true;
+          }
+        }
+        if (!success) {
+          //Failed to get some status files locally, use dropbox
+          DropBoxAPIFn.getDropBoxFile(
+            // oauthToken: state.oauthToken,
+            fileToDownload: relayFile,
+            callback: processRelayStateFile,
+            contentType: ContentType.text,
+            timeoutSecs: 5,
+          );
+        }
+      });
+    } else {
+      if (!dropboxOnly) {
+        //Get status file from local storage
+        FileStat stat = FileStat.statSync(relayFile);
+        if (stat.type != FileSystemEntityType.notFound) {
+          String statusStr = File(relayFile).readAsStringSync();
+          localRead = true;
+          processRelayStateFile(relayFile, statusStr);
+        }
+      }
+      if (!localRead) {
+        DropBoxAPIFn.getDropBoxFile(
+          // oauthToken: state.oauthToken,
+          fileToDownload: '/$relayFile',
+          callback: processRelayStateFile,
+          contentType: ContentType.text,
+          timeoutSecs: 1, //Cache entry timeout
+        );
+      }
+    }
+  }
+
+  void processRelayStateFile(String filename, String contents) {
+    try {
+      int relayState = int.parse(contents);
+      List<bool> newRelayStates = [false, false, false, false];
+      if (relayState & 1 == 1) {
+        newRelayStates[0] = true;
+      }
+      if (relayState & 2 == 2) {
+        newRelayStates[1] = true;
+      }
+      if (relayState & 4 == 4) {
+        newRelayStates[2] = true;
+      }
+      if (relayState & 8 == 8) {
+        newRelayStates[3] = true;
+      }
+      state = state.copyWith(actualRelayStates: newRelayStates);
+    } on FormatException {
+      print("Received non-int relay state format: $contents");
+    }
+  }
+}

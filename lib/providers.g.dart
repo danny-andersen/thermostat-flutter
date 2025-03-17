@@ -57,5 +57,22 @@ final cameraStatusNotifierProvider =
 );
 
 typedef _$CameraStatusNotifier = AutoDisposeNotifier<CameraStatus>;
+String _$relayStatusNotifierHash() =>
+    r'6696aca2032cdc7f2a07b7acb35d61d0f13a39b2';
+
+/// See also [RelayStatusNotifier].
+@ProviderFor(RelayStatusNotifier)
+final relayStatusNotifierProvider =
+    AutoDisposeNotifierProvider<RelayStatusNotifier, RelayStatus>.internal(
+  RelayStatusNotifier.new,
+  name: r'relayStatusNotifierProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$relayStatusNotifierHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$RelayStatusNotifier = AutoDisposeNotifier<RelayStatus>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

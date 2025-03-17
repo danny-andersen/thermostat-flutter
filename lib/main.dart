@@ -258,7 +258,7 @@ class _StatefulHomeState extends State<StatefulHome> {
       AirQualityHistoryPage(oauthToken: oauthToken),
       HolidayPage(oauthToken: oauthToken),
       SchedulePage(oauthToken: oauthToken),
-      RelayControlPage(),
+      RelayControlPage(oauthToken: oauthToken),
       WhoPage(oauthToken: oauthToken),
       CameraPage(oauthToken: oauthToken)
     ];
@@ -359,7 +359,7 @@ class CustomDrawer extends StatelessWidget {
                 icon = Icons.schedule;
                 break;
               case 'Power Controller':
-                icon = Icons.switch_video;
+                icon = Icons.power;
                 break;
               case 'Whos In and Out':
                 icon = Icons.person;
