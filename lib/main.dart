@@ -19,6 +19,7 @@ import 'package:thermostat_flutter/schedule-tab.dart';
 import 'package:thermostat_flutter/airquality-history.dart';
 import 'package:thermostat_flutter/airquality.dart';
 import 'package:thermostat_flutter/barometer-screen.dart';
+import 'package:thermostat_flutter/power-control.dart';
 // import 'package:flutterpi_gstreamer_video_player/flutterpi_gstreamer_video_player.dart';
 
 HttpAuthCredentialDatabase httpAuthCredentialDatabase =
@@ -233,6 +234,7 @@ class _StatefulHomeState extends State<StatefulHome> {
     'Air Quality History',
     'Holiday Setting',
     'Heating Schedule',
+    'Power Controller',
     'Whos In and Out',
     'Security Videos'
   ];
@@ -256,6 +258,7 @@ class _StatefulHomeState extends State<StatefulHome> {
       AirQualityHistoryPage(oauthToken: oauthToken),
       HolidayPage(oauthToken: oauthToken),
       SchedulePage(oauthToken: oauthToken),
+      RelayControlPage(),
       WhoPage(oauthToken: oauthToken),
       CameraPage(oauthToken: oauthToken)
     ];
@@ -354,6 +357,9 @@ class CustomDrawer extends StatelessWidget {
                 break;
               case 'Heating Schedule':
                 icon = Icons.schedule;
+                break;
+              case 'Power Controller':
+                icon = Icons.switch_video;
                 break;
               case 'Whos In and Out':
                 icon = Icons.person;
