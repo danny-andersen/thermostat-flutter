@@ -59,11 +59,15 @@ class LocalSendReceive {
     keys = SSHKeyPair.fromPem(keyString, passphrase);
   }
 
-  static Future<bool> sendLocalFile(String fileName, String contents,
-      [String? hostToSend]) async {
+  static Future<bool> sendLocalFile(
+      {required String fileName,
+      required String contents,
+      String? hostToSend,
+      bool append = false}) async {
     //On same LAN as control station - send file to controlstation using sftp
     bool success = false;
     SSHClient? client;
+    SftpClient? sftp;
     String hostName = hostToSend ?? host;
     try {
       client = SSHClient(
@@ -71,14 +75,26 @@ class LocalSendReceive {
         username: username,
         identities: keys,
       );
-      final sftp = await client.sftp();
+      sftp = await client.sftp();
       final file = await sftp.open(fileName,
-          mode: SftpFileOpenMode.create | SftpFileOpenMode.write);
+          mode: SftpFileOpenMode.create |
+              (append ? SftpFileOpenMode.append : SftpFileOpenMode.write) |
+              SftpFileOpenMode.write);
       await file.writeBytes(utf8.encode(contents));
       success = true;
     } catch (e) {
-      print(
-          "Caught SSH / SFTP error for host $host writing file $fileName: $e");
+      if (sftp != null && append) {
+        //If append fails, try to create a new file
+        print(
+            "Host: $hostName: Failed to append to file $fileName, trying to create new file: $e");
+        final file = await sftp.open(fileName,
+            mode: SftpFileOpenMode.create | SftpFileOpenMode.write);
+        await file.writeBytes(utf8.encode(contents));
+        success = true;
+      } else {
+        print(
+            "Caught SSH / SFTP error for host $host writing file $fileName: $e");
+      }
     } finally {
       client?.close();
       await client?.done;
@@ -274,6 +290,7 @@ class DropBoxAPIFn {
     String oauthToken = "BLANK",
     required String fileToUpload,
     required String contents,
+    bool append = false,
     Function? callback,
     String? callbackMsg,
   }) {
@@ -283,6 +300,8 @@ class DropBoxAPIFn {
         return;
       }
     }
+    String mode =
+        append ? "add" : "overwrite"; //Overwrite or add to file if it exists
     HttpClient client = HttpClient();
     final Uri uploadUri =
         Uri.parse("https://content.dropboxapi.com/2/files/upload");
@@ -291,7 +310,7 @@ class DropBoxAPIFn {
       client.postUrl(uploadUri).then((HttpClientRequest request) {
         request.headers.add("Authorization", "Bearer $oauthToken");
         request.headers.add("Dropbox-API-Arg",
-            "{\"path\": \"$fileToUpload\", \"mode\": \"overwrite\", \"mute\": true}");
+            "{\"path\": \"$fileToUpload\", \"mode\": \"$mode\", \"mute\": true}");
         request.headers
             .add(HttpHeaders.contentTypeHeader, "application/octet-stream");
         request.write(contents);

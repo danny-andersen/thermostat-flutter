@@ -18,7 +18,8 @@ void toggleLights(stationId, onLocalLan, lightStatus) {
   String contents = "$stationId: Lights ${lightStatus > 0 ? 'OFF' : 'ON'}";
   if (onLocalLan) {
     Future<bool> localSend = LocalSendReceive.sendLocalFile(
-        "/home/danny/control_station$controlStnCommandFile", contents);
+        fileName: "/home/danny/control_station$controlStnCommandFile",
+        contents: contents);
     localSend.then((success) {
       if (!success) {
         print("On local Lan but failed to send, so send again using Dropbox");
@@ -47,9 +48,10 @@ void resetStation(stationId, onLocalLan) {
 void sendCommandToHost(stationId, onLocalLan, contents) {
   if (onLocalLan) {
     Future<bool> localSend = LocalSendReceive.sendLocalFile(
-        "/home/danny/${stationId == 0 ? "monitor_home" : stationsWithSwitch.contains(stationId) ? "camera_with_switch" : "camera_station"}$controlStnCommandFile",
-        contents,
-        hostNameById[stationId]);
+        fileName:
+            "/home/danny/${stationId == 0 ? "monitor_home" : stationsWithSwitch.contains(stationId) ? "camera_with_switch" : "camera_station"}$controlStnCommandFile",
+        contents: contents,
+        hostToSend: hostNameById[stationId]);
     localSend.then((success) {
       if (!success) {
         print("On local Lan but failed to send, so send again using Dropbox");
@@ -690,8 +692,8 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
           }
         } else if (state.onLocalLan) {
           sendByDropbox = false;
-          Future<bool> localSend =
-              LocalSendReceive.sendLocalFile(localSetTempFile, contents);
+          Future<bool> localSend = LocalSendReceive.sendLocalFile(
+              fileName: localSetTempFile, contents: contents);
           localSend.then((success) {
             if (!success) {
               print(
@@ -722,8 +724,8 @@ class ThermostatStatusNotifier extends _$ThermostatStatusNotifier {
         print("On thermostat host and cannot write locally");
       }
     } else if (state.onLocalLan) {
-      Future<bool> localSend =
-          LocalSendReceive.sendLocalFile(thermostatLocalCommandFile, contents);
+      Future<bool> localSend = LocalSendReceive.sendLocalFile(
+          fileName: thermostatLocalCommandFile, contents: contents);
       localSend.then((success) {
         if (!success) {
           print(
@@ -1209,8 +1211,8 @@ class RelayStatus {
   bool localGetInProgress = false;
   String oauthToken = "";
 
-  List<bool> actualRelayStates = [false, false, false, false];
-  List<bool> requestedRelayStates = [false, false, false, false];
+  List<bool> actualRelayStates = [false, false, false, false, false, false];
+  List<bool> requestedRelayStates = [false, false, false, false, false, false];
 }
 
 @riverpod
@@ -1240,12 +1242,14 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
 
   void sendRelayCommandToHost(
       {required int index, required bool reqState, bool dropboxOnly = false}) {
-    String contents = "${index + 1}=${reqState ? '1' : '0'}";
+    String contents = "${index + 1}=${reqState ? '1' : '0'}\n";
     bool onLocalLan = state.onLocalLan;
     if (!dropboxOnly && onLocalLan) {
       //Send command to control station
       Future<bool> localSend = LocalSendReceive.sendLocalFile(
-          "/home/danny/control_station/$relayCommandFile", contents);
+          fileName: "/home/danny/control_station/$relayCommandFile",
+          contents: contents,
+          append: true);
       localSend.then((success) {
         if (!success) {
           print("On local Lan but failed to send, so send again using Dropbox");
@@ -1257,7 +1261,7 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
       //Remote from control station - use Dropbox to send command
       DropBoxAPIFn.sendDropBoxFile(
           // oauthToken: state.oauthToken,
-          fileToUpload: relayCommandFile,
+          fileToUpload: "/$relayCommandFile",
           contents: contents);
     }
   }
@@ -1283,7 +1287,7 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
           //Failed to get some status files locally, use dropbox
           DropBoxAPIFn.getDropBoxFile(
             // oauthToken: state.oauthToken,
-            fileToDownload: relayFile,
+            fileToDownload: "/$relayFile",
             callback: processRelayStateFile,
             contentType: ContentType.text,
             timeoutSecs: 5,
@@ -1313,6 +1317,9 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
   }
 
   void processRelayStateFile(String filename, String contents) {
+    if (contents.isEmpty || contents.contains("error")) {
+      return;
+    }
     try {
       int relayState = int.parse(contents);
       List<bool> newRelayStates = [false, false, false, false];

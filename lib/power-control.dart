@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers.dart';
-import 'dropbox-api.dart';
 
 class RelayControlPage extends ConsumerStatefulWidget {
   RelayControlPage({super.key, required this.oauthToken});
@@ -118,7 +117,7 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
               ],
             ),
             Divider(),
-            ...List.generate(4, (index) {
+            ...List.generate(6, (index) {
               return Row(
                 children: [
                   Expanded(child: Center(child: Text('${index + 1}'))),
