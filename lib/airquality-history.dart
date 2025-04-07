@@ -119,6 +119,9 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
   }
 
   void processAirQFile(String filename, String contents) {
+    if (contents.isEmpty || contents.contains("error")) {
+      return;
+    }
     final result = csv.CsvConverter().convert(contents);
     for (int i = 1; i < result.length; i++) {
       final row = result[i];
@@ -133,9 +136,21 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
         //ignore row
       }
     }
+    airQualitySeries = LineChartBarData(
+      spots: airQualityList,
+      color: Colors.red[600],
+    );
+    if (mounted) {
+      setState(() {
+        setChartData();
+      });
+    }
   }
 
   void processCO2File(String filename, String contents) {
+    if (contents.isEmpty || contents.contains("error")) {
+      return;
+    }
     final result = csv.CsvConverter().convert(contents);
     for (int i = 1; i < result.length; i++) {
       final row = result[i];
@@ -151,10 +166,6 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
       }
     }
 
-    airQualitySeries = LineChartBarData(
-      spots: airQualityList,
-      color: Colors.red[600],
-    );
     cO2Series = LineChartBarData(spots: cO2List, color: Colors.blue);
 
     if (mounted) {
@@ -165,6 +176,9 @@ class AirQualityHistoryPageState extends State<AirQualityHistoryPage> {
   }
 
   void processGasFile(String filename, String contents) {
+    if (contents.isEmpty || contents.contains("error")) {
+      return;
+    }
     String filed = filename.split('_')[0].split('/')[1];
     String procDate =
         "${filed.substring(0, 4)}-${filed.substring(4, 6)}-${filed.substring(6, 8)}";
