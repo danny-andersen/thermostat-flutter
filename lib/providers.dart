@@ -1173,6 +1173,7 @@ class RelayStatus {
     this.onLocalLan,
     this.localGetInProgress,
     this.oauthToken,
+    this.lastUpdateTime,
     this.actualRelayStates,
     this.requestedRelayStates,
   );
@@ -1180,6 +1181,7 @@ class RelayStatus {
   RelayStatus copyWith({
     List<bool>? actualRelayStates,
     List<bool>? requestedRelayStates,
+    DateTime? updateTime,
   }) {
     List<bool> newRelayStates = List<bool>.from(this.actualRelayStates);
     if (actualRelayStates != null && actualRelayStates.isNotEmpty) {
@@ -1197,8 +1199,11 @@ class RelayStatus {
         }
       }
     }
+    if (updateTime != null) {
+      lastUpdateTime = updateTime;
+    }
     return RelayStatus.fromParams(onLocalLan, localGetInProgress, oauthToken,
-        newRelayStates, newReqRelayStates);
+        lastUpdateTime, newRelayStates, newReqRelayStates);
   }
 
   RelayStatus setRelayState({required int relayIndex, required bool state}) {
@@ -1210,6 +1215,7 @@ class RelayStatus {
   late bool onLocalLan;
   bool localGetInProgress = false;
   String oauthToken = "";
+  DateTime? lastUpdateTime;
 
   List<bool> actualRelayStates = [false, false, false, false, false, false];
   List<bool> requestedRelayStates = [false, false, false, false, false, false];
@@ -1321,8 +1327,15 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
       return;
     }
     try {
-      int relayState = int.parse(contents);
-      List<bool> newRelayStates = [false, false, false, false];
+      List<String> parts = contents.split('@');
+      if (parts.length < 2) {
+        print("Received invalid relay state format: $contents");
+        return;
+      }
+      String dateStr = parts[0].trim();
+      DateTime newLastHeard = DateTime.parse(dateStr);
+      int relayState = int.parse(parts[1].trim());
+      List<bool> newRelayStates = [false, false, false, false, false, false];
       if (relayState & 1 == 1) {
         newRelayStates[0] = true;
       }
@@ -1335,9 +1348,16 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
       if (relayState & 8 == 8) {
         newRelayStates[3] = true;
       }
-      state = state.copyWith(actualRelayStates: newRelayStates);
+      if (relayState & 0x10 == 0x10) {
+        newRelayStates[4] = true;
+      }
+      if (relayState & 0x20 == 0x20) {
+        newRelayStates[5] = true;
+      }
+      state = state.copyWith(
+          updateTime: newLastHeard, actualRelayStates: newRelayStates);
     } on FormatException {
-      print("Received non-int relay state format: $contents");
+      print("Received non-int relay state format or timestamp: $contents");
     }
   }
 }

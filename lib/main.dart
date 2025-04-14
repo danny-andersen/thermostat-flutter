@@ -234,7 +234,7 @@ class _StatefulHomeState extends State<StatefulHome> {
     'Air Quality History',
     'Holiday Setting',
     'Heating Schedule',
-    'Power Controller',
+    'Power Strip Controller',
     'Whos In and Out',
     'Security Videos'
   ];

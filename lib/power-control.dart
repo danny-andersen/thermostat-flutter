@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,7 +26,16 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
 
   String? selectedCommand;
   List<String> commandFiles = ['cluster_on.txt', 'cluster_off.txt'];
+  List<String> socket = [
+    'pi4desktop',
+    'pi4node0',
+    'pi4node1',
+    'pi4node2',
+    'Fans',
+    'Network SW',
+  ];
   late Timer timer;
+  DateTime? lastCommandTime;
 
   @override
   void initState() {
@@ -44,7 +54,14 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
     //If on Local lan can get files quickly directly from control station, unless there is an issue
     //e.g. request is hanging, in which case get from dropbox less frequently
     final provider = ref.read(relayStatusNotifierProvider);
-    return provider.onLocalLan && !provider.localGetInProgress ? 10000 : 20000;
+    if (lastCommandTime != null && !provider.localGetInProgress) {
+      final diff = DateTime.now().difference(lastCommandTime!).inSeconds;
+      if (diff < 60) {
+        //We have just sent a command, so refresh quickly
+        return 2000;
+      }
+    }
+    return provider.onLocalLan && !provider.localGetInProgress ? 15000 : 30000;
   }
 
   void updateStatus() {
@@ -61,6 +78,7 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
   }
 
   void setRelayState(int index, bool state) {
+    lastCommandTime = DateTime.now();
     ref.read(relayStatusNotifierProvider.notifier).setRelayState(index, state);
   }
 
@@ -78,9 +96,41 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
   @override
   Widget build(BuildContext context) {
     final RelayStatus status = ref.watch(relayStatusNotifierProvider);
+    Color txtColor = Colors.green;
+    String lastHeardStr = "??";
+    if (status.lastUpdateTime == null) {
+      txtColor = Colors.red;
+      lastHeardStr = "Never";
+    } else {
+      DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm');
+      lastHeardStr = formatter.format(status.lastUpdateTime!);
+      DateTime currentTime = DateTime.now();
+      int timezoneDifference = currentTime.timeZoneOffset.inMinutes;
+      if (currentTime.timeZoneName == 'BST' ||
+          currentTime.timeZoneName == 'GMT') {
+        timezoneDifference = 0;
+      }
+      int diff = currentTime.difference(status.lastUpdateTime!).inMinutes -
+          timezoneDifference;
+      if (diff == 60) {
+        //If exactly 60 mins then could be daylight savings
+        diff = 0;
+      }
+      if (diff > 15) {
+        txtColor = Colors.red;
+      } else if (diff > 5) {
+        txtColor = Colors.amber;
+      } else {
+        txtColor = Colors.green;
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Relay Control'),
+        title: Text(
+          'Last Update: $lastHeardStr',
+          style: TextStyle(color: txtColor, fontSize: 20),
+        ),
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
@@ -120,7 +170,9 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
             ...List.generate(6, (index) {
               return Row(
                 children: [
-                  Expanded(child: Center(child: Text('${index + 1}'))),
+                  Expanded(
+                      child: Center(
+                          child: Text('${index + 1} (${socket[index]})'))),
                   Expanded(
                     child: Center(
                       child: Icon(
