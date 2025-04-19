@@ -234,7 +234,6 @@ class _StatefulHomeState extends State<StatefulHome> {
     'Air Quality History',
     'Holiday Setting',
     'Heating Schedule',
-    'Power Strip Controller',
     'Whos In and Out',
     'Security Videos'
   ];
@@ -258,7 +257,6 @@ class _StatefulHomeState extends State<StatefulHome> {
       AirQualityHistoryPage(oauthToken: oauthToken),
       HolidayPage(oauthToken: oauthToken),
       SchedulePage(oauthToken: oauthToken),
-      RelayControlPage(oauthToken: oauthToken),
       WhoPage(oauthToken: oauthToken),
       CameraPage(oauthToken: oauthToken)
     ];
@@ -291,6 +289,11 @@ class _StatefulHomeState extends State<StatefulHome> {
 
   @override
   Widget build(BuildContext context) {
+    if (!statusPage.localUI &&
+        !_pageTitles.contains('Power Strip Controller')) {
+      _pageTitles.add('Power Strip Controller');
+      _pages.add(RelayControlPage(oauthToken: oauthToken));
+    }
     return Scaffold(
       appBar: AppBar(
           title: statusPage.localUI &&
