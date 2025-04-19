@@ -1,0 +1,2 @@
+/home/danny/git/thermostat-flutter/android/app/.cxx/Debug/1r4j3s31/armeabi-v7a/CMakeFiles/edit_cache.dir
+/home/danny/git/thermostat-flutter/android/app/.cxx/Debug/1r4j3s31/armeabi-v7a/CMakeFiles/rebuild_cache.dir

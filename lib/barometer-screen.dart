@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:format/format.dart';
 
 import 'providers.dart';
 
@@ -412,7 +411,8 @@ class HistoryLineChart extends StatelessWidget {
           reservedSize: 35,
           getTitlesWidget: (value, meta) {
             return SideTitleWidget(
-              axisSide: AxisSide.left,
+              meta: meta,
+              // axisSide: AxisSide.left,
               child: Text(value.toStringAsFixed(0),
                   style: Theme.of(context)
                       .textTheme
@@ -443,7 +443,8 @@ class HistoryLineChart extends StatelessWidget {
                         minute.toString().padLeft(2, '0');
                   }
                   return SideTitleWidget(
-                      axisSide: AxisSide.bottom,
+                      //  TitleMeta(axisSide: AxisSide.bottom)
+                      meta: meta,
                       angle: 120,
                       child: Text(label,
                           style: Theme.of(context)

@@ -1,0 +1,28 @@
+{
+  "buildFiles": [
+    "/home/danny/flutter/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/danny/Android/Sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/danny/git/thermostat-flutter/android/app/.cxx/Debug/1r4j3s31/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/danny/Android/Sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/danny/git/thermostat-flutter/android/app/.cxx/Debug/1r4j3s31/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {},
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/home/danny/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/linux-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/home/danny/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": []
+}
