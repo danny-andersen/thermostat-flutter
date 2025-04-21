@@ -27,12 +27,12 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
   String? selectedCommand;
   List<String> commandFiles = ['cluster_on.txt', 'cluster_off.txt'];
   List<String> socket = [
-    'pi4desktop',
-    'pi4node0',
-    'pi4node1',
-    'pi4node2',
-    'Fans',
-    'Network SW',
+    'pi4desktop ',
+    'pi4node0   ',
+    'pi4node1   ',
+    'pi4node2   ',
+    'Fans         ',
+    'Network SW ',
   ];
   late Timer timer;
   DateTime? lastCommandTime;
@@ -61,7 +61,7 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
         return 2000;
       }
     }
-    return provider.onLocalLan && !provider.localGetInProgress ? 15000 : 30000;
+    return provider.onLocalLan && !provider.localGetInProgress ? 5000 : 15000;
   }
 
   void updateStatus() {
@@ -93,6 +93,14 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
     }
   }
 
+  static const WidgetStateProperty<Icon> thumbIcon =
+      WidgetStateProperty<Icon>.fromMap(
+    <WidgetStatesConstraint, Icon>{
+      WidgetState.selected: Icon(Icons.power, color: Colors.green),
+      WidgetState.any: Icon(Icons.power_off, color: Colors.red)
+    },
+  );
+
   @override
   Widget build(BuildContext context) {
     final RelayStatus status = ref.watch(relayStatusNotifierProvider);
@@ -122,6 +130,33 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
         txtColor = Colors.amber;
       } else {
         txtColor = Colors.green;
+      }
+    }
+    Color txtColorTemp = Colors.green;
+    String lastHeardStrTemp = "??";
+    if (status.lastTempUpdateTime == null) {
+      txtColorTemp = Colors.red;
+    } else {
+      DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm');
+      lastHeardStrTemp = formatter.format(status.lastTempUpdateTime!);
+      DateTime currentTime = DateTime.now();
+      int timezoneDifference = currentTime.timeZoneOffset.inMinutes;
+      if (currentTime.timeZoneName == 'BST' ||
+          currentTime.timeZoneName == 'GMT') {
+        timezoneDifference = 0;
+      }
+      int diff = currentTime.difference(status.lastTempUpdateTime!).inMinutes -
+          timezoneDifference;
+      if (diff == 60) {
+        //If exactly 60 mins then could be daylight savings
+        diff = 0;
+      }
+      if (diff > 15) {
+        txtColorTemp = Colors.red;
+      } else if (diff > 5) {
+        txtColorTemp = Colors.amber;
+      } else {
+        txtColorTemp = Colors.green;
       }
     }
 
@@ -160,10 +195,6 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
                     child: Center(
                         child: Text('Controls',
                             style: TextStyle(fontWeight: FontWeight.bold)))),
-                Expanded(
-                    child: Center(
-                        child: Text(' ',
-                            style: TextStyle(fontWeight: FontWeight.bold)))),
               ],
             ),
             Divider(),
@@ -171,8 +202,8 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
               return Row(
                 children: [
                   Expanded(
-                      child: Center(
-                          child: Text('${index + 1} (${socket[index]})'))),
+                      child:
+                          Center(child: Text('${index + 1} ${socket[index]}'))),
                   Expanded(
                     child: Center(
                       child: Icon(
@@ -204,61 +235,89 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
                       child: Center(
                           child: Align(
                     alignment: Alignment.center,
-                    child: ElevatedButton(
-                      onPressed: () => setRelayState(index, true),
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.fromLTRB(0, 5, 0, 5),
-                        backgroundColor: status.requestedRelayStates[index]
-                            ? Colors.green
-                            : Colors.grey,
-                      ),
-                      child: Text('ON'),
+                    child: Switch(
+                      value: status.actualRelayStates[index],
+                      activeColor: Colors.green,
+                      thumbIcon: thumbIcon,
+                      onChanged: (bool val) => setRelayState(index, val),
                     ),
                   ))),
-                  Expanded(
-                    child: Center(
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: ElevatedButton(
-                          onPressed: () => setRelayState(index, false),
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.fromLTRB(0, 5, 0, 5),
-                            backgroundColor: !status.requestedRelayStates[index]
-                                ? Colors.red
-                                : Colors.grey,
-                          ),
-                          child: Text('OFF'),
-                        ),
-                      ),
-                    ),
-                  ),
                   SizedBox(height: 50),
                 ],
               );
             }),
-            SizedBox(height: 20),
-            Text('Select Command Script',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            DropdownButton<String>(
-              value: selectedCommand,
-              hint: Text('Select Script'),
-              items: commandFiles.map((cmd) {
-                return DropdownMenuItem(
-                  value: cmd,
-                  child: Text(cmd),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedCommand = value;
-                });
-              },
+            SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(width: 10),
+                DropdownButton<String>(
+                  value: selectedCommand,
+                  hint: Text('Select Script    '),
+                  items: commandFiles.map((cmd) {
+                    return DropdownMenuItem(
+                      value: cmd,
+                      child: Text(cmd),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedCommand = value;
+                    });
+                  },
+                ),
+                SizedBox(width: 40),
+                ElevatedButton(
+                  onPressed: executeCommand,
+                  child: Text('Execute'),
+                ),
+              ],
             ),
             SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: executeCommand,
-              child: Text('Execute Command Script'),
+            Text(
+              'Last Node Temperature Update: $lastHeardStrTemp',
+              style: TextStyle(color: txtColorTemp, fontSize: 15),
             ),
+            SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                    child: Center(
+                        child: Text('Host',
+                            style: TextStyle(fontWeight: FontWeight.bold)))),
+                Expanded(
+                    child: Center(
+                        child: Text('CPU Temp',
+                            style: TextStyle(fontWeight: FontWeight.bold)))),
+                Expanded(
+                    child: Center(
+                        child: Text('Fan Speed',
+                            style: TextStyle(fontWeight: FontWeight.bold)))),
+              ],
+            ),
+            Divider(),
+            ...List.generate(status.nodeHosts.length, (index) {
+              return Row(
+                children: [
+                  Expanded(child: Center(child: Text(status.nodeHosts[index]))),
+                  Expanded(
+                      child: Center(
+                          child:
+                              Text(status.nodeTemperatures[index].toString()))),
+                  Expanded(
+                    child: Center(
+                      child: Text(status.fanSpeeds.length <= index
+                          ? "?"
+                          : status.fanSpeeds[index] == 255
+                              ? 'N/A'
+                              : status.fanSpeeds[index] == 0
+                                  ? "Off"
+                                  : "${status.fanSpeeds[index].toString()}%"),
+                    ),
+                  ),
+                ],
+              );
+            }),
           ],
         ),
       ),

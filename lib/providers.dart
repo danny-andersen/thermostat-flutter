@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:dart_ping/dart_ping.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ part 'providers.g.dart';
 const String controlStnCommandFile = "/command.txt";
 const String thermostatLocalCommandFile = "/home/danny/thermostat/command.txt";
 const String remoteStnCommandFile = "command-cam";
+const String nodeTemperatureFile = "/clusterNodesTemp.txt";
 
 void toggleLights(stationId, onLocalLan, lightStatus) {
   String contents = "$stationId: Lights ${lightStatus > 0 ? 'OFF' : 'ON'}";
@@ -1168,12 +1170,22 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
 
 class RelayStatus {
   RelayStatus({required this.onLocalLan});
+  static const Map<String, int> hostToFanSpeed = {
+    "pi4desktop": 3,
+    "pi4node0": 2,
+    "pi4node1": 1,
+    "pi4node2": 0,
+  };
 
   RelayStatus.fromParams(
     this.onLocalLan,
     this.localGetInProgress,
     this.oauthToken,
     this.lastUpdateTime,
+    this.lastTempUpdateTime,
+    this.nodeHosts,
+    this.nodeTemperatures,
+    this.fanSpeeds,
     this.actualRelayStates,
     this.requestedRelayStates,
   );
@@ -1182,6 +1194,10 @@ class RelayStatus {
     List<bool>? actualRelayStates,
     List<bool>? requestedRelayStates,
     DateTime? updateTime,
+    DateTime? tempUpdateTime,
+    List<String>? hosts,
+    List<double>? temps,
+    List<int>? speeds,
   }) {
     List<bool> newRelayStates = List<bool>.from(this.actualRelayStates);
     if (actualRelayStates != null && actualRelayStates.isNotEmpty) {
@@ -1202,8 +1218,33 @@ class RelayStatus {
     if (updateTime != null) {
       lastUpdateTime = updateTime;
     }
-    return RelayStatus.fromParams(onLocalLan, localGetInProgress, oauthToken,
-        lastUpdateTime, newRelayStates, newReqRelayStates);
+    List<String> newNodes = List<String>.from(this.nodeHosts);
+    if (hosts != null && hosts.isNotEmpty) {
+      newNodes = hosts;
+    }
+    List<double> newTemps = List<double>.from(this.nodeTemperatures);
+    if (temps != null && temps.isNotEmpty) {
+      newTemps = temps;
+    }
+    List<int> newSpeeds = List<int>.from(this.fanSpeeds);
+    if (speeds != null && speeds.isNotEmpty) {
+      newSpeeds = speeds;
+    }
+
+    if (tempUpdateTime != null) {
+      lastTempUpdateTime = tempUpdateTime;
+    }
+    return RelayStatus.fromParams(
+        onLocalLan,
+        localGetInProgress,
+        oauthToken,
+        lastUpdateTime,
+        lastTempUpdateTime,
+        newNodes,
+        newTemps,
+        newSpeeds,
+        newRelayStates,
+        newReqRelayStates);
   }
 
   RelayStatus setRelayState({required int relayIndex, required bool state}) {
@@ -1216,6 +1257,10 @@ class RelayStatus {
   bool localGetInProgress = false;
   String oauthToken = "";
   DateTime? lastUpdateTime;
+  DateTime? lastTempUpdateTime;
+  List<String> nodeHosts = [];
+  List<double> nodeTemperatures = [];
+  List<int> fanSpeeds = [];
 
   List<bool> actualRelayStates = [false, false, false, false, false, false];
   List<bool> requestedRelayStates = [false, false, false, false, false, false];
@@ -1268,7 +1313,8 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
       DropBoxAPIFn.sendDropBoxFile(
           // oauthToken: state.oauthToken,
           fileToUpload: "/$relayCommandFile",
-          contents: contents);
+          contents: contents,
+          append: true);
     }
   }
 
@@ -1320,6 +1366,14 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
         );
       }
     }
+    //Now get cluster node temp file sent by the fan controller
+    DropBoxAPIFn.getDropBoxFile(
+      // oauthToken: state.oauthToken,
+      fileToDownload: nodeTemperatureFile,
+      callback: processNodeTempFile,
+      contentType: ContentType.text,
+      timeoutSecs: 1, //Cache entry timeout
+    );
   }
 
   void processRelayStateFile(String filename, String contents) {
@@ -1358,6 +1412,53 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
           updateTime: newLastHeard, actualRelayStates: newRelayStates);
     } on FormatException {
       print("Received non-int relay state format or timestamp: $contents");
+    }
+  }
+
+  void processNodeTempFile(String filename, String contents) {
+    //Format is <data time>={<hostname>:<temp>}]}
+    if (contents.isEmpty || contents.contains("error")) {
+      return;
+    }
+    try {
+      // print("Received node temp file: $contents");
+      List<String> parts = contents.split('@');
+      String dateStr = parts[0].trim();
+      dateStr = dateStr.replaceAll('/', '-');
+      DateTime newLastHeard = DateTime.parse(dateStr);
+      String nodeStr = parts[1].trim();
+      nodeStr = nodeStr.replaceAll("'", '"');
+      Map<String, dynamic> tempData = jsonDecode(nodeStr);
+      List<dynamic> fanData = [];
+      if (parts.length == 3) {
+        //Parse fan speeds
+        fanData = jsonDecode(parts[2]);
+      }
+      List<String> newNodes = [];
+      List<double> newTemps = [];
+      List<int> fanSpeeds = [];
+      for (String key in tempData.keys) {
+        var t = tempData[key];
+        double temp = double.parse(t.toString());
+        newNodes.add(key);
+        newTemps.add(temp);
+        if (fanData.isNotEmpty) {
+          if (RelayStatus.hostToFanSpeed[key] != null) {
+            int fanIndex = RelayStatus.hostToFanSpeed[key]!;
+            int fanSpeed = fanData[fanIndex];
+            fanSpeeds.add(fanSpeed);
+          }
+        }
+      }
+      state = state.copyWith(
+        tempUpdateTime: newLastHeard,
+        hosts: newNodes,
+        temps: newTemps,
+        speeds: fanSpeeds,
+      );
+    } on FormatException catch (e) {
+      print(
+          "Received invalid node and temp or timestamp: $contents: Error: $e");
     }
   }
 }
