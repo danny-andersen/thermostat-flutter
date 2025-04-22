@@ -164,7 +164,7 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
       appBar: AppBar(
         title: Text(
           'Last Update: $lastHeardStr',
-          style: TextStyle(color: txtColor, fontSize: 20),
+          style: TextStyle(color: txtColor, fontSize: 16),
         ),
         actions: [
           IconButton(
@@ -174,8 +174,8 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+        padding: const EdgeInsets.all(5.0),
+        child: ListView(
           children: [
             Row(
               children: [
@@ -275,7 +275,7 @@ class _RelayControlPageState extends ConsumerState<RelayControlPage> {
             ),
             SizedBox(height: 10),
             Text(
-              'Last Node Temperature Update: $lastHeardStrTemp',
+              '  Last Node Temperature Update: $lastHeardStrTemp',
               style: TextStyle(color: txtColorTemp, fontSize: 15),
             ),
             SizedBox(height: 10),

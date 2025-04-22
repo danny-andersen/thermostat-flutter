@@ -1426,36 +1426,44 @@ class RelayStatusNotifier extends _$RelayStatusNotifier {
       String dateStr = parts[0].trim();
       dateStr = dateStr.replaceAll('/', '-');
       DateTime newLastHeard = DateTime.parse(dateStr);
-      String nodeStr = parts[1].trim();
-      nodeStr = nodeStr.replaceAll("'", '"');
-      Map<String, dynamic> tempData = jsonDecode(nodeStr);
-      List<dynamic> fanData = [];
-      if (parts.length == 3) {
-        //Parse fan speeds
-        fanData = jsonDecode(parts[2]);
-      }
-      List<String> newNodes = [];
-      List<double> newTemps = [];
-      List<int> fanSpeeds = [];
-      for (String key in tempData.keys) {
-        var t = tempData[key];
-        double temp = double.parse(t.toString());
-        newNodes.add(key);
-        newTemps.add(temp);
-        if (fanData.isNotEmpty) {
-          if (RelayStatus.hostToFanSpeed[key] != null) {
-            int fanIndex = RelayStatus.hostToFanSpeed[key]!;
-            int fanSpeed = fanData[fanIndex];
-            fanSpeeds.add(fanSpeed);
+      DateTime now = DateTime.now();
+      if (newLastHeard.isBefore(now.subtract(Duration(minutes: 3)))) {
+        //Ignore old data
+        state = state.copyWith(
+          tempUpdateTime: newLastHeard,
+        );
+      } else {
+        String nodeStr = parts[1].trim();
+        nodeStr = nodeStr.replaceAll("'", '"');
+        Map<String, dynamic> tempData = jsonDecode(nodeStr);
+        List<dynamic> fanData = [];
+        if (parts.length == 3) {
+          //Parse fan speeds
+          fanData = jsonDecode(parts[2]);
+        }
+        List<String> newNodes = [];
+        List<double> newTemps = [];
+        List<int> fanSpeeds = [];
+        for (String key in tempData.keys) {
+          var t = tempData[key];
+          double temp = double.parse(t.toString());
+          newNodes.add(key);
+          newTemps.add(temp);
+          if (fanData.isNotEmpty) {
+            if (RelayStatus.hostToFanSpeed[key] != null) {
+              int fanIndex = RelayStatus.hostToFanSpeed[key]!;
+              int fanSpeed = fanData[fanIndex];
+              fanSpeeds.add(fanSpeed);
+            }
           }
         }
+        state = state.copyWith(
+          tempUpdateTime: newLastHeard,
+          hosts: newNodes,
+          temps: newTemps,
+          speeds: fanSpeeds,
+        );
       }
-      state = state.copyWith(
-        tempUpdateTime: newLastHeard,
-        hosts: newNodes,
-        temps: newTemps,
-        speeds: fanSpeeds,
-      );
     } on FormatException catch (e) {
       print(
           "Received invalid node and temp or timestamp: $contents: Error: $e");
