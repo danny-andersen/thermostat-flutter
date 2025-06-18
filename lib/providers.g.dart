@@ -58,7 +58,7 @@ final cameraStatusNotifierProvider =
 
 typedef _$CameraStatusNotifier = AutoDisposeNotifier<CameraStatus>;
 String _$relayStatusNotifierHash() =>
-    r'b87f1567bf90cd1c4b3c30c014042773b27258b0';
+    r'e7505f6da666c2768b0472f3f026bfcdf51f8045';
 
 /// See also [RelayStatusNotifier].
 @ProviderFor(RelayStatusNotifier)

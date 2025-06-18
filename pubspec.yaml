@@ -43,7 +43,7 @@ dependencies:
   syncfusion_flutter_sliders: ^29.0.0
   collection: ^1.16.0
   synchronized: ^3.1.0
-  fl_chart: ^0.71.0
+  fl_chart: ^1.0.0
   format: ^1.6.0
   timeline_tile: ^2.0.0
   flutter_inappwebview: ^6.0.0

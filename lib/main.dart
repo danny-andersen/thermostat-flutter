@@ -19,7 +19,6 @@ import 'package:thermostat_flutter/schedule-tab.dart';
 import 'package:thermostat_flutter/airquality-history.dart';
 import 'package:thermostat_flutter/airquality.dart';
 import 'package:thermostat_flutter/barometer-screen.dart';
-import 'package:thermostat_flutter/power-control.dart';
 // import 'package:flutterpi_gstreamer_video_player/flutterpi_gstreamer_video_player.dart';
 
 HttpAuthCredentialDatabase httpAuthCredentialDatabase =
@@ -289,11 +288,6 @@ class _StatefulHomeState extends State<StatefulHome> {
 
   @override
   Widget build(BuildContext context) {
-    if (!statusPage.localUI &&
-        !_pageTitles.contains('Power Strip Controller')) {
-      _pageTitles.add('Power Strip Controller');
-      _pages.add(RelayControlPage(oauthToken: oauthToken));
-    }
     return Scaffold(
       appBar: AppBar(
           title: statusPage.localUI &&
@@ -360,9 +354,6 @@ class CustomDrawer extends StatelessWidget {
                 break;
               case 'Heating Schedule':
                 icon = Icons.schedule;
-                break;
-              case 'Power Controller':
-                icon = Icons.power;
                 break;
               case 'Whos In and Out':
                 icon = Icons.person;

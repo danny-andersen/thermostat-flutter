@@ -159,7 +159,7 @@ Widget getAllGasAlarmStatus(ThermostatStatus status) {
     int nh3Status = (status.gasAlarm & 0x0C) >> 2;
     int no2Status = (status.gasAlarm & 0x30) >> 4;
     if (co2Status > 0) {
-      statusStr = "Carbon Dioxide ${getAlarmStatus(co2Status)}";
+      statusStr = "Carbon Monoxide ${getAlarmStatus(co2Status)}";
       alarmColor = getAlarmColor(co2Status);
     } else if (nh3Status > 0) {
       statusStr = "Ammonia/Propane/Butane ${getAlarmStatus(nh3Status)}";
