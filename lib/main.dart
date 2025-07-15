@@ -132,6 +132,13 @@ class MyAppState extends State<MyApp> {
                   realm: "Motion",
                   port: secret.intStartPort + 4),
               credential: creds);
+          httpAuthCredentialDatabase.setHttpAuthCredential(
+              protectionSpace: URLProtectionSpace(
+                  host: "backdoor-cam",
+                  protocol: "https",
+                  realm: "Motion",
+                  port: secret.intStartPort + 5),
+              credential: creds);
         }
       });
     });
@@ -181,6 +188,13 @@ class MyAppState extends State<MyApp> {
               protocol: "https",
               realm: "Motion",
               port: statusPage.statePage.extStartPort + 4),
+          credential: creds);
+      httpAuthCredentialDatabase.setHttpAuthCredential(
+          protectionSpace: URLProtectionSpace(
+              host: statusPage.statePage.extHost,
+              protocol: "https",
+              realm: "Motion",
+              port: statusPage.statePage.extStartPort + 5),
           credential: creds);
     });
   }

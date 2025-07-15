@@ -985,6 +985,7 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
     "/4_status.txt",
     "/5_status.txt",
     "/6_status.txt",
+    "/7_status.txt",
   ];
   final List<String> localExternalstatusFile = [
     "/home/danny/control_station/2_status.txt",
@@ -992,6 +993,7 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
     "/home/danny/control_station/4_status.txt",
     "/home/danny/control_station/5_status.txt",
     "/home/danny/control_station/6_status.txt",
+    "/home/danny/control_station/7_status.txt",
   ];
   final int STATION_WITH_EXT_TEMP = 2;
   final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
