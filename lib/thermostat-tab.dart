@@ -460,7 +460,7 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
         // ),localUI
       ]);
     }
-    widgets.add(SizedBox(height: status.localUI ? 30 : 50));
+    widgets.add(SizedBox(height: status.localUI ? 30 : 10));
 
     List<Widget> statusBoxes = [];
     if (!localUI) {
