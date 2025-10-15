@@ -355,8 +355,9 @@ class _ThermostatPageState extends ConsumerState<ThermostatPage> {
     String camUrl = "";
     if (!localUI && stationId != 0) {
       if (onLocalLan) {
-        int portNo = intStartPort + (stationId - 2);
-        camUrl = "${stationCamUrlByName[stationName]}:$portNo";
+        int portNo = intStartPort;
+        String hostStr = stationCamUrlByName[stationName] ?? extHost;
+        camUrl = "${hostStr.replaceAll("https", "http")}:$portNo";
       } else {
         int portNo = extStartPort + (stationId - 2);
         camUrl = "https://$extHost:$portNo";
