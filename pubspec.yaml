@@ -39,8 +39,8 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
-  syncfusion_flutter_gauges: ^31.2.2
-  syncfusion_flutter_sliders: ^31.2.2
+  syncfusion_flutter_gauges: ^30.2.0
+  syncfusion_flutter_sliders: ^30.2.0
   collection: ^1.16.0
   synchronized: ^3.1.0
   fl_chart: ^1.0.0
@@ -64,6 +64,9 @@ dependencies:
   dartssh2: ^2.10.0
   fast_csv: ^0.2.11
   
+dependency_overrides:
+  vector_math: 2.2.0  # Required by fl_chart - remove when fl_chart is updated to a version that supports vector_math 2.3.0 or higher.
+
 dev_dependencies:
   build_runner:
   custom_lint:
@@ -77,7 +80,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^6.0.0
+  # flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
