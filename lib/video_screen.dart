@@ -223,6 +223,8 @@ String getSourceFromFilename(String filename) {
     source = "Conservatory";
   } else if (parts[1].contains("backdoor")) {
     source = "Back Door";
+  } else if (parts[1].contains("lounge")) {
+    source = "Lounge";
   }
 
   return source;
@@ -242,6 +244,8 @@ String getFilenamefromSource(String source) {
     filename = "conservatory";
   } else if (source.contains("Back")) {
     filename = "backdoor";
+  } else if (source.contains("Lounge")) {
+    filename = "lounge";
   }
   return filename;
 }

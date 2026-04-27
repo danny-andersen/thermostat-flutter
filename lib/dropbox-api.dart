@@ -64,7 +64,7 @@ class LocalSendReceive {
       required String contents,
       String? hostToSend,
       bool append = false}) async {
-    //On same LAN as control station - send file to controlstation using sftp
+    //On same LAN as control station - send file to station using sftp
     bool success = false;
     SSHClient? client;
     SftpClient? sftp;

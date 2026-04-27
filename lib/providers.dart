@@ -15,8 +15,10 @@ const String controlStnCommandFile = "/command.txt";
 const String thermostatLocalCommandFile = "/home/danny/thermostat/command.txt";
 const String remoteStnCommandFile = "command-cam";
 const String nodeTemperatureFile = "/clusterNodesTemp.txt";
+const String piMediaCameraPowerCommandFile = "/pi-media-power-command.txt";
 
 void toggleLights(stationId, onLocalLan, lightStatus) {
+  // Lights are toggled via the controlstation, which responds to a GET command from the station
   String contents = "$stationId: Lights ${lightStatus > 0 ? 'OFF' : 'ON'}";
   if (onLocalLan) {
     Future<bool> localSend = LocalSendReceive.sendLocalFile(
@@ -38,7 +40,29 @@ void toggleLights(stationId, onLocalLan, lightStatus) {
 }
 
 void toggleCamera(stationId, onLocalLan, camStatus) {
+  // Camera commands are sent directly to the hosts
   String contents = "camera-${camStatus > 0 ? 'off' : 'on'}";
+  if (stationId == 8) {
+    //If stationID is 8, then need to tell power controller to power the station on
+    if (onLocalLan) {
+      Future<bool> localSend = LocalSendReceive.sendLocalFile(
+          fileName: "/home/danny/control_station$piMediaCameraPowerCommandFile",
+          contents: contents);
+      localSend.then((success) {
+        if (!success) {
+          print("On local Lan but failed to send, so send again using Dropbox");
+          toggleLights(stationId, false, camStatus);
+        }
+      });
+    } else {
+      //Remote from control station - use Dropbox to send command
+      DropBoxAPIFn.sendDropBoxFile(
+          // oauthToken: state.oauthToken,
+          fileToUpload: piMediaCameraPowerCommandFile,
+          contents: contents);
+    }
+  }
+  //Send camera command to the station, either directly or via dropbox
   sendCommandToHost(stationId, onLocalLan, contents);
 }
 
@@ -57,7 +81,7 @@ void sendCommandToHost(stationId, onLocalLan, contents) {
     localSend.then((success) {
       if (!success) {
         print("On local Lan but failed to send, so send again using Dropbox");
-        resetStation(stationId, false);
+        sendCommandToHost(stationId, false, contents);
       }
     });
   } else {
@@ -986,6 +1010,7 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
     "/5_status.txt",
     "/6_status.txt",
     "/7_status.txt",
+    "/8_status.txt",
   ];
   final List<String> localExternalstatusFile = [
     "/home/danny/control_station/2_status.txt",
@@ -994,6 +1019,7 @@ class CameraStatusNotifier extends _$CameraStatusNotifier {
     "/home/danny/control_station/5_status.txt",
     "/home/danny/control_station/6_status.txt",
     "/home/danny/control_station/7_status.txt",
+    "/home/danny/control_station/8_status.txt",
   ];
   final int STATION_WITH_EXT_TEMP = 2;
   final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
