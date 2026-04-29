@@ -41,7 +41,7 @@ final barometerStatusNotifierProvider = AutoDisposeNotifierProvider<
 
 typedef _$BarometerStatusNotifier = AutoDisposeNotifier<BarometerStatus>;
 String _$cameraStatusNotifierHash() =>
-    r'ed54057c58ac4dd0036aa5da339e21613ebcec1a';
+    r'c1f8852649abb7146bd59cb6b44f27a7fe4408f5';
 
 /// See also [CameraStatusNotifier].
 @ProviderFor(CameraStatusNotifier)

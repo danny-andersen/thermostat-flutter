@@ -1003,24 +1003,11 @@ class CameraStatus {
 
 @riverpod
 class CameraStatusNotifier extends _$CameraStatusNotifier {
-  final List<String> externalstatusFile = [
-    "/2_status.txt",
-    "/3_status.txt",
-    "/4_status.txt",
-    "/5_status.txt",
-    "/6_status.txt",
-    "/7_status.txt",
-    "/8_status.txt",
-  ];
-  final List<String> localExternalstatusFile = [
-    "/home/danny/control_station/2_status.txt",
-    "/home/danny/control_station/3_status.txt",
-    "/home/danny/control_station/4_status.txt",
-    "/home/danny/control_station/5_status.txt",
-    "/home/danny/control_station/6_status.txt",
-    "/home/danny/control_station/7_status.txt",
-    "/home/danny/control_station/8_status.txt",
-  ];
+  final List<String> externalstatusFile = new List<String>.generate(
+      extStationNames.length, (i) => "/${i + 2}_status.txt");
+  final List<String> localExternalstatusFile = new List<String>.generate(
+      extStationNames.length,
+      (i) => "${localStatusFilePath}/${i + 2}_status.txt");
   final int STATION_WITH_EXT_TEMP = 2;
   final String localDisplayOnFile = "/home/danny/thermostat/displayOn.txt";
 
