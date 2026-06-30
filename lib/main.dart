@@ -90,56 +90,6 @@ class MyAppState extends State<MyApp> {
         statusPage.statePage.localUI = localUI;
         statusPage.statePage.extStartPort = secret.extStartPort;
         statusPage.statePage.intStartPort = secret.intStartPort;
-        if (!localUI && !Platform.isLinux) {
-          //TODO: When (if?) Inapp_webview supports Linux devices, then remove this condition
-          //Until then it causes a null exception as there is no native implementation
-          URLCredential creds = URLCredential(
-              username: LocalSendReceive.username,
-              password: LocalSendReceive.passphrase);
-
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
-                  host: "house-rh-side-cam0",
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.intStartPort),
-              credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
-                  host: "front-door-cam",
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.intStartPort + 1),
-              credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
-                  host: "house-lh-side",
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.intStartPort + 2),
-              credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
-                  host: "masterstation",
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.intStartPort + 3),
-              credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
-                  host: "conservatory-cam",
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.intStartPort + 4),
-              credential: creds);
-          httpAuthCredentialDatabase.setHttpAuthCredential(
-              protectionSpace: URLProtectionSpace(
-                  host: "backdoor-cam",
-                  protocol: "https",
-                  realm: "Motion",
-                  port: secret.intStartPort + 5),
-              credential: creds);
-        }
       });
     });
     super.initState();
@@ -153,49 +103,16 @@ class MyAppState extends State<MyApp> {
           username: LocalSendReceive.username,
           password: LocalSendReceive.passphrase);
 
-      //Set the credentials for the external cameras ip d
-      httpAuthCredentialDatabase.setHttpAuthCredential(
-          protectionSpace: URLProtectionSpace(
-              host: statusPage.statePage.extHost,
-              protocol: "https",
-              realm: "Motion",
-              port: statusPage.statePage.extStartPort),
-          credential: creds);
-      httpAuthCredentialDatabase.setHttpAuthCredential(
-          protectionSpace: URLProtectionSpace(
-              host: statusPage.statePage.extHost,
-              protocol: "https",
-              realm: "Motion",
-              port: statusPage.statePage.extStartPort + 1),
-          credential: creds);
-      httpAuthCredentialDatabase.setHttpAuthCredential(
-          protectionSpace: URLProtectionSpace(
-              host: statusPage.statePage.extHost,
-              protocol: "https",
-              realm: "Motion",
-              port: statusPage.statePage.extStartPort + 2),
-          credential: creds);
-      httpAuthCredentialDatabase.setHttpAuthCredential(
-          protectionSpace: URLProtectionSpace(
-              host: statusPage.statePage.extHost,
-              protocol: "https",
-              realm: "Motion",
-              port: statusPage.statePage.extStartPort + 3),
-          credential: creds);
-      httpAuthCredentialDatabase.setHttpAuthCredential(
-          protectionSpace: URLProtectionSpace(
-              host: statusPage.statePage.extHost,
-              protocol: "https",
-              realm: "Motion",
-              port: statusPage.statePage.extStartPort + 4),
-          credential: creds);
-      httpAuthCredentialDatabase.setHttpAuthCredential(
-          protectionSpace: URLProtectionSpace(
-              host: statusPage.statePage.extHost,
-              protocol: "https",
-              realm: "Motion",
-              port: statusPage.statePage.extStartPort + 5),
-          credential: creds);
+      //Set the credentials for the external cameras ip
+      for (int i = 0; i < 8; i++) {
+        httpAuthCredentialDatabase.setHttpAuthCredential(
+            protectionSpace: URLProtectionSpace(
+                host: statusPage.statePage.extHost,
+                protocol: "https",
+                realm: "Motion",
+                port: statusPage.statePage.extStartPort + i),
+            credential: creds);
+      }
     });
   }
 
